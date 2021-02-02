@@ -1,10 +1,7 @@
 * Gameboy UI
 ** Running
-You must have built the wasm bundle before you run this. ~npm run
-build~ will do that for you. Run ~npm run build~ or ~wasm-pack build~
-in the emulator directory each time you change the rust code. ~npm run
-build~ also sets up required sym links. This only needs to be done
-once.
+You need to create a symlink in public. =public/rust= should be a
+symlink to =../emulator/pkg=. This only needs to be done once.
 
 *** 🛠️ Build with ~npm run build~
     ~npm run build~

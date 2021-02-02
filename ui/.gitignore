@@ -10,7 +10,7 @@
 
 # production
 /build
-public/package
+public/rust
 
 # misc
 .DS_Store

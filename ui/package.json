@@ -11,19 +11,19 @@
     "@types/react": "^16.14.2",
     "@types/react-dom": "^16.9.10",
     "react": "^17.0.1",
+    "react-app-rewired": "^2.1.8",
     "react-dom": "^17.0.1",
     "react-scripts": "4.0.1",
+    "rust": "file:../emulator/pkg",
     "typescript": "^4.1.3",
+    "wasm-loader": "^1.3.0",
     "web-vitals": "^0.2.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "npm run wasm && react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "wasm": "npm run wasm-build && npm run wasm-aquire",
-    "wasm-build": "cd ../emulator && wasm-pack build",
-    "wasm-aquire": "cd public && [ -e package ] || ln -sr ../../emulator/pkg/ package"
+    "start": "react-app-rewired start",
+    "build": "npm run wasm-build && react-app-rewired build",
+    "test": "react-app-rewired test",
+    "wasm-build": "cd ../emulator && wasm-pack build"
   },
   "eslintConfig": {
     "extends": [
@@ -42,5 +42,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "worker-loader": "^3.0.7"
   }
 }
