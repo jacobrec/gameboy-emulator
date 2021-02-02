@@ -23,7 +23,7 @@
     "eject": "react-scripts eject",
     "wasm": "npm run wasm-build && npm run wasm-aquire",
     "wasm-build": "cd ../emulator && wasm-pack build",
-    "wasm-aquire": "[ -e package ] || ln -sr ../../emulator/pkg/ package"
+    "wasm-aquire": "cd public && [ -e package ] || ln -sr ../../emulator/pkg/ package"
   },
   "eslintConfig": {
     "extends": [
