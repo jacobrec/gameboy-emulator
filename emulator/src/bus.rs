@@ -28,7 +28,7 @@ impl Bus {
         Bus { rom, ram }
     }
 
-    pub fn read(self, loc: u16) -> u8 {
+    pub fn read(&self, loc: u16) -> u8 {
         match loc {
             0x0000..=0x3FFF => self.rom.read(loc),
             0xC000..=0xCFFF => self.ram[loc as usize],

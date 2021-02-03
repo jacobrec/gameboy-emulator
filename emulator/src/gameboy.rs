@@ -52,7 +52,7 @@ impl ROM {
     pub fn from_data(data: Vec<u8>) -> Self {
         ROM {data}
     }
-    pub fn read(self, loc: u16) -> u8 {
+    pub fn read(&self, loc: u16) -> u8 {
         self.data[loc as usize]
     }
     pub fn write(&mut self, loc: u16, val: u8) {
