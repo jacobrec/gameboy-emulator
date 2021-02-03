@@ -22,8 +22,23 @@ pub fn update(x: isize) {
 
 
 #[wasm_bindgen]
-pub fn check_x() -> u16 {
+pub fn get_screen() -> u16 {
     unsafe {
         X
+    }
+}
+
+#[wasm_bindgen]
+pub fn press_button(b: isize) {
+    match b {
+        0 => (), // Start
+        1 => (), // Select
+        2 => (), // DUp
+        3 => (), // DDown
+        4 => (), // DLeft
+        5 => (), // DRight
+        6 => (), // A
+        7 => (), // B
+        _ => panic!("Unknown button pressed")
     }
 }
