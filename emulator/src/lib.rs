@@ -1,4 +1,8 @@
 mod utils;
+mod cpu;
+mod bus;
+mod ppu;
+mod gameboy;
 
 use wasm_bindgen::prelude::*;
 
