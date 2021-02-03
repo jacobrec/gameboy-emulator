@@ -1,28 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
-
-type RustAPI = any;
+import Emulator from './Emulator'
 
 function App() {
-    const [rust, setRust] = useState<RustAPI | null>(null);
-    useEffect(() => {
-        const emulatorworker = new Worker(process.env.PUBLIC_URL + '/emulatorworker.js')
-        emulatorworker.onmessage = (m) => console.log(m.data);
-    });
-    return (rust !== null) ? <Main rust={rust}/> : <p>Loading...</p>;
-}
-
-function Main(props: {rust: RustAPI}) {
   const [count, setCount] = useState(0);
-  useEffect(() => {
-      const go = async () => {
-        console.log(props);
-        //const update = () => setCount(props.rust.check_x());
-        //setTimeout(update, 300);
+  const [emulator, setEmulator] = useState(new Emulator());
+    const [intervals, setIntervals] = useState(false);
+
+    if (!intervals) {
+      setIntervals(true);
+      setInterval(() => {
+        emulator.update();
+      }, 10);
+      const checker = () => {
+        setCount(emulator.check_x())
+        requestAnimationFrame(checker);
       };
-      go();
-  });
+      requestAnimationFrame(checker);
+    }
+
   return (
     <div className="App">
       <header className="App-header">
