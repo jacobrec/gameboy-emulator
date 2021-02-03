@@ -88,6 +88,7 @@ impl CPU {
             5 => RegisterLoc::L,
             6 => RegisterLoc::MemHL,
             7 => RegisterLoc::A,
+            _ => unreachable!("The number must be anded with 0b111")
         };
         match data {
             // LD SP n16
