@@ -5,16 +5,22 @@ on:
     branches: [ dev ]
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always 
 
 jobs:
   build:
 
-    runs-on: [ubuntu-latest, windows-latest]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
+    - uses: jetli/wasm-pack-action@v0.3.0
+      with:
+        # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
+        version: 'latest'
     - name: Build
       run: wasm-pack build
+      working-directory: emulator
     - name: Run tests
-      run: wasm-pack test
+      run: wasm-pack test --headless --chrome --node
+      working-directory: emulator
