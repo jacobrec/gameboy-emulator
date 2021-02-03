@@ -90,9 +90,19 @@ impl CPU {
             7 => RegisterLoc::A,
             _ => unreachable!("The number must be anded with 0b111")
         };
+        let regl = Location::Register(reg);
         match data {
-            // LD SP n16
-            0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())),
+            0x00 => Instruction::Nop,
+            0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
+            0x76 => Instruction::Halt,
+            0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regl),
+            0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regl),
+            0x50..=0x57 => Instruction::Load(Location::Register(RegisterLoc::D), regl),
+            0x58..=0x5F => Instruction::Load(Location::Register(RegisterLoc::E), regl),
+            0x60..=0x67 => Instruction::Load(Location::Register(RegisterLoc::H), regl),
+            0x68..=0x6F => Instruction::Load(Location::Register(RegisterLoc::L), regl),
+            0x70..=0x77 => Instruction::Load(Location::Register(RegisterLoc::MemHL), regl),
+            0x78..=0x7F => Instruction::Load(Location::Register(RegisterLoc::A), regl),
             0x80..=0x87 => Instruction::Add(reg),
             0x88..=0x8F => Instruction::Adc(reg),
             0x90..=0x97 => Instruction::Sub(reg),
@@ -117,6 +127,8 @@ impl CPU {
             Instruction::Xor(loc) => (),
             Instruction::Or(loc) => (),
             Instruction::Cp(loc) => (),
+            Instruction::Halt => (),
+            Instruction::Nop => (),
         }
     }
 

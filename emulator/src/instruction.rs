@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub enum RegisterLoc {
     A,
     B,
@@ -9,6 +10,7 @@ pub enum RegisterLoc {
     MemHL
 }
 
+#[derive(Copy, Clone)]
 pub enum Location {
     Register(RegisterLoc),
     Immediate(u8),
@@ -16,6 +18,7 @@ pub enum Location {
     SP,
 }
 
+#[derive(Copy, Clone)]
 pub enum Instruction {
     Load (Location, Location), // Dest, Src
     Add (RegisterLoc),
@@ -25,6 +28,8 @@ pub enum Instruction {
     And (RegisterLoc),
     Xor (RegisterLoc),
     Or (RegisterLoc),
-    Cp (RegisterLoc)
+    Cp (RegisterLoc),
+    Halt,
+    Nop
 }
 
