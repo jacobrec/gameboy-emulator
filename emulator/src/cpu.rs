@@ -6,14 +6,16 @@ pub struct CPU {
     registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
     sp: u16,
     pc: u16,
+    bus: crate::bus::Bus,
 }
 
 impl CPU {
-    pub fn new() -> Self {
+    pub const fn new(bus: crate::bus::Bus) -> Self {
         CPU {
             sp: 0,
             pc: 0,
-            registers: [0, 0, 0, 0, 0, 0, 0, 0]
+            registers: [0, 0, 0, 0, 0, 0, 0, 0],
+            bus
         }
     }
     pub fn a(&self) -> u8 {self.registers[6]}

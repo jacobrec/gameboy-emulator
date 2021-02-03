@@ -6,20 +6,28 @@ mod gameboy;
 
 use wasm_bindgen::prelude::*;
 
-
 static mut X: u16 = 0;
+static mut GAMEBOY: gameboy::Gameboy = gameboy::Gameboy::empty();
 
-fn clock_tick() {
+
+#[wasm_bindgen]
+pub fn init(romdata: Vec<u8>) {
+    utils::set_panic_hook();
+    let gameboy = gameboy::GameboyBuilder::new()
+        .load_rom(gameboy::ROM::from_data(romdata))
+        .build();
     unsafe {
-        X += 1;
+      GAMEBOY.set_state(gameboy)
     }
 }
 
 #[wasm_bindgen]
 pub fn update(x: isize) {
-    utils::set_panic_hook();
     for _ in 0..x {
-        clock_tick();
+        unsafe {
+          GAMEBOY.tick();
+          X += 1
+        }
     }
 }
 
