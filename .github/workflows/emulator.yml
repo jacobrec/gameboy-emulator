@@ -5,7 +5,7 @@ on:
     branches: [ dev ]
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always --node
 
 jobs:
   build:
