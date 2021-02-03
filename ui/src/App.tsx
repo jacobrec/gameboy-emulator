@@ -6,7 +6,7 @@ import Emulator from './Emulator'
 function App() {
   const [count, setCount] = useState(0);
   const [emulator, setEmulator] = useState(new Emulator());
-    const [intervals, setIntervals] = useState(false);
+  const [intervals, setIntervals] = useState(false);
 
     if (!intervals) {
       setIntervals(true);
@@ -14,7 +14,7 @@ function App() {
         emulator.update();
       }, 10);
       const checker = () => {
-        setCount(emulator.check_x())
+        setCount(emulator.get_screen())
         requestAnimationFrame(checker);
       };
       requestAnimationFrame(checker);
