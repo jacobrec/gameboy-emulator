@@ -1,8 +1,5 @@
 * Gameboy UI
 ** Running
-You need to create a symlink in public. =public/rust= should be a
-symlink to =../emulator/pkg=. This only needs to be done once.
-
 *** 🛠️ Build with ~npm run build~
     ~npm run build~
 
