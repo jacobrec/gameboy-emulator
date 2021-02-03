@@ -23,4 +23,4 @@ jobs:
       working-directory: emulator
     - name: Run tests
       run: wasm-pack test
-      working-directory: emulator
+      working-directory: emulator/tests
