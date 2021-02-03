@@ -22,5 +22,5 @@ jobs:
       run: wasm-pack build
       working-directory: emulator
     - name: Run tests
-      run: wasm-pack test
-      working-directory: emulator/tests
+      run: wasm-pack test --headless --chrome --node
+      working-directory: emulator
