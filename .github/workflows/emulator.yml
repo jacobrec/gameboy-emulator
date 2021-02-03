@@ -20,5 +20,7 @@ jobs:
         version: 'latest'
     - name: Build
       run: wasm-pack build
+      working-directory: emulator
     - name: Run tests
       run: wasm-pack test
+      working-directory: emulator
