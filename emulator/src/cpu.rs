@@ -79,16 +79,43 @@ impl CPU {
     }
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
-        if data == 0x31 { // LD SP n16
-            return Instruction::Load(Location::SP, Location::Immediate16(self.next16()))
+        let reg = match (data & 0b111) {
+            0 => RegisterLoc::B,
+            1 => RegisterLoc::C,
+            2 => RegisterLoc::D,
+            3 => RegisterLoc::E,
+            4 => RegisterLoc::H,
+            5 => RegisterLoc::L,
+            6 => RegisterLoc::MemHL,
+            7 => RegisterLoc::A,
+        };
+        match data {
+            // LD SP n16
+            0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())),
+            0x80..=0x87 => Instruction::Add(reg),
+            0x88..=0x8F => Instruction::Adc(reg),
+            0x90..=0x97 => Instruction::Sub(reg),
+            0x98..=0x9F => Instruction::Sbc(reg),
+            0xA0..=0xA7 => Instruction::And(reg),
+            0xA8..=0xAF => Instruction::Xor(reg),
+            0xB0..=0xB7 => Instruction::Or(reg),
+            0xB8..=0xBF => Instruction::Cp(reg),
+
+            _ => panic!("Unimplemented Instruction {}", data)
         }
-        panic!("Unimplemented Instruction {}", data)
     }
 
     fn execute(&mut self, op: Instruction) {
         match op {
             Instruction::Load(dest, src) => (),
-            Instruction::XOR(loc) => (),
+            Instruction::Add(loc) => (),
+            Instruction::Adc(loc) => (),
+            Instruction::Sub(loc) => (),
+            Instruction::Sbc(loc) => (),
+            Instruction::And(loc) => (),
+            Instruction::Xor(loc) => (),
+            Instruction::Or(loc) => (),
+            Instruction::Cp(loc) => (),
         }
     }
 

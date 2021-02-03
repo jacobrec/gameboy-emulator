@@ -18,6 +18,13 @@ pub enum Location {
 
 pub enum Instruction {
     Load (Location, Location), // Dest, Src
-    XOR (RegisterLoc)
+    Add (RegisterLoc),
+    Adc (RegisterLoc),
+    Sub (RegisterLoc),
+    Sbc (RegisterLoc),
+    And (RegisterLoc),
+    Xor (RegisterLoc),
+    Or (RegisterLoc),
+    Cp (RegisterLoc)
 }
 
