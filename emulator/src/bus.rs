@@ -51,4 +51,11 @@ impl Bus {
             _ => panic!("Unimplemented read range: {}", loc)
         }
     }
+
+    pub fn cpu_tick(&mut self) {
+        // CPU runs at 1MHz
+        // PPU runs at 2MHz
+        self.ppu.tick();
+        self.ppu.tick();
+    }
 }

@@ -14,4 +14,7 @@ impl PPU {
         self.screen
     }
 
+    pub fn tick(&mut self) {
+    }
+
 }

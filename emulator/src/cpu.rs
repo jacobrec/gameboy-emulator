@@ -70,6 +70,7 @@ impl CPU {
 
     fn clock(&mut self) {
         self.cycles += 4; // Each CPU is 4 cycles I belive
+        self.bus.cpu_tick();
     }
 
     fn next(&mut self) -> u8 {
