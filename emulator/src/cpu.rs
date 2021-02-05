@@ -13,6 +13,10 @@ pub struct CPU {
 }
 
 impl CPU {
+    pub fn get_screen(&self) -> crate::ppu::Canvas {
+        return self.bus.get_screen()
+    }
+
     pub const fn new(bus: crate::bus::Bus) -> Self {
         CPU {
             sp: 0,

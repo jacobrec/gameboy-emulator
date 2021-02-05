@@ -20,12 +20,18 @@ Memory Map
 pub struct Bus {
     rom: ROM,
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
+    ppu: crate::ppu::PPU,
 }
 
 impl Bus {
+    pub fn get_screen(&self) -> crate::ppu::Canvas {
+        return self.ppu.get_screen()
+    }
+
     pub const fn new(rom: ROM) -> Self {
         let ram = [0u8; 0xFFFF];
-        Bus { rom, ram }
+        let ppu = crate::ppu::PPU::new();
+        Bus { rom, ram, ppu }
     }
 
     pub fn read(&self, loc: u16) -> u8 {

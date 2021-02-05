@@ -46,6 +46,9 @@ impl Gameboy {
 
     pub fn tick(&mut self) {
     }
+    pub fn get_screen(&self) -> crate::ppu::Canvas {
+        return self.cpu.get_screen()
+    }
 }
 
 impl ROM {
