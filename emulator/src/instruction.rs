@@ -29,6 +29,17 @@ pub enum Instruction {
     Xor (RegisterLoc),
     Or (RegisterLoc),
     Cp (RegisterLoc),
+    Rlc (RegisterLoc),
+    Rrc (RegisterLoc),
+    Rl (RegisterLoc),
+    Rr (RegisterLoc),
+    Sla (RegisterLoc),
+    Sra (RegisterLoc),
+    Swap (RegisterLoc),
+    Srl (RegisterLoc),
+    Bit (u8, RegisterLoc),
+    Res (u8, RegisterLoc),
+    Set (u8, RegisterLoc),
     Halt,
     Nop
 }

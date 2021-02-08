@@ -82,9 +82,8 @@ impl CPU {
     fn next16(&mut self) -> u16 {
         ((self.next() as u16) << 8) | self.next() as u16
     }
-    fn next_op(&mut self) -> Instruction {
-        let data = self.next();
-        let reg = match (data & 0b111) {
+    fn register_from_data(data: u8) -> RegisterLoc {
+        match (data & 0b111) {
             0 => RegisterLoc::B,
             1 => RegisterLoc::C,
             2 => RegisterLoc::D,
@@ -94,7 +93,11 @@ impl CPU {
             6 => RegisterLoc::MemHL,
             7 => RegisterLoc::A,
             _ => unreachable!("The number must be anded with 0b111")
-        };
+        }
+    }
+    fn next_op(&mut self) -> Instruction {
+        let data = self.next();
+        let reg = Self::register_from_data(data);
         let regl = Location::Register(reg);
         match data {
             0x00 => Instruction::Nop,
@@ -117,23 +120,54 @@ impl CPU {
             0xB0..=0xB7 => Instruction::Or(reg),
             0xB8..=0xBF => Instruction::Cp(reg),
 
+            0xCB => self.next_op_extended(),
+
             _ => panic!("Unimplemented Instruction {}", data)
+        }
+    }
+    fn next_op_extended(&mut self) -> Instruction {
+        let data = self.next();
+        let reg = Self::register_from_data(data);
+        match data {
+            0x00..=0x07 => Instruction::Rlc(reg),
+            0x08..=0x0F => Instruction::Rrc(reg),
+            0x10..=0x17 => Instruction::Rl(reg),
+            0x18..=0x1F => Instruction::Rr(reg),
+            0x20..=0x27 => Instruction::Sla(reg),
+            0x28..=0x2F => Instruction::Sra(reg),
+            0x30..=0x37 => Instruction::Swap(reg),
+            0x38..=0x3F => Instruction::Srl(reg),
+            0x40..=0x47 => Instruction::Bit(0, reg),
+            0x48..=0x4F => Instruction::Bit(1, reg),
+            0x50..=0x57 => Instruction::Bit(2, reg),
+            0x58..=0x5F => Instruction::Bit(3, reg),
+            0x60..=0x67 => Instruction::Bit(4, reg),
+            0x68..=0x6F => Instruction::Bit(5, reg),
+            0x70..=0x77 => Instruction::Bit(6, reg),
+            0x78..=0x7F => Instruction::Bit(7, reg),
+            0x80..=0x87 => Instruction::Res(0, reg),
+            0x88..=0x8F => Instruction::Res(1, reg),
+            0x90..=0x97 => Instruction::Res(2, reg),
+            0x98..=0x9F => Instruction::Res(3, reg),
+            0xA0..=0xA7 => Instruction::Res(4, reg),
+            0xA8..=0xAF => Instruction::Res(5, reg),
+            0xB0..=0xB7 => Instruction::Res(6, reg),
+            0xB8..=0xBF => Instruction::Res(7, reg),
+            0xC0..=0xC7 => Instruction::Set(0, reg),
+            0xC8..=0xCF => Instruction::Set(1, reg),
+            0xD0..=0xD7 => Instruction::Set(2, reg),
+            0xD8..=0xDF => Instruction::Set(3, reg),
+            0xE0..=0xE7 => Instruction::Set(4, reg),
+            0xE8..=0xEF => Instruction::Set(5, reg),
+            0xF0..=0xF7 => Instruction::Set(6, reg),
+            0xF8..=0xFF => Instruction::Set(7, reg),
         }
     }
 
     fn execute(&mut self, op: Instruction) {
         match op {
-            Instruction::Load(dest, src) => (),
-            Instruction::Add(loc) => (),
-            Instruction::Adc(loc) => (),
-            Instruction::Sub(loc) => (),
-            Instruction::Sbc(loc) => (),
-            Instruction::And(loc) => (),
-            Instruction::Xor(loc) => (),
-            Instruction::Or(loc) => (),
-            Instruction::Cp(loc) => (),
-            Instruction::Halt => (),
             Instruction::Nop => (),
+            _ => unimplemented!("TODO")
         }
     }
 
