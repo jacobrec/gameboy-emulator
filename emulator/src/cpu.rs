@@ -109,7 +109,7 @@ impl CPU {
         let data = self.next();
         let reg = Self::register_from_data(data);
         let regl = Location::Register(reg);
-        match data {
+        match data { // https://gbdev.io/gb-opcodes/optables/
             0x00 => Instruction::Nop,
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
             0x76 => Instruction::Halt,
