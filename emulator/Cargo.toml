@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["Jacob Reckhard <jacobreckhard@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+name="cli-runner"
+path="src/main.rs"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

@@ -68,6 +68,14 @@ impl CPU {
         self.execute(instruction);
     }
 
+    pub fn print_state(&self) {
+        println!("CLK: {} | PC: {} | SP: {} | F: {} | A: {} | \
+                  B: {} | C: {} | D: {} | E: {} | H: {} | L: {}",
+                 self.cycles, self.pc, self.sp, self.f(), self.a(),
+                 self.b(), self.c(), self.d(), self.e(), self.h(), self.l()
+        )
+    }
+
     fn clock(&mut self) {
         self.cycles += 4; // Each CPU is 4 cycles I belive
         self.bus.cpu_tick();
@@ -80,7 +88,9 @@ impl CPU {
         return data
     }
     fn next16(&mut self) -> u16 {
-        ((self.next() as u16) << 8) | self.next() as u16
+        let lower = self.next() as u16;
+        let upper = (self.next() as u16) << 8;
+        upper | lower
     }
     fn register_from_data(data: u8) -> RegisterLoc {
         match (data & 0b111) {
@@ -165,6 +175,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
+        print!("{} => ", op);
         match op {
             Instruction::Nop => (),
             _ => unimplemented!("TODO")

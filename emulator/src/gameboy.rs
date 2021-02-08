@@ -45,9 +45,14 @@ impl Gameboy {
     }
 
     pub fn tick(&mut self) {
+        self.cpu.tick()
     }
     pub fn get_screen(&self) -> crate::ppu::Canvas {
         return self.cpu.get_screen()
+    }
+
+    pub fn print_cpu_state(&self) {
+        self.cpu.print_state();
     }
 }
 
