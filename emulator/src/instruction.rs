@@ -25,6 +25,7 @@ pub enum Location {
     Register16(Register16Loc),
     Immediate(u8),
     Immediate16(u16),
+    HLIndirectDecrement,
     SP,
 }
 
@@ -88,6 +89,7 @@ impl Display for Location {
             Self::Register16(rl) => write!(f, "{}", rl),
             Self::Immediate(b) => write!(f, "${:X}", b),
             Self::Immediate16(b) => write!(f, "${:X}", b),
+            Self::HLIndirectDecrement => write!(f, "(HL-)"),
             Self::SP => write!(f, "SP"),
         }
     }

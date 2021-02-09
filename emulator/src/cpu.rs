@@ -176,6 +176,8 @@ impl CPU {
             0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD SP n16
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
 
+            0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD SP n16
+
             0x76 => Instruction::Halt,
             0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regl),
             0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regl),
@@ -270,12 +272,22 @@ impl CPU {
                     let v8: u8 = match src {
                         Location::Immediate(i) => i,
                         Location::Register(r) => self.get_register(r),
+                        Location::HLIndirectDecrement => {
+                            let hl = self.hl();
+                            self.clock();
+                            self.bus.read(hl)
+                        }
                         _ => panic!("8 bit src in 16 bit load")
                     };
 
                     match dest {
                         Location::Immediate(_) => panic!("Immediate cannot be a destination"),
                         Location::Register(r) => self.set_register(r, v8),
+                        Location::HLIndirectDecrement => {
+                            let hl = self.hl();
+                            self.clock();
+                            self.bus.write(hl, v8)
+                        }
                         _ => panic!("8 bit dest in 16 bit load")
                     }
                 }
