@@ -292,6 +292,12 @@ impl CPU {
                     }
                 }
             },
+            Instruction::Bit(v3, r) => {
+                let eq1: bool = ((self.get_register(r) >> v3) & 1) == 1;
+                self.set_flag(Flag::Zero, eq1);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, true);
+            },
             Instruction::Xor(r) => {
                 let nv = self.a() ^ self.get_register(r);
                 self.set_flag(Flag::Zero, nv != 0);
