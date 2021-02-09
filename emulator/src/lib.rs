@@ -28,7 +28,7 @@ pub fn init(romdata: Vec<u8>) {
 pub fn update(x: isize) {
     for _ in 0..x {
         unsafe {
-          GAMEBOY.tick();
+          // GAMEBOY.tick();
           X += 1
         }
     }
