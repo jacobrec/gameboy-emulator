@@ -21,6 +21,8 @@ fn main() {
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
+
+    gameboy.print_cpu_state();
     for _ in 0..100 {
         gameboy.tick();
         gameboy.print_cpu_state();

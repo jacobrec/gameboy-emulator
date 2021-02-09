@@ -63,6 +63,32 @@ impl CPU {
         (self.f() >> bit) & 1
     }
 
+    fn get_register(&self, r: RegisterLoc) -> u8{
+        match r {
+            RegisterLoc::A => self.a(),
+            RegisterLoc::B => self.b(),
+            RegisterLoc::C => self.c(),
+            RegisterLoc::D => self.d(),
+            RegisterLoc::E => self.e(),
+            RegisterLoc::H => self.h(),
+            RegisterLoc::L => self.l(),
+            RegisterLoc::MemHL => unimplemented!("(HL) indirect lookup"), // TODO: this problably is an extra tick too
+        }
+    }
+
+    fn set_register(&mut self, r: RegisterLoc, val: u8) {
+        match r {
+            RegisterLoc::A => self.set_a(val),
+            RegisterLoc::B => self.set_b(val),
+            RegisterLoc::C => self.set_c(val),
+            RegisterLoc::D => self.set_d(val),
+            RegisterLoc::E => self.set_e(val),
+            RegisterLoc::H => self.set_h(val),
+            RegisterLoc::L => self.set_l(val),
+            RegisterLoc::MemHL => unimplemented!("(HL) indirect lookup"), // TODO: this problably is an extra tick too
+        }
+    }
+
     pub fn tick(&mut self) {
         let instruction = self.next_op();
         self.execute(instruction);
@@ -93,7 +119,7 @@ impl CPU {
         upper | lower
     }
     fn register_from_data(data: u8) -> RegisterLoc {
-        match (data & 0b111) {
+        match data & 0b111 {
             0 => RegisterLoc::B,
             1 => RegisterLoc::C,
             2 => RegisterLoc::D,
@@ -176,8 +202,44 @@ impl CPU {
 
     fn execute(&mut self, op: Instruction) {
         print!("{} => ", op);
+        fn isLoc16Bit (l: Location) -> bool {
+            match l {
+                Location::Immediate16(_) => true,
+                Location::SP => true,
+                _ => false,
+            }
+        };
+
         match op {
             Instruction::Nop => (),
+            Instruction::Load(dest, src) => {
+                let is16BitMode = isLoc16Bit(dest) || isLoc16Bit(src);
+                if is16BitMode {
+                    let v16: u16 = match src {
+                        Location::Immediate16(i) => i,
+                        Location::SP => self.sp,
+                        _ => panic!("8 bit src in 16 bit load")
+                    };
+
+                    match dest {
+                        Location::Immediate16(_) => panic!("Immediate cannot be a destination"),
+                        Location::SP => self.sp = v16,
+                        _ => panic!("8 bit dest in 16 bit load")
+                    }
+                } else {
+                    let v8: u8 = match src {
+                        Location::Immediate(i) => i,
+                        Location::Register(r) => self.get_register(r),
+                        _ => panic!("8 bit src in 16 bit load")
+                    };
+
+                    match dest {
+                        Location::Immediate(_) => panic!("Immediate cannot be a destination"),
+                        Location::Register(r) => self.set_register(r, v8),
+                        _ => panic!("8 bit dest in 16 bit load")
+                    }
+                }
+            },
             _ => unimplemented!("TODO")
         }
     }

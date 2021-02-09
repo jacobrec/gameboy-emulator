@@ -8,6 +8,8 @@ mod gameboy;
 use wasm_bindgen::prelude::*;
 
 static mut X: u16 = 0;
+// TODO: Maybe don't use a static mut, and instead pass a reference to the
+// frontend for the gb object, and just get that back each update call
 static mut GAMEBOY: gameboy::Gameboy = gameboy::Gameboy::empty();
 
 
