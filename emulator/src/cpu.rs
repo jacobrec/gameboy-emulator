@@ -63,6 +63,21 @@ impl CPU {
         (self.f() >> bit) & 1
     }
 
+    pub fn set_flag(&mut self, f: Flag, b: bool) {
+        let bit = match f {
+            Flag::Zero => 7,
+            Flag::AddSub => 6,
+            Flag::HalfCarry => 5,
+            Flag::Carry => 4
+        };
+        if b {
+            self.set_f(self.f() | 1 << bit) // set bit
+        } else {
+            self.set_f(self.f() & !(1 << bit)) // clear bit
+        }
+    }
+
+
     fn get_register(&self, r: RegisterLoc) -> u8{
         match r {
             RegisterLoc::A => self.a(),
@@ -158,7 +173,7 @@ impl CPU {
 
             0xCB => self.next_op_extended(),
 
-            _ => panic!("Unimplemented Instruction {}", data)
+            _ => panic!("Unimplemented Instruction 0x{:X}", data)
         }
     }
     fn next_op_extended(&mut self) -> Instruction {
@@ -240,6 +255,11 @@ impl CPU {
                     }
                 }
             },
+            Instruction::Xor(r) => {
+                let nv = self.a() ^ self.get_register(r);
+                self.set_flag(Flag::Zero, nv == 0);
+                self.set_a(nv)
+            }
             _ => unimplemented!("TODO")
         }
     }
