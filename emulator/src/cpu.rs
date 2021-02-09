@@ -1,4 +1,4 @@
-use crate::instruction::{Instruction, Location, RegisterLoc};
+use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc};
 
 enum Flag {
     Zero, AddSub, HalfCarry, Carry
@@ -35,10 +35,10 @@ impl CPU {
     fn f(&self) -> u8 {self.registers[7]}
     fn h(&self) -> u8 {self.registers[0]}
     fn l(&self) -> u8 {self.registers[1]}
-    fn af(&self) -> u16 {(self.a() << 8) as u16 | self.f() as u16}
-    fn bc(&self) -> u16 {(self.b() << 8) as u16 | self.c() as u16}
-    fn de(&self) -> u16 {(self.d() << 8) as u16 | self.e() as u16}
-    fn hl(&self) -> u16 {(self.h() << 8) as u16 | self.l() as u16}
+    fn af(&self) -> u16 {((self.a() as u16) << 8) | self.f() as u16}
+    fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
+    fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
+    fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
 
     fn set_a(&mut self, v: u8) {self.registers[6] = v}
     fn set_b(&mut self, v: u8) {self.registers[4] = v}
@@ -104,14 +104,30 @@ impl CPU {
         }
     }
 
+    fn get_register16(&self, r: Register16Loc) -> u16 {
+        match r {
+            Register16Loc::BC => self.bc(),
+            Register16Loc::DE => self.de(),
+            Register16Loc::HL => self.hl(),
+        }
+    }
+
+    fn set_register16(&mut self, r: Register16Loc, val: u16) {
+        match r {
+            Register16Loc::BC => self.set_bc(val),
+            Register16Loc::DE => self.set_de(val),
+            Register16Loc::HL => self.set_hl(val),
+        }
+    }
+
     pub fn tick(&mut self) {
         let instruction = self.next_op();
         self.execute(instruction);
     }
 
     pub fn print_state(&self) {
-        println!("CLK: {} | PC: {} | SP: {} | F: {} | A: {} | \
-                  B: {} | C: {} | D: {} | E: {} | H: {} | L: {}",
+        println!("CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
+                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}",
                  self.cycles, self.pc, self.sp, self.f(), self.a(),
                  self.b(), self.c(), self.d(), self.e(), self.h(), self.l()
         )
@@ -152,7 +168,12 @@ impl CPU {
         let regl = Location::Register(reg);
         match data { // https://gbdev.io/gb-opcodes/optables/
             0x00 => Instruction::Nop,
+
+            0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())), // LD SP n16
+            0x11 => Instruction::Load(Location::Register16(Register16Loc::DE), Location::Immediate16(self.next16())), // LD SP n16
+            0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD SP n16
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
+
             0x76 => Instruction::Halt,
             0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regl),
             0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regl),
@@ -216,7 +237,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        print!("{} => ", op);
+        print!("{:<15} => ", format!("{}", op));
         fn isLoc16Bit (l: Location) -> bool {
             match l {
                 Location::Immediate16(_) => true,
@@ -232,6 +253,7 @@ impl CPU {
                 if is16BitMode {
                     let v16: u16 = match src {
                         Location::Immediate16(i) => i,
+                        Location::Register16(r) => self.get_register16(r),
                         Location::SP => self.sp,
                         _ => panic!("8 bit src in 16 bit load")
                     };
@@ -239,6 +261,7 @@ impl CPU {
                     match dest {
                         Location::Immediate16(_) => panic!("Immediate cannot be a destination"),
                         Location::SP => self.sp = v16,
+                        Location::Register16(r) => self.set_register16(r, v16),
                         _ => panic!("8 bit dest in 16 bit load")
                     }
                 } else {
@@ -257,7 +280,7 @@ impl CPU {
             },
             Instruction::Xor(r) => {
                 let nv = self.a() ^ self.get_register(r);
-                self.set_flag(Flag::Zero, nv == 0);
+                self.set_flag(Flag::Zero, nv != 0);
                 self.set_a(nv)
             }
             _ => unimplemented!("TODO")

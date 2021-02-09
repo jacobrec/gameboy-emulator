@@ -13,8 +13,16 @@ pub enum RegisterLoc {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub enum Register16Loc {
+    BC,
+    DE,
+    HL,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum Location {
     Register(RegisterLoc),
+    Register16(Register16Loc),
     Immediate(u8),
     Immediate16(u16),
     SP,
@@ -62,11 +70,22 @@ impl Display for RegisterLoc {
     }
 }
 
+impl Display for Register16Loc {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = match self {
+            Self::BC => "BC",
+            Self::DE => "BC",
+            Self::HL => "HL",
+        };
+        write!(f, "{}", s)
+    }
+}
 
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::Register(rl) => write!(f, "{}", rl),
+            Self::Register16(rl) => write!(f, "{}", rl),
             Self::Immediate(b) => write!(f, "${:X}", b),
             Self::Immediate16(b) => write!(f, "${:X}", b),
             Self::SP => write!(f, "SP"),
