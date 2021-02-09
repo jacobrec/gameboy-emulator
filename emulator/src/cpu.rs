@@ -48,6 +48,8 @@ impl CPU {
     fn set_f(&mut self, v: u8) {self.registers[7] = v}
     fn set_h(&mut self, v: u8) {self.registers[0] = v}
     fn set_l(&mut self, v: u8) {self.registers[1] = v}
+
+    // TODO: I'm not 100% sure which order things go in here
     fn set_af(&mut self, v: u16) {self.set_a((v >> 8) as u8); self.set_f((v & 0xFF) as u8)}
     fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}

@@ -39,6 +39,7 @@ impl Bus {
             0x0000..=0x3FFF => self.rom.read(loc),
             0xC000..=0xCFFF => self.ram[loc as usize],
             0xD000..=0xDFFF => self.ram[loc as usize],
+            0x8000..=0x9FFF => self.ppu.read(loc),
             _ => panic!("Unimplemented read range: {}", loc)
         }
     }
@@ -48,6 +49,7 @@ impl Bus {
             0x0000..=0x3FFF => self.rom.write(loc, val),
             0xC000..=0xCFFF => self.ram[loc as usize] = val,
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
+            0x8000..=0x9FFF => self.ppu.write(loc, val),
             _ => panic!("Unimplemented read range: {}", loc)
         }
     }
