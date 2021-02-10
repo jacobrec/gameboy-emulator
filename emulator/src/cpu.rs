@@ -170,14 +170,15 @@ impl CPU {
             _ => unreachable!("The number must be anded with 0b111")
         }
     }
-    fn register16_from_data(data: u8) -> Register16Loc {
+    fn register16_from_data(&self, data: u8) -> Register16Loc {
         //TODO: Implement
-        match data & 0b111 {
-            0 => Register16Loc::BC,
-            1 => Register16Loc::DE,
-            2 => Register16Loc::HL,
-            3 => Register16Loc::AF,
-            _ => unreachable!("The number must be anded with 0b111")
+        let f_reg = self.f();
+        match data & 0b1111 {
+            1 => Register16Loc::BC,
+            3 => Register16Loc::DE,
+            5 => Register16Loc::HL,
+            f => Register16Loc::AF,
+            _ => panic!("'register16_from_data()' may have been implemented incorrectly. This is the data being matched -> 0x{:02X}", data) 
         }
     }
 
@@ -192,7 +193,7 @@ impl CPU {
 
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
-        //TODO: Implement register_from_data function that can read 16 bit registers  
+        
         let reg = Self::register_from_data(data);
         let regloc = Location::Register(reg);
         match data { // https://gbdev.io/gb-opcodes/optables/
@@ -234,12 +235,19 @@ impl CPU {
             0xB0..=0xB7 => Instruction::Or(reg),
             0xB8..=0xBF => Instruction::Cp(reg),
 
-            // bottom quarter
-            //implement POP and Push stack operations
-            0xC1 => Instruction::Pop(Self::register16_from_data(data)),
-            0xD1 => Instruction::Pop(Self::register16_from_data(data)),
-            0xE1 => Instruction::Pop(Self::register16_from_data(data)),
-            // 0xF1 => _,
+            //TODO: Implement register_from_data function that can read 16 bit registers  
+            // Bottom quarter ~ 0xC0 - 0xFF
+            0xC1 => Instruction::Pop(self.register16_from_data(data)),
+            0xC5 => Instruction::Push(self.register16_from_data(data)),
+
+            0xD1 => Instruction::Pop(self.register16_from_data(data)),
+            0xD5 => Instruction::Push(self.register16_from_data(data)),
+
+            0xE1 => Instruction::Pop(self.register16_from_data(data)),
+            0xE5 => Instruction::Push(self.register16_from_data(data)),
+
+            0xF1 => Instruction::Pop(self.register16_from_data(data)), 
+            0xF5 => Instruction::Push(self.register16_from_data(data)), 
 
             0xCB => self.next_op_extended(),
 
@@ -353,15 +361,44 @@ impl CPU {
                 self.set_flag(Flag::Carry, false);
                 self.set_a(nv)
             },
-            Instruction::Pop(r) => {
+            Instruction::Pop(r) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#POP_r16
                 let n16 = self.next16();
                 match r {
                     Register16Loc::BC => self.set_bc(n16),
                     Register16Loc::DE => self.set_de(n16),
                     Register16Loc::HL => self.set_hl(n16),
-                    Register16Loc::AF => self.set_af(n16),
+                    Register16Loc::AF => {
+                        self.set_af(n16);
+                        let f = &self.f(); 
+                        let zflag = if ((f >> 7) & 0x1) == 1 {true} else {false};
+                        let nflag = if ((f >> 6) & 0x1) == 1 {true} else {false};
+                        let hflag = if ((f >> 5) & 0x1) == 1 {true} else {false};
+                        let cflag = if ((f >> 4) & 0x1) == 1 {true} else {false};
+                        self.set_flag(Flag::Zero, zflag);
+                        self.set_flag(Flag::AddSub, nflag);
+                        self.set_flag(Flag::HalfCarry, hflag);
+                        self.set_flag(Flag::Carry, cflag);
+                    } 
                 }
-            }
+                let old_cycles = self.cycles;
+                loop {
+                    self.clock();
+                    if self.cycles == (old_cycles+12) {break;}
+                }
+            },
+            Instruction::Push(r) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#PUSH_r16
+                match r {
+                    Register16Loc::BC => self.sp += &self.bc(),
+                    Register16Loc::DE => self.sp += &self.de(),
+                    Register16Loc::HL => self.sp += &self.hl(),
+                    Register16Loc::AF => self.sp += &self.af(),
+                }
+                let old_cycles = self.cycles;
+                loop {
+                    self.clock();
+                    if self.cycles == (old_cycles+16) {break;}
+                }
+            },
             Instruction::Jmp(j, f) => {
                 let b = self.check_jmp_flag(f);
                 if b {
