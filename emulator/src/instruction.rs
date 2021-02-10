@@ -123,6 +123,8 @@ impl Display for Instruction {
             Self::Bit(i, r)     => ("Bit", format!(" {},{}", i, r)),
             Self::Res(i, r)     => ("RES", format!(" {},{}", i, r)),
             Self::Set(i, r)     => ("SET", format!(" {},{}", i, r)),
+            Self::Pop(r)        => ("POP", format!(" {}", r)),
+            Self::Push(r)        => ("PUSH", format!(" {}", r)),
             Self::Halt  => ("HALT", String::new()),
         };
         write!(f, "{}{}", op, args)
