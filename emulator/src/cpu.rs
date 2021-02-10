@@ -300,7 +300,10 @@ impl CPU {
             },
             Instruction::Xor(r) => {
                 let nv = self.a() ^ self.get_register(r);
-                self.set_flag(Flag::Zero, nv != 0);
+                self.set_flag(Flag::Zero, nv == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, false);
                 self.set_a(nv)
             }
             _ => unimplemented!("TODO")
