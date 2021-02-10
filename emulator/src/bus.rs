@@ -11,7 +11,7 @@ Memory Map
 = D000-EFFF = 4KB  Work RAM Bank 1
 = E000-FDFF = Mirror of C000-DDFF
 = FE00-FE9F = OAM RAM
-= FEA0-FEFF = Unused
+= FEA0-FEFF = Unused. Reads return 0xFF when OAM blocked, otherwise 00
 = FF00-FF7F = I/O registers
 = FF80-FFFE = HRAM
 = FFFF-FFFF = Interrupt Enable Register
@@ -21,6 +21,7 @@ pub struct Bus {
     rom: ROM,
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
+    apu: crate::apu::APU,
 }
 
 impl Bus {
@@ -31,7 +32,8 @@ impl Bus {
     pub const fn new(rom: ROM) -> Self {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
-        Bus { rom, ram, ppu }
+        let apu = crate::apu::APU::new();
+        Bus { rom, ram, ppu, apu }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -40,6 +42,8 @@ impl Bus {
             0xC000..=0xCFFF => self.ram[loc as usize],
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
+            0xFF10..=0xFF26 => self.apu.read(loc),
+            0xFF30..=0xFF3F => self.apu.read(loc),
             _ => panic!("Unimplemented read range: {:04X}", loc)
         }
     }
@@ -50,6 +54,8 @@ impl Bus {
             0xC000..=0xCFFF => self.ram[loc as usize] = val,
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
+            0xFF10..=0xFF26 => self.apu.write(loc, val),
+            0xFF30..=0xFF3F => self.apu.write(loc, val),
             _ => panic!("Unimplemented write range: {:04X}", loc)
         }
     }
@@ -59,5 +65,6 @@ impl Bus {
         // PPU runs at 2MHz
         self.ppu.tick();
         self.ppu.tick();
+        // TODO: call apu tick
     }
 }

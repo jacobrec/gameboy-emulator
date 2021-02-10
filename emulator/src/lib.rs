@@ -1,5 +1,6 @@
 mod utils;
 mod cpu;
+mod apu;
 mod bus;
 mod ppu;
 mod instruction;
