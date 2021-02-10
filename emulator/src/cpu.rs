@@ -50,6 +50,7 @@ impl CPU {
     fn set_l(&mut self, v: u8) {self.registers[1] = v}
 
     // TODO: I'm not 100% sure which order things go in here
+    // Should be set low (C , E or L) then set high (B, D or H)
     fn set_af(&mut self, v: u16) {self.set_a((v >> 8) as u8); self.set_f((v & 0xFF) as u8)}
     fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
@@ -111,6 +112,7 @@ impl CPU {
             Register16Loc::BC => self.bc(),
             Register16Loc::DE => self.de(),
             Register16Loc::HL => self.hl(),
+            Register16Loc::AF => self.af(),
         }
     }
 
@@ -119,6 +121,7 @@ impl CPU {
             Register16Loc::BC => self.set_bc(val),
             Register16Loc::DE => self.set_de(val),
             Register16Loc::HL => self.set_hl(val),
+            Register16Loc::AF => self.set_af(val),
         }
     }
 
@@ -164,10 +167,21 @@ impl CPU {
             _ => unreachable!("The number must be anded with 0b111")
         }
     }
+    fn register16_from_data(data: u8) -> Register16Loc {
+        //TODO: Implement
+        match data & 0b111 {
+            0 => Register16Loc::BC,
+            1 => Register16Loc::DE,
+            2 => Register16Loc::HL,
+            3 => Register16Loc::AF,
+            _ => unreachable!("The number must be anded with 0b111")
+        }
+    }
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
+        //TODO: Implement register_from_data function that can read 16 bit registers  
         let reg = Self::register_from_data(data);
-        let regl = Location::Register(reg);
+        let regloc = Location::Register(reg);
         match data { // https://gbdev.io/gb-opcodes/optables/
             0x00 => Instruction::Nop,
 
@@ -179,14 +193,14 @@ impl CPU {
             0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD SP n16
 
             0x76 => Instruction::Halt,
-            0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regl),
-            0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regl),
-            0x50..=0x57 => Instruction::Load(Location::Register(RegisterLoc::D), regl),
-            0x58..=0x5F => Instruction::Load(Location::Register(RegisterLoc::E), regl),
-            0x60..=0x67 => Instruction::Load(Location::Register(RegisterLoc::H), regl),
-            0x68..=0x6F => Instruction::Load(Location::Register(RegisterLoc::L), regl),
-            0x70..=0x77 => Instruction::Load(Location::Register(RegisterLoc::MemHL), regl),
-            0x78..=0x7F => Instruction::Load(Location::Register(RegisterLoc::A), regl),
+            0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regloc),
+            0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regloc),
+            0x50..=0x57 => Instruction::Load(Location::Register(RegisterLoc::D), regloc),
+            0x58..=0x5F => Instruction::Load(Location::Register(RegisterLoc::E), regloc),
+            0x60..=0x67 => Instruction::Load(Location::Register(RegisterLoc::H), regloc),
+            0x68..=0x6F => Instruction::Load(Location::Register(RegisterLoc::L), regloc),
+            0x70..=0x77 => Instruction::Load(Location::Register(RegisterLoc::MemHL), regloc),
+            0x78..=0x7F => Instruction::Load(Location::Register(RegisterLoc::A), regloc),
             0x80..=0x87 => Instruction::Add(reg),
             0x88..=0x8F => Instruction::Adc(reg),
             0x90..=0x97 => Instruction::Sub(reg),
@@ -195,6 +209,12 @@ impl CPU {
             0xA8..=0xAF => Instruction::Xor(reg),
             0xB0..=0xB7 => Instruction::Or(reg),
             0xB8..=0xBF => Instruction::Cp(reg),
+
+            //implement POP and Push stack operations
+            0xC1 => Instruction::Pop(Self::register16_from_data(data)),
+            0xD1 => Instruction::Pop(Self::register16_from_data(data)),
+            0xE1 => Instruction::Pop(Self::register16_from_data(data)),
+            // 0xF1 => _,
 
             0xCB => self.next_op_extended(),
 
@@ -305,6 +325,15 @@ impl CPU {
                 self.set_flag(Flag::HalfCarry, false);
                 self.set_flag(Flag::Carry, false);
                 self.set_a(nv)
+            },
+            Instruction::Pop(r) => {
+                let n16 = self.next16();
+                match r {
+                    Register16Loc::BC => self.set_bc(n16),
+                    Register16Loc::DE => self.set_de(n16),
+                    Register16Loc::HL => self.set_hl(n16),
+                    Register16Loc::AF => self.set_af(n16),
+                }
             }
             _ => unimplemented!("TODO")
         }

@@ -17,6 +17,7 @@ pub enum Register16Loc {
     BC,
     DE,
     HL,
+    AF,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -51,6 +52,8 @@ pub enum Instruction {
     Bit (u8, RegisterLoc),
     Res (u8, RegisterLoc),
     Set (u8, RegisterLoc),
+    Pop (Register16Loc),
+    Push (Register16Loc),
     Halt,
     Nop
 }
@@ -75,8 +78,9 @@ impl Display for Register16Loc {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let s = match self {
             Self::BC => "BC",
-            Self::DE => "BC",
+            Self::DE => "DE",
             Self::HL => "HL",
+            Self::AF => "AF",
         };
         write!(f, "{}", s)
     }
