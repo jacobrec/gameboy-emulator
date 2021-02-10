@@ -206,6 +206,15 @@ impl CPU {
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
             0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD (HL-) n16
 
+            0x06 => Instruction::Load(Location::Register(RegisterLoc::B), Location::Immediate(self.next())),
+            0x16 => Instruction::Load(Location::Register(RegisterLoc::D), Location::Immediate(self.next())),
+            0x26 => Instruction::Load(Location::Register(RegisterLoc::H), Location::Immediate(self.next())),
+            0x36 => Instruction::Load(Location::Register(RegisterLoc::MemHL), Location::Immediate(self.next())),
+            0x0E => Instruction::Load(Location::Register(RegisterLoc::C), Location::Immediate(self.next())),
+            0x1E => Instruction::Load(Location::Register(RegisterLoc::E), Location::Immediate(self.next())),
+            0x2E => Instruction::Load(Location::Register(RegisterLoc::L), Location::Immediate(self.next())),
+            0x3E => Instruction::Load(Location::Register(RegisterLoc::A), Location::Immediate(self.next())),
+
             // middle 2 quarters
             0x76 => Instruction::Halt,
             0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regloc),
