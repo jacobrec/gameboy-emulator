@@ -1,6 +1,20 @@
 use std::fmt::Display;
 
 #[derive(Copy, Clone, Debug)]
+pub enum JmpFlag {
+    NoZero,
+    Zero,
+    Carry,
+    NoCarry,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum Jump {
+    Relative(i8),
+    Absolute(u16),
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum RegisterLoc {
     A,
     B,
@@ -54,8 +68,30 @@ pub enum Instruction {
     Set (u8, RegisterLoc),
     Pop (Register16Loc),
     Push (Register16Loc),
+    Jmp (Jump, JmpFlag),
     Halt,
     Nop
+}
+
+impl Display for Jump {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Absolute(u) => write!(f, "${:04X}", u),
+            Self::Relative(u) => write!(f, "{}", u),
+        }
+    }
+}
+
+impl Display for JmpFlag {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = match self {
+            Self::Carry => "C",
+            Self::NoCarry => "NC",
+            Self::Zero => "Z",
+            Self::NoZero => "NZ",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl Display for RegisterLoc {
@@ -125,6 +161,12 @@ impl Display for Instruction {
             Self::Set(i, r)     => ("SET", format!(" {},{}", i, r)),
             Self::Pop(r)        => ("POP", format!(" {}", r)),
             Self::Push(r)        => ("PUSH", format!(" {}", r)),
+            Self::Jmp(j, f)    => {
+                (match j {
+                    Jump::Absolute(_) => "JP",
+                    Jump::Relative(_) => "JR"
+                }, format!(" {},{}", f, j))
+            }
             Self::Halt  => ("HALT", String::new()),
         };
         write!(f, "{}{}", op, args)

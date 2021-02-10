@@ -1,4 +1,4 @@
-use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc};
+use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag};
 
 enum Flag {
     Zero, AddSub, HalfCarry, Carry
@@ -56,14 +56,14 @@ impl CPU {
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
     fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
 
-    pub fn get_flag(&self, f: Flag) -> u8 {
+    pub fn get_flag(&self, f: Flag) -> bool {
         let bit = match f {
             Flag::Zero => 7,
             Flag::AddSub => 6,
             Flag::HalfCarry => 5,
             Flag::Carry => 4
         };
-        (self.f() >> bit) & 1
+        1 == ((self.f() >> bit) & 1)
     }
 
     pub fn set_flag(&mut self, f: Flag, b: bool) {
@@ -149,6 +149,9 @@ impl CPU {
         self.clock();
         return data
     }
+    fn next_signed(&mut self) -> i8 {
+        self.next() as i8
+    }
     fn next16(&mut self) -> u16 {
         let lower = self.next() as u16;
         let upper = (self.next() as u16) << 8;
@@ -177,6 +180,16 @@ impl CPU {
             _ => unreachable!("The number must be anded with 0b111")
         }
     }
+
+    fn check_jmp_flag(&self, f: JmpFlag) -> bool {
+        match f {
+            JmpFlag::Zero => self.get_flag(Flag::Zero),
+            JmpFlag::NoZero => !self.get_flag(Flag::Zero),
+            JmpFlag::Carry => self.get_flag(Flag::Carry),
+            JmpFlag::NoCarry => !self.get_flag(Flag::Carry),
+        }
+    }
+
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
         //TODO: Implement register_from_data function that can read 16 bit registers  
@@ -185,13 +198,15 @@ impl CPU {
         match data { // https://gbdev.io/gb-opcodes/optables/
             0x00 => Instruction::Nop,
 
-            0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())), // LD SP n16
-            0x11 => Instruction::Load(Location::Register16(Register16Loc::DE), Location::Immediate16(self.next16())), // LD SP n16
-            0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD SP n16
+            // top quarter
+            0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())), // LD BC n16
+            0x11 => Instruction::Load(Location::Register16(Register16Loc::DE), Location::Immediate16(self.next16())), // LD DE n16
+            0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), JmpFlag::NoZero), // JR NZ, r8
+            0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD HL n16
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
+            0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD (HL-) n16
 
-            0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD SP n16
-
+            // middle 2 quarters
             0x76 => Instruction::Halt,
             0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regloc),
             0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regloc),
@@ -210,6 +225,7 @@ impl CPU {
             0xB0..=0xB7 => Instruction::Or(reg),
             0xB8..=0xBF => Instruction::Cp(reg),
 
+            // bottom quarter
             //implement POP and Push stack operations
             0xC1 => Instruction::Pop(Self::register16_from_data(data)),
             0xD1 => Instruction::Pop(Self::register16_from_data(data)),
@@ -218,7 +234,7 @@ impl CPU {
 
             0xCB => self.next_op_extended(),
 
-            _ => panic!("Unimplemented Instruction 0x{:X}", data)
+            _ => panic!("Unimplemented Instruction 0x{:02X}", data)
         }
     }
     fn next_op_extended(&mut self) -> Instruction {
@@ -294,6 +310,7 @@ impl CPU {
                         Location::Register(r) => self.get_register(r),
                         Location::HLIndirectDecrement => {
                             let hl = self.hl();
+                            self.set_hl(hl - 1);
                             self.clock();
                             self.bus.read(hl)
                         }
@@ -305,6 +322,7 @@ impl CPU {
                         Location::Register(r) => self.set_register(r, v8),
                         Location::HLIndirectDecrement => {
                             let hl = self.hl();
+                            self.set_hl(hl - 1);
                             self.clock();
                             self.bus.write(hl, v8)
                         }
@@ -314,7 +332,7 @@ impl CPU {
             },
             Instruction::Bit(v3, r) => {
                 let eq1: bool = ((self.get_register(r) >> v3) & 1) == 1;
-                self.set_flag(Flag::Zero, eq1);
+                self.set_flag(Flag::Zero, !eq1);
                 self.set_flag(Flag::AddSub, false);
                 self.set_flag(Flag::HalfCarry, true);
             },
@@ -335,6 +353,17 @@ impl CPU {
                     Register16Loc::AF => self.set_af(n16),
                 }
             }
+            Instruction::Jmp(j, f) => {
+                let b = self.check_jmp_flag(f);
+                if b {
+                    let dest = match j {
+                        Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
+                        Jump::Absolute(v16) => v16,
+                    };
+                    self.clock();
+                    self.pc = dest;
+                }
+            },
             _ => unimplemented!("TODO")
         }
     }

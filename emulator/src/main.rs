@@ -23,10 +23,9 @@ fn main() {
         .build();
 
     gameboy.print_cpu_state();
-    for _ in 0..100 {
+    loop {
         gameboy.tick();
         gameboy.print_cpu_state();
     }
 
-    println!("Hello, world!")
 }
