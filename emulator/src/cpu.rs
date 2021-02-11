@@ -301,7 +301,7 @@ impl CPU {
                 Location::SP => true,
                 _ => false,
             }
-        };
+        }
 
         match op {
             Instruction::Nop => (),
