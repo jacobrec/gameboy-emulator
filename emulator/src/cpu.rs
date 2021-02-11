@@ -418,3 +418,16 @@ impl CPU {
     }
 
 }
+
+#[cfg(test)]
+mod test {
+
+
+    #[test]
+    fn test_push() {
+    }
+
+    #[test]
+    fn test_pop() {
+    }
+}
