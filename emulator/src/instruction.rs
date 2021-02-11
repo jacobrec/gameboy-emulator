@@ -42,6 +42,7 @@ pub enum Location {
     Immediate16(u16),
     HLIndirectDecrement,
     SP,
+    ZeroPageC,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -131,6 +132,7 @@ impl Display for Location {
             Self::Immediate16(b) => write!(f, "${:X}", b),
             Self::HLIndirectDecrement => write!(f, "(HL-)"),
             Self::SP => write!(f, "SP"),
+            Self::ZeroPageC => write!(f, "($FF00+C)"),
         }
     }
 }
@@ -139,7 +141,7 @@ impl Display for Instruction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let (op, args) = match self {
             Self::Nop           => ("NOP", String::new()),
-            Self::Load(l1, l2)  => ("LOAD", format!(" {},{}", l1, l2)),
+            Self::Load(l1, l2)  => ("LD", format!(" {},{}", l1, l2)),
             Self::Add(r)        => ("ADD", format!(" {}", r)),
             Self::Adc(r)        => ("ADC", format!(" {}", r)),
             Self::Sub(r)        => ("SUB", format!(" {}", r)),
@@ -156,7 +158,7 @@ impl Display for Instruction {
             Self::Sra(r)        => ("SRA", format!(" {}", r)),
             Self::Swap(r)       => ("SWAP", format!(" {}", r)),
             Self::Srl(r)        => ("SRL", format!(" {}", r)),
-            Self::Bit(i, r)     => ("Bit", format!(" {},{}", i, r)),
+            Self::Bit(i, r)     => ("BIT", format!(" {},{}", i, r)),
             Self::Res(i, r)     => ("RES", format!(" {},{}", i, r)),
             Self::Set(i, r)     => ("SET", format!(" {},{}", i, r)),
             Self::Pop(r)        => ("POP", format!(" {}", r)),

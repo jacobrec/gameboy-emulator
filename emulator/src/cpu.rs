@@ -244,6 +244,7 @@ impl CPU {
             0xD5 => Instruction::Push(self.register16_from_data(data)),
 
             0xE1 => Instruction::Pop(self.register16_from_data(data)),
+            0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),
             0xE5 => Instruction::Push(self.register16_from_data(data)),
 
             0xF1 => Instruction::Pop(self.register16_from_data(data)), 
@@ -325,6 +326,7 @@ impl CPU {
                     let v8: u8 = match src {
                         Location::Immediate(i) => i,
                         Location::Register(r) => self.get_register(r),
+                        Location::ZeroPageC => self.bus.read(0xFF00 + (self.c() as u16)),
                         Location::HLIndirectDecrement => {
                             let hl = self.hl();
                             self.set_hl(hl - 1);
@@ -337,6 +339,7 @@ impl CPU {
                     match dest {
                         Location::Immediate(_) => panic!("Immediate cannot be a destination"),
                         Location::Register(r) => self.set_register(r, v8),
+                        Location::ZeroPageC => self.bus.write(0xFF00 + (self.c() as u16), v8),
                         Location::HLIndirectDecrement => {
                             let hl = self.hl();
                             self.set_hl(hl - 1);

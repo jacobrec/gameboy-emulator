@@ -5,6 +5,7 @@ mod utils;
 mod cpu;
 mod bus;
 mod ppu;
+mod apu;
 mod instruction;
 mod gameboy;
 
