@@ -69,6 +69,8 @@ pub enum Instruction {
     Set (u8, RegisterLoc),
     Pop (Register16Loc),
     Push (Register16Loc),
+    Ret (Option<JmpFlag>),
+    Reti,
     Jmp (Jump, JmpFlag),
     Halt,
     Nop
@@ -162,7 +164,21 @@ impl Display for Instruction {
             Self::Res(i, r)     => ("RES", format!(" {},{}", i, r)),
             Self::Set(i, r)     => ("SET", format!(" {},{}", i, r)),
             Self::Pop(r)        => ("POP", format!(" {}", r)),
-            Self::Push(r)        => ("PUSH", format!(" {}", r)),
+            Self::Push(r)       => ("PUSH", format!(" {}", r)),
+            Self::Reti          => ("RETI", String::new()),
+            Self::Ret(cc)       => {
+                if let Some(flag) = cc {
+                    (match flag {
+                        JmpFlag::NoZero => "NZ",
+                        JmpFlag::Zero   => "Z",
+                        JmpFlag::Carry  => "C",
+                        JmpFlag::NoCarry=> "NC",
+                    }, format!("RET {}", flag))
+                }
+                else {
+                    ("RET", String::new())
+                }      
+            }
             Self::Jmp(j, f)    => {
                 (match j {
                     Jump::Absolute(_) => "JP",

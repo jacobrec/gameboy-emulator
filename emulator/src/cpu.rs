@@ -237,11 +237,17 @@ impl CPU {
 
             //TODO: Implement register_from_data function that can read 16 bit registers  
             // Bottom quarter ~ 0xC0 - 0xFF
+            0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),
             0xC1 => Instruction::Pop(self.register16_from_data(data)),
             0xC5 => Instruction::Push(self.register16_from_data(data)),
+            0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),
+            0xC9 => Instruction::Ret(None),
 
+            0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),
             0xD1 => Instruction::Pop(self.register16_from_data(data)),
             0xD5 => Instruction::Push(self.register16_from_data(data)),
+            0xD8 => Instruction::Ret(Some(JmpFlag::Carry)), 
+            0xD9 => Instruction::Reti,
 
             0xE1 => Instruction::Pop(self.register16_from_data(data)),
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),
@@ -402,6 +408,17 @@ impl CPU {
                     if self.cycles == (old_cycles+16) {break;}
                 }
             },
+            Instruction::Reti => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RETI
+                // Return from subroutine and enable interupts 
+            },
+            Instruction::Ret(cc) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RET_cc
+
+                if let Some(flag) = cc { //
+                    //TODO : For each jumpflag return from subroutine if jumpflag is met 
+                } else { // No flag 
+                    //TODO : Return from subroutine
+                }
+            }
             Instruction::Jmp(j, f) => {
                 let b = self.check_jmp_flag(f);
                 if b {
@@ -425,9 +442,11 @@ mod test {
 
     #[test]
     fn test_push() {
+        assert_eq!(2+2, 4);
     }
 
     #[test]
     fn test_pop() {
+        assert_eq!(2+2, 4);
     }
 }
