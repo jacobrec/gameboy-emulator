@@ -171,14 +171,13 @@ impl CPU {
         }
     }
     fn register16_from_data(&self, data: u8) -> Register16Loc {
-        //TODO: Implement
-        let f_reg = self.f();
-        match data & 0b1111 {
-            1 => Register16Loc::BC,
-            3 => Register16Loc::DE,
-            5 => Register16Loc::HL,
-            f => Register16Loc::AF,
-            _ => panic!("'register16_from_data()' may have been implemented incorrectly. This is the data being matched -> 0x{:02X}", data) 
+        // Needs To be better generalized 
+        match data & 0xF0 {
+            0xC0 => Register16Loc::BC,
+            0xD0 => Register16Loc::DE,
+            0xE0 => Register16Loc::HL,
+            0xF0 => Register16Loc::AF,
+            _ => panic!("'register16_from_data was called when it wasn't supposed to be") 
         }
     }
 
@@ -397,10 +396,30 @@ impl CPU {
             },
             Instruction::Push(r) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#PUSH_r16
                 match r {
-                    Register16Loc::BC => self.sp += &self.bc(),
-                    Register16Loc::DE => self.sp += &self.de(),
-                    Register16Loc::HL => self.sp += &self.hl(),
-                    Register16Loc::AF => self.sp += &self.af(),
+                    Register16Loc::BC => {
+                        if self.sp > 0 {self.sp += 1}
+                        self.bus.stack_push(self.b());
+                        self.sp += 1; 
+                        self.bus.stack_push(self.c());
+                    },
+                    Register16Loc::DE => {
+                        if self.sp > 0 {self.sp += 1}
+                        self.bus.stack_push(self.d());
+                        self.sp += 1; 
+                        self.bus.stack_push(self.e());
+                    },
+                    Register16Loc::HL => {
+                        if self.sp > 0 {self.sp += 1}
+                        self.bus.stack_push(self.h());
+                        self.sp += 1; 
+                        self.bus.stack_push(self.l());
+                    },
+                    Register16Loc::AF => { 
+                        if self.sp > 0 {self.sp += 1}
+                        self.bus.stack_push(self.a());
+                        self.sp += 1; 
+                        self.bus.stack_push(self.f());
+                    },
                 }
                 let old_cycles = self.cycles;
                 loop {
@@ -438,15 +457,70 @@ impl CPU {
 
 #[cfg(test)]
 mod test {
+    use crate::bus::Bus;
+    use crate::gameboy::ROM;
+    use crate::cpu::{CPU, Flag};
+    use crate::instruction::{Register16Loc, RegisterLoc};
 
 
     #[test]
     fn test_push() {
-        assert_eq!(2+2, 4);
+        let rom_data = vec![0xC5,0xD5,0xE5,0xF5];
+        let mut test_cpu = CPU::new(Bus::new(ROM::from_data(rom_data)));
+
+        test_cpu.set_register16(Register16Loc::BC, 0x0B0C);
+        test_cpu.set_register16(Register16Loc::DE, 0x0D0E);
+        test_cpu.set_register16(Register16Loc::HL, 0x080C);
+        test_cpu.set_register16(Register16Loc::AF, 0x0A00);
+        
+        // Eventually move to seperate unit test 
+        assert_eq!(test_cpu.get_register(RegisterLoc::B), 0x0B);
+        assert_eq!(test_cpu.get_register(RegisterLoc::C), 0x0C);
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x0D);
+        assert_eq!(test_cpu.get_register(RegisterLoc::E), 0x0E);
+        assert_eq!(test_cpu.get_register(RegisterLoc::H), 0x08);
+        assert_eq!(test_cpu.get_register(RegisterLoc::L), 0x0C);
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x0A);
+        // need to check each flag 
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+
+        // Executes 0xC5
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 1);
+        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C]);
+
+        // Executes 0xD5
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 3);
+        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E]);
+
+        // Executes 0xE5
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 5);
+        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x0C]);
+        
+        // Executes 0xF5
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 7);
+        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x0C, 0x0A, 0]);
+        
     }
 
     #[test]
     fn test_pop() {
-        assert_eq!(2+2, 4);
+        assert_eq!(1, 1);
+    }
+
+    #[test]
+    fn test_ret() {
+        assert_eq!(1, 1);
+    }
+
+    #[test]
+    fn test_reti() {
+        assert_eq!(1, 1);
     }
 }

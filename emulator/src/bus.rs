@@ -22,6 +22,7 @@ pub struct Bus {
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
+    stack: std::vec::Vec<u8>,
 }
 
 impl Bus {
@@ -33,7 +34,8 @@ impl Bus {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
-        Bus { rom, ram, ppu, apu }
+        let stack = Vec::new();
+        Bus { rom, ram, ppu, apu, stack }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -66,5 +68,17 @@ impl Bus {
         self.ppu.tick();
         self.ppu.tick();
         // TODO: call apu tick
+    }
+
+    pub fn stack_push(&mut self, data: u8) {
+        self.stack.push(data);
+    }
+
+    pub fn stack_pop(&mut self) -> Option<u8> {
+        self.stack.pop()
+    }
+
+    pub fn get_stack(&self) -> &[u8] {
+        &self.stack
     }
 }
