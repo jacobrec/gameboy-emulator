@@ -370,22 +370,54 @@ impl CPU {
                 self.set_a(nv)
             },
             Instruction::Pop(r) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#POP_r16
-                let n16 = self.next16();
                 match r {
-                    Register16Loc::BC => self.set_bc(n16),
-                    Register16Loc::DE => self.set_de(n16),
-                    Register16Loc::HL => self.set_hl(n16),
+                    Register16Loc::BC => {
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_c(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        self.sp -= 1;
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_b(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        if self.sp > 0 {self.sp -= 1}  
+                    },
+                    Register16Loc::DE => {
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_e(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        self.sp -= 1;
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_d(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        if self.sp > 0 {self.sp -= 1}  
+                    },
+                    Register16Loc::HL => {
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_l(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        self.sp -= 1;
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_h(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        if self.sp > 0 {self.sp -= 1}  
+                    },
                     Register16Loc::AF => {
-                        self.set_af(n16);
-                        let f = &self.f(); 
-                        let zflag = if ((f >> 7) & 0x1) == 1 {true} else {false};
-                        let nflag = if ((f >> 6) & 0x1) == 1 {true} else {false};
-                        let hflag = if ((f >> 5) & 0x1) == 1 {true} else {false};
-                        let cflag = if ((f >> 4) & 0x1) == 1 {true} else {false};
-                        self.set_flag(Flag::Zero, zflag);
-                        self.set_flag(Flag::AddSub, nflag);
-                        self.set_flag(Flag::HalfCarry, hflag);
-                        self.set_flag(Flag::Carry, cflag);
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_f(data);
+                        }else {panic!("Attempted to POP from empty STACK")}
+
+                        self.sp -= 1;
+                        if let Some(data) = self.bus.stack_pop() {
+                            self.set_a(data);
+                        }
+                        else {panic!("Attempted to POP from empty STACK")}
+                        if self.sp > 0 {self.sp -= 1} 
                     } 
                 }
                 let old_cycles = self.cycles;
@@ -434,8 +466,36 @@ impl CPU {
 
                 if let Some(flag) = cc { //
                     //TODO : For each jumpflag return from subroutine if jumpflag is met 
-                } else { // No flag 
+                    match flag {
+                        JmpFlag::Zero => {
+                            
+                        },
+                        JmpFlag::NoZero => {},
+                        JmpFlag::NoCarry => {},
+                        JmpFlag::Carry => {},
+                    }
+                } else { // Regular return
                     //TODO : Return from subroutine
+                    // Essentially POP PC 
+                    if let Some(data) = self.bus.stack_pop() {
+                        // low 8 bits
+                        self.pc = data as u16;
+                    }
+                    else {panic!("Attempted to POP from empty STACK")}
+                    self.sp -= 1;
+                    if let Some(data) = self.bus.stack_pop() {
+                        // high 8 bits 
+                        self.pc = ((data as u16) << 8) | self.pc;
+                    }
+                    else {panic!("Attempted to POP from empty STACK")}
+                    if self.sp > 0 {self.sp -= 1}  
+
+                    let old_cycles = self.cycles;
+                    loop {
+                        self.clock();
+                        if self.cycles == (old_cycles+16) {break;}
+                    }
+
                 }
             }
             Instruction::Jmp(j, f) => {
@@ -462,18 +522,19 @@ mod test {
     use crate::cpu::{CPU, Flag};
     use crate::instruction::{Register16Loc, RegisterLoc};
 
+    fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
+        CPU::new(Bus::new(ROM::from_data(instruction_set)))
+    }
 
     #[test]
-    fn test_push() {
-        let rom_data = vec![0xC5,0xD5,0xE5,0xF5];
-        let mut test_cpu = CPU::new(Bus::new(ROM::from_data(rom_data)));
+    fn test_getter_setter_register() {
+        let mut test_cpu = create_test_cpu(vec![]);
 
         test_cpu.set_register16(Register16Loc::BC, 0x0B0C);
         test_cpu.set_register16(Register16Loc::DE, 0x0D0E);
         test_cpu.set_register16(Register16Loc::HL, 0x080C);
         test_cpu.set_register16(Register16Loc::AF, 0x0A00);
         
-        // Eventually move to seperate unit test 
         assert_eq!(test_cpu.get_register(RegisterLoc::B), 0x0B);
         assert_eq!(test_cpu.get_register(RegisterLoc::C), 0x0C);
         assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x0D);
@@ -481,29 +542,27 @@ mod test {
         assert_eq!(test_cpu.get_register(RegisterLoc::H), 0x08);
         assert_eq!(test_cpu.get_register(RegisterLoc::L), 0x0C);
         assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x0A);
-        // need to check each flag 
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+    }
 
-        // Executes 0xC5
-        test_cpu.tick();
-        assert_eq!(test_cpu.sp, 1);
-        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C]);
+    #[test]
+    fn test_push() {
+        let rom_data = vec![0xC5,0xD5,0xE5,0xF5];
+        let mut test_cpu = create_test_cpu(rom_data);
 
-        // Executes 0xD5
-        test_cpu.tick();
-        assert_eq!(test_cpu.sp, 3);
-        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E]);
-
-        // Executes 0xE5
-        test_cpu.tick();
-        assert_eq!(test_cpu.sp, 5);
-        assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x0C]);
+        test_cpu.set_register16(Register16Loc::BC, 0x0B0C);
+        test_cpu.set_register16(Register16Loc::DE, 0x0D0E);
+        test_cpu.set_register16(Register16Loc::HL, 0x080C);
+        test_cpu.set_register16(Register16Loc::AF, 0x0A00);
         
-        // Executes 0xF5
-        test_cpu.tick();
+        test_cpu.tick();    // Executes 0xC5
+        test_cpu.tick();    // Executes 0xD5
+        test_cpu.tick();    // Executes 0xE5
+        test_cpu.tick();    // Executes 0xF5
+
         assert_eq!(test_cpu.sp, 7);
         assert_eq!(test_cpu.bus.get_stack(), [0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x0C, 0x0A, 0]);
         
@@ -511,12 +570,38 @@ mod test {
 
     #[test]
     fn test_pop() {
-        assert_eq!(1, 1);
+        let rom_data = vec![0xC1];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.bus.stack_push(0x0B);
+        test_cpu.bus.stack_push(0x0C);
+        test_cpu.sp = 1;
+
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.sp, 0);
+        assert_eq!(test_cpu.bus.get_stack(), []);
+        assert_eq!(test_cpu.get_register16(Register16Loc::BC), 0x0B0C);
     }
 
     #[test]
     fn test_ret() {
-        assert_eq!(1, 1);
+       //Testing Return with no CC
+       let rom_data = vec![0xC9];
+       let mut test_cpu = create_test_cpu(rom_data);
+
+       test_cpu.bus.stack_push(0x0F);
+       test_cpu.bus.stack_push(0x0C);
+       test_cpu.sp = 1;
+
+       test_cpu.tick(); 
+
+       assert_eq!(test_cpu.sp, 0);
+       assert_eq!(test_cpu.bus.get_stack(), []);
+       assert_eq!(test_cpu.pc, 0x0F0C);
+
+       //Testing Return with CC
+
     }
 
     #[test]

@@ -22,7 +22,7 @@ pub struct Bus {
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
-    stack: std::vec::Vec<u8>,
+    stack: Vec<u8>,
 }
 
 impl Bus {
