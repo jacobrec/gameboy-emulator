@@ -81,7 +81,7 @@ impl CPU {
     }
 
 
-    fn get_register(&self, r: RegisterLoc) -> u8{
+    fn get_register(&mut self, r: RegisterLoc) -> u8{
         match r {
             RegisterLoc::A => self.a(),
             RegisterLoc::B => self.b(),
@@ -90,7 +90,7 @@ impl CPU {
             RegisterLoc::E => self.e(),
             RegisterLoc::H => self.h(),
             RegisterLoc::L => self.l(),
-            RegisterLoc::MemHL => unimplemented!("(HL) indirect lookup"), // TODO: this problably is an extra tick too
+            RegisterLoc::MemHL => self.read(self.hl()),
         }
     }
 
@@ -103,7 +103,7 @@ impl CPU {
             RegisterLoc::E => self.set_e(val),
             RegisterLoc::H => self.set_h(val),
             RegisterLoc::L => self.set_l(val),
-            RegisterLoc::MemHL => unimplemented!("(HL) indirect lookup"), // TODO: this problably is an extra tick too
+            RegisterLoc::MemHL => self.write(self.hl(), val),
         }
     }
 
@@ -143,10 +143,20 @@ impl CPU {
         self.bus.cpu_tick();
     }
 
-    fn next(&mut self) -> u8 {
-        let data = self.bus.read(self.pc);
-        self.pc += 1;
+    fn read(&mut self, loc: u16) -> u8 {
+        let data = self.bus.read(loc);
         self.clock();
+        return data
+    }
+
+    fn write(&mut self, loc: u16, val: u8) {
+        let data = self.bus.write(loc, val);
+        self.clock();
+    }
+
+    fn next(&mut self) -> u8 {
+        let data = self.read(self.pc);
+        self.pc += 1;
         return data
     }
     fn next_signed(&mut self) -> i8 {
@@ -408,15 +418,14 @@ impl CPU {
                     let v8: u8 = match src {
                         Location::Immediate(i) => i,
                         Location::Register(r) => self.get_register(r),
-                        Location::ZeroPageC => self.bus.read(0xFF00 + (self.c() as u16)),
+                        Location::ZeroPageC => self.read(0xFF00 + (self.c() as u16)),
                         Location::Indirect(off) => {
                             let hl = self.hl();
                             match off {
                                 Offset::HLDec => self.set_hl(hl - 1),
                                 Offset::HLInc => self.set_hl(hl + 1),
                             };
-                            self.clock();
-                            self.bus.read(hl)
+                            self.read(hl)
                         }
                         _ => panic!("8 bit src in 16 bit load")
                     };
@@ -424,15 +433,14 @@ impl CPU {
                     match dest {
                         Location::Immediate(_) => panic!("Immediate cannot be a destination"),
                         Location::Register(r) => self.set_register(r, v8),
-                        Location::ZeroPageC => self.bus.write(0xFF00 + (self.c() as u16), v8),
+                        Location::ZeroPageC => self.write(0xFF00 + (self.c() as u16), v8),
                         Location::Indirect(off) => {
                             let hl = self.hl();
                             match off {
                                 Offset::HLDec => self.set_hl(hl - 1),
                                 Offset::HLInc => self.set_hl(hl + 1),
                             };
-                            self.clock();
-                            self.bus.write(hl, v8)
+                            self.write(hl, v8)
                         }
                         _ => panic!("8 bit dest in 16 bit load")
                     }
@@ -454,7 +462,7 @@ impl CPU {
                 let new_val = a_val.wrapping_add(reg_val);
                 
                 self.set_register(RegisterLoc::A, new_val);
-                self.set_flag(Flag::Zero, self.get_register(RegisterLoc::A) == 0);
+                self.set_flag(Flag::Zero, new_val == 0);
                 self.set_flag(Flag::AddSub, false);
                 self.set_flag(Flag::HalfCarry, is_half_carry); 
                 self.set_flag(Flag::Carry, is_carry); 
@@ -469,7 +477,7 @@ impl CPU {
                 let new_val = a_val.wrapping_sub(reg_val);
                 
                 self.set_register(RegisterLoc::A, new_val);
-                self.set_flag(Flag::Zero, self.get_register(RegisterLoc::A) == 0);
+                self.set_flag(Flag::Zero, new_val == 0);
                 self.set_flag(Flag::AddSub, true);
                 self.set_flag(Flag::HalfCarry, is_half_carry); 
                 self.set_flag(Flag::Carry, is_carry); 
@@ -505,7 +513,7 @@ impl CPU {
                 let new_val = old_val.wrapping_add(1);
                 
                 self.set_register(r, new_val);
-                self.set_flag(Flag::Zero, self.get_register(r) == 0);
+                self.set_flag(Flag::Zero, new_val == 0);
                 self.set_flag(Flag::AddSub, false);
                 self.set_flag(Flag::HalfCarry, is_half_carry); 
             },
@@ -516,7 +524,7 @@ impl CPU {
                 let new_val = old_val.wrapping_sub(1);
                 
                 self.set_register(r, new_val);
-                self.set_flag(Flag::Zero, self.get_register(r) == 0);
+                self.set_flag(Flag::Zero, new_val == 0);
                 self.set_flag(Flag::AddSub, true);
                 self.set_flag(Flag::HalfCarry, is_half_carry); 
             }
