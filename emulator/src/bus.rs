@@ -15,6 +15,20 @@ Memory Map
 = FF00-FF7F = I/O registers
 = FF80-FFFE = HRAM
 = FFFF-FFFF = Interrupt Enable Register
+
+
+I/O Register Details
+====================
+$FF00     $FF02     DMG     Port/Mode
+$FF04     $FF07     DMG     Port/Mode
+$FF10     $FF26     DMG     Sound
+$FF30     $FF3F     DMG     Waveform RAM
+$FF40     $FF4B     DMG     LCD
+$FF4F               CGB     VRAM Bank Select
+$FF50               DMG     Set to non-zero to disable boot ROM
+$FF51     $FF55     CGB     HDMA
+$FF68     $FF69     CGB     BCP/OCP
+$FF70               CGB     WRAM Bank Select
 */
 
 pub struct Bus {
@@ -44,6 +58,7 @@ impl Bus {
             0x8000..=0x9FFF => self.ppu.read(loc),
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
+            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", ""); 0},
             _ => panic!("Unimplemented read range: {:04X}", loc)
         }
     }
@@ -56,6 +71,7 @@ impl Bus {
             0x8000..=0x9FFF => self.ppu.write(loc, val),
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
+            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
             _ => panic!("Unimplemented write range: {:04X}", loc)
         }
     }

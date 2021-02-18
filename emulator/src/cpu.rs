@@ -306,10 +306,12 @@ impl CPU {
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)), 
             0xD9 => Instruction::Reti,
 
+            0xE0 => Instruction::Load(Location::ZeroPageAbsolute(self.next()), Location::Register(RegisterLoc::A)), // LD (a8), A
             0xE1 => Instruction::Pop(Register16Loc::HL),
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),
             0xE5 => Instruction::Push(Register16Loc::HL),
 
+            0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF), 
             0xF5 => Instruction::Push(Register16Loc::AF), 
 
@@ -419,6 +421,7 @@ impl CPU {
                         Location::Immediate(i) => i,
                         Location::Register(r) => self.get_register(r),
                         Location::ZeroPageC => self.read(0xFF00 + (self.c() as u16)),
+                        Location::ZeroPageAbsolute(v) => self.read(0xFF00 + (v as u16)),
                         Location::Indirect(off) => {
                             let hl = self.hl();
                             match off {
@@ -434,6 +437,7 @@ impl CPU {
                         Location::Immediate(_) => panic!("Immediate cannot be a destination"),
                         Location::Register(r) => self.set_register(r, v8),
                         Location::ZeroPageC => self.write(0xFF00 + (self.c() as u16), v8),
+                        Location::ZeroPageAbsolute(v) => self.write(0xFF00 + (v as u16), v8),
                         Location::Indirect(off) => {
                             let hl = self.hl();
                             match off {

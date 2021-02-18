@@ -49,6 +49,7 @@ pub enum Location {
     Indirect(Offset),
     SP,
     ZeroPageC,
+    ZeroPageAbsolute(u8),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -152,6 +153,7 @@ impl Display for Location {
             Self::Indirect(offset) => write!(f, "({})", offset),
             Self::SP => write!(f, "SP"),
             Self::ZeroPageC => write!(f, "($FF00+C)"),
+            Self::ZeroPageAbsolute(v) => write!(f, "($FF00+${:X})", v),
         }
     }
 }
