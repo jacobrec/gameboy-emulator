@@ -170,16 +170,6 @@ impl CPU {
             _ => unreachable!("The number must be anded with 0b111")
         }
     }
-    fn register16_from_data(&self, data: u8) -> Register16Loc {
-        // Needs To be better generalized 
-        match data & 0xF0 {
-            0xC0 => Register16Loc::BC,
-            0xD0 => Register16Loc::DE,
-            0xE0 => Register16Loc::HL,
-            0xF0 => Register16Loc::AF,
-            _ => panic!("'register16_from_data was called when it wasn't supposed to be") 
-        }
-    }
 
     fn check_jmp_flag(&self, f: JmpFlag) -> bool {
         match f {
@@ -295,23 +285,23 @@ impl CPU {
             //TODO: Implement register_from_data function that can read 16 bit registers  
             // Bottom quarter ~ 0xC0 - 0xFF
             0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),
-            0xC1 => Instruction::Pop(self.register16_from_data(data)),
-            0xC5 => Instruction::Push(self.register16_from_data(data)),
+            0xC1 => Instruction::Pop(Register16Loc::BC),
+            0xC5 => Instruction::Push(Register16Loc::BC),
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),
             0xC9 => Instruction::Ret(None),
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),
-            0xD1 => Instruction::Pop(self.register16_from_data(data)),
-            0xD5 => Instruction::Push(self.register16_from_data(data)),
+            0xD1 => Instruction::Pop(Register16Loc::DE),
+            0xD5 => Instruction::Push(Register16Loc::DE),
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)), 
             0xD9 => Instruction::Reti,
 
-            0xE1 => Instruction::Pop(self.register16_from_data(data)),
+            0xE1 => Instruction::Pop(Register16Loc::HL),
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),
-            0xE5 => Instruction::Push(self.register16_from_data(data)),
+            0xE5 => Instruction::Push(Register16Loc::HL),
 
-            0xF1 => Instruction::Pop(self.register16_from_data(data)), 
-            0xF5 => Instruction::Push(self.register16_from_data(data)), 
+            0xF1 => Instruction::Pop(Register16Loc::AF), 
+            0xF5 => Instruction::Push(Register16Loc::AF), 
 
             0xCB => self.next_op_extended(),
 
