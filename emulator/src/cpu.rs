@@ -245,10 +245,10 @@ impl CPU {
             0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)), // LD (HL-) n16
 
             // LD (XX), A
-            0x02 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
-            0x12 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (BC)
-            0x22 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (BC)
-            0x32 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (BC)
+            0x02 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD (BC), A
+            0x12 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD (DE), A
+            0x22 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD (HL+), A
+            0x32 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD (HL-), A
 
             // Increment implemented manuall because can't use the lower 3 bits to determine register 
             0x04 => Instruction::Inc(RegisterLoc::B),
@@ -263,9 +263,9 @@ impl CPU {
 
             // LD A, (XX)
             0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
-            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (BC)
-            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (BC)
-            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (BC)
+            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (DE)
+            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (HL+)
+            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (HL-)
 
             // Increment implemented manuall because can't use the lower 3 bits to determine register 
             0x05 => Instruction::Dec(RegisterLoc::B),
