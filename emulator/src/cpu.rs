@@ -190,6 +190,44 @@ impl CPU {
         }
     }
 
+    fn is_add_half_carry(&self, target: u8, value: u8) -> bool {
+        ((target & 0x0F).wrapping_add(value & 0x0F)) & 0x10 == 0x10
+    }
+
+    fn is_add_carry(&self, target: u8, value: u8) -> bool {
+        let (val, overflow) = target.overflowing_add(value);
+        return overflow
+    }
+
+    fn is_add_half_carry16(&self, target: u16, value: u16) -> bool {
+        ((target & 0x00FF).wrapping_add(value & 0x00FF)) & 0x0100 == 0x0100
+    }
+
+    fn is_add_carry16(&self, target: u16, value: u16) -> bool {
+        let (val, overflow) = target.overflowing_add(value);
+        return overflow
+    }
+
+    fn is_subtract_half_carry(&self, target: u8, value: u8) -> bool {
+        let (val, overflow) = (target & 0x0F).overflowing_sub(value & 0x0F);
+        return if overflow { true } else { val < 0 }
+    }
+
+    fn is_subtract_carry(&self, target: u8, value: u8) -> bool {
+        let (val, overflow) = target.overflowing_sub(value);
+        return overflow
+    }
+
+    fn is_subtract_half_carry16(&self, target: u16, value: u16) -> bool {
+        let (val, overflow) = (target & 0x00FF).overflowing_sub(value & 0x00FF);
+        return if overflow { true } else { val < 0 }
+    }
+
+    fn is_subtract_carry16(&self, target: u16, value: u16) -> bool {
+        let (val, overflow) = target.overflowing_sub(value);
+        return overflow
+    }
+
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
         
@@ -205,6 +243,26 @@ impl CPU {
             0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD HL n16
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
             0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD (HL-) n16
+
+            // Increment implemented manuall because can't use the lower 3 bits to determine register 
+            0x04 => Instruction::Inc(RegisterLoc::B),
+            0x14 => Instruction::Inc(RegisterLoc::D),
+            0x24 => Instruction::Inc(RegisterLoc::H),
+            // 0x34 => Instruction::Inc(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+            0x0C => Instruction::Inc(RegisterLoc::C),
+            0x1C => Instruction::Inc(RegisterLoc::E),
+            0x2C => Instruction::Inc(RegisterLoc::L),
+            0x3C => Instruction::Inc(RegisterLoc::A),
+
+            // Increment implemented manuall because can't use the lower 3 bits to determine register 
+            0x05 => Instruction::Dec(RegisterLoc::B),
+            0x15 => Instruction::Dec(RegisterLoc::D),
+            0x25 => Instruction::Dec(RegisterLoc::H),
+            // 0x35 => Instruction::Dec(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+            0x0D => Instruction::Dec(RegisterLoc::C),
+            0x1D => Instruction::Dec(RegisterLoc::E),
+            0x2D => Instruction::Dec(RegisterLoc::L),
+            0x3D => Instruction::Dec(RegisterLoc::A),
 
             0x06 => Instruction::Load(Location::Register(RegisterLoc::B), Location::Immediate(self.next())),
             0x16 => Instruction::Load(Location::Register(RegisterLoc::D), Location::Immediate(self.next())),
@@ -361,6 +419,44 @@ impl CPU {
                 self.set_flag(Flag::AddSub, false);
                 self.set_flag(Flag::HalfCarry, true);
             },
+            Instruction::Add(r) => {
+                
+                let a_val: u8 = self.get_register(RegisterLoc::A);
+                let reg_val: u8 = self.get_register(r);
+
+                let is_half_carry = self.is_add_half_carry(a_val, reg_val);
+                let is_carry = self.is_add_carry(a_val, reg_val);
+                let new_val = a_val.wrapping_add(reg_val);
+                
+                self.set_register(RegisterLoc::A, new_val);
+                self.set_flag(Flag::Zero, self.get_register(RegisterLoc::A) == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, is_half_carry); 
+                self.set_flag(Flag::Carry, is_carry); 
+            },
+            Instruction::Sub(r) => {
+                
+                let a_val: u8 = self.get_register(RegisterLoc::A);
+                let reg_val: u8 = self.get_register(r);
+
+                let is_half_carry = self.is_subtract_half_carry(a_val, reg_val);
+                let is_carry = self.is_subtract_carry(a_val, reg_val);
+                let new_val = a_val.wrapping_sub(reg_val);
+                
+                self.set_register(RegisterLoc::A, new_val);
+                self.set_flag(Flag::Zero, self.get_register(RegisterLoc::A) == 0);
+                self.set_flag(Flag::AddSub, true);
+                self.set_flag(Flag::HalfCarry, is_half_carry); 
+                self.set_flag(Flag::Carry, is_carry); 
+            },
+            Instruction::And(r) => {
+                let nv = self.a() ^& self.get_register(r);
+                self.set_flag(Flag::Zero, nv == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, true);
+                self.set_flag(Flag::Carry, false);
+                self.set_a(nv)
+            },
             Instruction::Xor(r) => {
                 let nv = self.a() ^ self.get_register(r);
                 self.set_flag(Flag::Zero, nv == 0);
@@ -369,6 +465,36 @@ impl CPU {
                 self.set_flag(Flag::Carry, false);
                 self.set_a(nv)
             },
+            Instruction::Or(r) => {
+                let nv = self.a() | self.get_register(r);
+                self.set_flag(Flag::Zero, nv == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, false);
+                self.set_a(nv)
+            },
+            Instruction::Inc(r) => {
+                
+                let old_val: u8 = self.get_register(r);
+                let is_half_carry = self.is_add_half_carry(old_val, 1 as u8);
+                let new_val = old_val.wrapping_add(1);
+                
+                self.set_register(r, new_val);
+                self.set_flag(Flag::Zero, self.get_register(r) == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, is_half_carry); 
+            },
+            Instruction::Dec(r) => {
+
+                let old_val: u8 = self.get_register(r);
+                let is_half_carry = self.is_subtract_half_carry(old_val, 1 as u8);
+                let new_val = old_val.wrapping_sub(1);
+                
+                self.set_register(r, new_val);
+                self.set_flag(Flag::Zero, self.get_register(r) == 0);
+                self.set_flag(Flag::AddSub, true);
+                self.set_flag(Flag::HalfCarry, is_half_carry); 
+            }
             Instruction::Pop(r) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#POP_r16
                 match r {
                     Register16Loc::BC => {
@@ -796,5 +922,132 @@ mod test {
     #[test]
     fn test_reti() {
         assert_eq!(1, 1);
+    }
+
+    #[test]
+    fn test_add() {
+        let rom_data = vec![0x80,0x80,0x80];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_register(RegisterLoc::A, 0x00);
+        test_cpu.set_register(RegisterLoc::B, 0x0F);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x0F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::B, 0xF0);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0xFF);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::B, 0x01);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+    }
+
+    fn test_subtract() {
+        let rom_data = vec![0x90,0x90,0x90];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_register(RegisterLoc::A, 0x10);
+        test_cpu.set_register(RegisterLoc::B, 0x01);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x0F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::B, 0x0F);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::B, 0x01);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+    }
+
+    #[test]
+    fn test_inc() {
+        let rom_data = vec![0x04,0x0C,0x14];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_register(RegisterLoc::B, 0x0E);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::B), 0x0F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+
+        test_cpu.set_register(RegisterLoc::C, 0x0F);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::C), 0x10);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+
+        test_cpu.set_register(RegisterLoc::D, 0xFF);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+    }
+
+    #[test]
+    fn test_dec() {
+        let rom_data = vec![0x05,0x0D,0x15];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_register(RegisterLoc::B, 0x0F);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::B), 0x0E);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+
+        test_cpu.set_register(RegisterLoc::C, 0x10);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::C), 0x0F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+
+        test_cpu.set_register(RegisterLoc::D, 0x01);
+        test_cpu.tick(); 
+
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
     }
 }
