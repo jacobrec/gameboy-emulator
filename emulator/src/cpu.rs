@@ -244,21 +244,35 @@ impl CPU {
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
             0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)), // LD (HL-) n16
 
+            // LD (XX), A
+            0x02 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
+            0x12 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (BC)
+            0x22 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (BC)
+            0x32 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (BC)
+
             // Increment implemented manuall because can't use the lower 3 bits to determine register 
             0x04 => Instruction::Inc(RegisterLoc::B),
             0x14 => Instruction::Inc(RegisterLoc::D),
             0x24 => Instruction::Inc(RegisterLoc::H),
-            // 0x34 => Instruction::Inc(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+            0x34 => Instruction::Inc(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+
             0x0C => Instruction::Inc(RegisterLoc::C),
             0x1C => Instruction::Inc(RegisterLoc::E),
             0x2C => Instruction::Inc(RegisterLoc::L),
             0x3C => Instruction::Inc(RegisterLoc::A),
 
+            // LD A, (XX)
+            0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
+            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (BC)
+            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (BC)
+            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (BC)
+
             // Increment implemented manuall because can't use the lower 3 bits to determine register 
             0x05 => Instruction::Dec(RegisterLoc::B),
             0x15 => Instruction::Dec(RegisterLoc::D),
             0x25 => Instruction::Dec(RegisterLoc::H),
-            // 0x35 => Instruction::Dec(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+            0x35 => Instruction::Dec(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+
             0x0D => Instruction::Dec(RegisterLoc::C),
             0x1D => Instruction::Dec(RegisterLoc::E),
             0x2D => Instruction::Dec(RegisterLoc::L),
@@ -388,6 +402,16 @@ impl CPU {
         self.pc = loc;
     }
 
+    fn indirect_lookup(&mut self, off: Offset) -> u16 {
+        let hl = self.hl();
+        match off {
+            Offset::HLDec => { self.set_hl(hl - 1); hl },
+            Offset::HLInc => { self.set_hl(hl + 1); hl },
+            Offset::BC => self.bc(),
+            Offset::DE => self.de(),
+        }
+    }
+
     fn execute(&mut self, op: Instruction) {
         print!("{:<15} => ", format!("{}", op));
         fn isLoc16Bit (l: Location) -> bool {
@@ -397,6 +421,7 @@ impl CPU {
                 _ => false,
             }
         }
+
 
         match op {
             Instruction::Nop => (),
@@ -423,12 +448,8 @@ impl CPU {
                         Location::ZeroPageC => self.read(0xFF00 + (self.c() as u16)),
                         Location::ZeroPageAbsolute(v) => self.read(0xFF00 + (v as u16)),
                         Location::Indirect(off) => {
-                            let hl = self.hl();
-                            match off {
-                                Offset::HLDec => self.set_hl(hl - 1),
-                                Offset::HLInc => self.set_hl(hl + 1),
-                            };
-                            self.read(hl)
+                            let loc = self.indirect_lookup(off);
+                            self.read(loc)
                         }
                         _ => panic!("8 bit src in 16 bit load")
                     };
@@ -439,12 +460,8 @@ impl CPU {
                         Location::ZeroPageC => self.write(0xFF00 + (self.c() as u16), v8),
                         Location::ZeroPageAbsolute(v) => self.write(0xFF00 + (v as u16), v8),
                         Location::Indirect(off) => {
-                            let hl = self.hl();
-                            match off {
-                                Offset::HLDec => self.set_hl(hl - 1),
-                                Offset::HLInc => self.set_hl(hl + 1),
-                            };
-                            self.write(hl, v8)
+                            let loc = self.indirect_lookup(off);
+                            self.write(loc, v8)
                         }
                         _ => panic!("8 bit dest in 16 bit load")
                     }

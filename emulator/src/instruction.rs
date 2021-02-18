@@ -38,6 +38,8 @@ pub enum Register16Loc {
 pub enum Offset {
     HLInc,
     HLDec,
+    BC,
+    DE,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -139,6 +141,8 @@ impl Display for Offset {
         match self {
             Self::HLInc => write!(f, "HL-"),
             Self::HLDec => write!(f, "HL+"),
+            Self::BC => write!(f, "BC"),
+            Self::DE => write!(f, "DE"),
         }
     }
 }
