@@ -35,12 +35,18 @@ pub enum Register16Loc {
 }
 
 #[derive(Copy, Clone, Debug)]
+pub enum Offset {
+    HLInc,
+    HLDec,
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum Location {
     Register(RegisterLoc),
     Register16(Register16Loc),
     Immediate(u8),
     Immediate16(u16),
-    HLIndirectDecrement,
+    Indirect(Offset),
     SP,
     ZeroPageC,
 }
@@ -127,6 +133,15 @@ impl Display for Register16Loc {
     }
 }
 
+impl Display for Offset {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::HLInc => write!(f, "HL-"),
+            Self::HLDec => write!(f, "HL+"),
+        }
+    }
+}
+
 impl Display for Location {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
@@ -134,7 +149,7 @@ impl Display for Location {
             Self::Register16(rl) => write!(f, "{}", rl),
             Self::Immediate(b) => write!(f, "${:X}", b),
             Self::Immediate16(b) => write!(f, "${:X}", b),
-            Self::HLIndirectDecrement => write!(f, "(HL-)"),
+            Self::Indirect(offset) => write!(f, "({})", offset),
             Self::SP => write!(f, "SP"),
             Self::ZeroPageC => write!(f, "($FF00+C)"),
         }

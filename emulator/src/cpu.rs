@@ -1,4 +1,4 @@
-use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag};
+use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
 
 enum Flag {
     Zero, AddSub, HalfCarry, Carry
@@ -232,7 +232,7 @@ impl CPU {
             0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), JmpFlag::NoZero), // JR NZ, r8
             0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD HL n16
             0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
-            0x32 => Instruction::Load(Location::HLIndirectDecrement, Location::Register(RegisterLoc::A)), // LD (HL-) n16
+            0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)), // LD (HL-) n16
 
             // Increment implemented manuall because can't use the lower 3 bits to determine register 
             0x04 => Instruction::Inc(RegisterLoc::B),
@@ -409,9 +409,12 @@ impl CPU {
                         Location::Immediate(i) => i,
                         Location::Register(r) => self.get_register(r),
                         Location::ZeroPageC => self.bus.read(0xFF00 + (self.c() as u16)),
-                        Location::HLIndirectDecrement => {
+                        Location::Indirect(off) => {
                             let hl = self.hl();
-                            self.set_hl(hl - 1);
+                            match off {
+                                Offset::HLDec => self.set_hl(hl - 1),
+                                Offset::HLInc => self.set_hl(hl + 1),
+                            };
                             self.clock();
                             self.bus.read(hl)
                         }
@@ -422,9 +425,12 @@ impl CPU {
                         Location::Immediate(_) => panic!("Immediate cannot be a destination"),
                         Location::Register(r) => self.set_register(r, v8),
                         Location::ZeroPageC => self.bus.write(0xFF00 + (self.c() as u16), v8),
-                        Location::HLIndirectDecrement => {
+                        Location::Indirect(off) => {
                             let hl = self.hl();
-                            self.set_hl(hl - 1);
+                            match off {
+                                Offset::HLDec => self.set_hl(hl - 1),
+                                Offset::HLInc => self.set_hl(hl + 1),
+                            };
                             self.clock();
                             self.bus.write(hl, v8)
                         }
