@@ -57,13 +57,25 @@ impl Gameboy {
 }
 
 impl ROM {
+    pub fn is_bootrom(&self) -> bool {
+        true
+    }
+
     pub fn from_data(data: Vec<u8>) -> Self {
         ROM {data}
     }
     pub fn read(&self, loc: u16) -> u8 {
-        self.data[loc as usize]
+       if loc < 0x00FF  && self.is_bootrom() {
+           self.data[loc as usize]
+       } else if loc < 0x4000 { // Bank 0
+           0 // TODO Static bank
+       } else { // Bank 1-N (Swappable)
+           0 // TODO Swap banks
+       }
     }
     pub fn write(&mut self, loc: u16, val: u8) {
+        // Some cartriges provide writable memory for saving
+        // TODO: Find out which areas are write protected
         self.data[loc as usize] = val
     }
 }
