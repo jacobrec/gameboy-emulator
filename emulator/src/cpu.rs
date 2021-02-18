@@ -483,14 +483,19 @@ impl CPU {
                                 let old_cycles = self.cycles;
                                 loop {
                                     self.clock();
-                                    if self.cycles == (old_cycles+20) {break;}
+                                    if self.cycles == (old_cycles+20) {break;} // tweak
                                 }
+                                // make a function to push and pop the stack 
+                                // have that function worry about the cycle
+                                // 16 bit function
+                                // helper funciton to set a jump 
+                                // set program counter function
                             } else {
-                                let old_cycles = self.cycles;
-                                loop {
-                                    self.clock();
-                                    if self.cycles == (old_cycles+8) {break;}
-                                }
+                                self.clock();
+                                // let old_cycles = self.cycles;
+                                // loop {
+                                //     if self.cycles == (old_cycles+8) {break;}
+                                // }
                             }
                         },
                         JmpFlag::NoZero => {
