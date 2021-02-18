@@ -371,6 +371,11 @@ impl CPU {
         self.clock();
     }
 
+    fn set_pc(&mut self, loc: u16) {
+        self.clock();
+        self.pc = loc;
+    }
+
     fn execute(&mut self, op: Instruction) {
         print!("{:<15} => ", format!("{}", op));
         fn isLoc16Bit (l: Location) -> bool {
@@ -548,141 +553,17 @@ impl CPU {
                 // Return from subroutine and enable interupts 
             },
             Instruction::Ret(cc) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RET_cc
+                if let Some(flag) = cc { 
+                    self.clock();
+                    if self.check_jmp_flag(flag) {
+                        let loc = self.stack_pop();
+                        self.set_pc(loc);
+                    }
 
-                // if let Some(flag) = cc { //
-                //     //TODO : For each jumpflag return from subroutine if jumpflag is met 
-                //     match flag {
-                //         JmpFlag::Zero => {
-                //             if self.get_flag(Flag::Zero) {
-                //                 if let Some(data) = self.bus.stack_pop() {
-                //                     self.pc = data as u16;  // low 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 self.sp -= 1;
-                //                 if let Some(data) = self.bus.stack_pop() {        
-                //                     self.pc = ((data as u16) << 8) | self.pc;   // high 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 if self.sp > 0 {self.sp -= 1}  
-            
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+20) {break;} // tweak
-                //                 }
-                //                 // make a function to push and pop the stack 
-                //                 // have that function worry about the cycle
-                //                 // 16 bit function
-                //                 // helper funciton to set a jump 
-                //                 // set program counter function
-                //             } else {
-                //                 self.clock();
-                //                 // let old_cycles = self.cycles;
-                //                 // loop {
-                //                 //     if self.cycles == (old_cycles+8) {break;}
-                //                 // }
-                //             }
-                //         },
-                //         JmpFlag::NoZero => {
-                //             if !self.get_flag(Flag::Zero) {
-                //                 if let Some(data) = self.bus.stack_pop() {
-                //                     self.pc = data as u16;  // low 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 self.sp -= 1;
-                //                 if let Some(data) = self.bus.stack_pop() {        
-                //                     self.pc = ((data as u16) << 8) | self.pc;   // high 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 if self.sp > 0 {self.sp -= 1}  
-            
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+20) {break;}
-                //                 }
-                //             } else {
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+8) {break;}
-                //                 }
-                //             }
-                //         },
-                //         JmpFlag::Carry => {
-                //             if self.get_flag(Flag::Carry) {
-                //                 if let Some(data) = self.bus.stack_pop() {
-                //                     self.pc = data as u16;  // low 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 self.sp -= 1;
-                //                 if let Some(data) = self.bus.stack_pop() {        
-                //                     self.pc = ((data as u16) << 8) | self.pc;   // high 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 if self.sp > 0 {self.sp -= 1}  
-            
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+20) {break;}
-                //                 }
-                //             } else {
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+8) {break;}
-                //                 }
-                //             }
-                //         },
-                //         JmpFlag::NoCarry => {
-                //             if !self.get_flag(Flag::Carry) {
-                //                 if let Some(data) = self.bus.stack_pop() {
-                //                     self.pc = data as u16;  // low 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 self.sp -= 1;
-                //                 if let Some(data) = self.bus.stack_pop() {        
-                //                     self.pc = ((data as u16) << 8) | self.pc;   // high 8 bits
-                //                 }
-                //                 else {panic!("Attempted to POP from empty STACK")}
-                //                 if self.sp > 0 {self.sp -= 1}  
-            
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+20) {break;}
-                //                 }
-                //             } else {
-                //                 let old_cycles = self.cycles;
-                //                 loop {
-                //                     self.clock();
-                //                     if self.cycles == (old_cycles+8) {break;}
-                //                 }
-                //             }
-                //         },
-                        
-                    // }
-                // } else { // Regular return
-                //     // Essentially POP PC 
-                //     if let Some(data) = self.bus.stack_pop() {
-                //         self.pc = data as u16;  // low 8 bits
-                //     }
-                //     else {panic!("Attempted to POP from empty STACK")}
-                //     self.sp -= 1;
-                //     if let Some(data) = self.bus.stack_pop() {        
-                //         self.pc = ((data as u16) << 8) | self.pc;   // high 8 bits
-                //     }
-                //     else {panic!("Attempted to POP from empty STACK")}
-                //     if self.sp > 0 {self.sp -= 1}  
-
-                //     let old_cycles = self.cycles;
-                //     loop {
-                //         self.clock();
-                //         if self.cycles == (old_cycles+16) {break;}
-                //     }
-
-                // }
+                } else { 
+                    let loc = self.stack_pop();
+                    self.set_pc(loc);
+                }
             }
             Instruction::Jmp(j, f) => {
                 let b = self.check_jmp_flag(f);
@@ -762,6 +643,7 @@ mod test {
         assert_eq!(test_cpu.bus.stack_pop(0xFFF7), 0x0A);
         assert_eq!(test_cpu.bus.stack_pop(0xFFF6), 0x00);
         assert_eq!(test_cpu.sp, 0xFFF6);
+        assert_eq!(test_cpu.cycles, 16*4);
         
     }
 
@@ -786,115 +668,105 @@ mod test {
         assert_eq!(test_cpu.get_register16(Register16Loc::DE), 0x0000);
         assert_eq!(test_cpu.get_register16(Register16Loc::HL), 0x0000);
         assert_eq!(test_cpu.get_register16(Register16Loc::AF), 0x0000);
+        assert_eq!(test_cpu.cycles, 12*4);
     }
 
     #[test]
     fn test_ret() {
-       //Testing Return with no CC
-    //    let rom_data = vec![0xC9];
-    //    let mut test_cpu = create_test_cpu(rom_data);
+       let rom_data = vec![0xC9];
+       let mut test_cpu = create_test_cpu(rom_data);
 
-    //    test_cpu.bus.stack_push(0x0F);
-    //    test_cpu.bus.stack_push(0x0C);
-    //    test_cpu.sp = 1;
+       test_cpu.sp = 0xFFFC; 
 
-    //    test_cpu.tick(); 
+       test_cpu.tick(); 
 
-    //    assert_eq!(test_cpu.sp, 0);
-    //    assert_eq!(test_cpu.bus.get_stack(), []);
-    //    assert_eq!(test_cpu.pc, 0x0F0C);
+       assert_eq!(test_cpu.sp, 0xFFFE);
+       assert_eq!(test_cpu.pc, 0x0000);
+       assert_eq!(test_cpu.cycles, 16);
 
     }
 
     #[test]
     fn test_ret_z() {
-        // let rom_data = vec![0xC8, 0xC8];
-        // let mut test_cpu = create_test_cpu(rom_data);
-        
-        // test_cpu.bus.stack_push(0x0F);
-        // test_cpu.bus.stack_push(0x0C);
-        // test_cpu.set_flag(Flag::Zero, false);
-        // test_cpu.sp = 1;
+        let rom_data = vec![0xC8, 0xC8];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_flag(Flag::Zero, false);
+        test_cpu.sp = 0xFFFC;
  
-        // test_cpu.tick(); 
-        // assert_eq!(test_cpu.sp, 1);
-        // assert_eq!(test_cpu.bus.get_stack(), [0x0F, 0x0C]);
+        test_cpu.tick(); 
+        assert_eq!(test_cpu.sp, 0xFFFC);
+        assert_eq!(test_cpu.cycles, 8);
 
-        // test_cpu.set_flag(Flag::Zero, true);
+        test_cpu.set_flag(Flag::Zero, true);
 
-        // test_cpu.tick();
-        // assert_eq!(test_cpu.sp, 0);
-        // assert_eq!(test_cpu.bus.get_stack(), []);
-        // assert_eq!(test_cpu.pc, 0x0F0C);
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFE);
+        assert_eq!(test_cpu.pc, 0x0000);
+        assert_eq!(test_cpu.cycles, 28);
     }
 
-    // #[test]
-    // fn test_ret_nz() {
-    //     let rom_data = vec![0xC0, 0xC0];
-    //     let mut test_cpu = create_test_cpu(rom_data);
-        
-    //     test_cpu.bus.stack_push(0x0F);
-    //     test_cpu.bus.stack_push(0x0C);
-    //     test_cpu.set_flag(Flag::Zero, true);
-    //     test_cpu.sp = 1;
+    #[test]
+    fn test_ret_nz() {
+        let rom_data = vec![0xC0, 0xC0];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_flag(Flag::Zero, true);
+        test_cpu.sp = 0xFFFC;
  
-    //     test_cpu.tick(); 
-    //     assert_eq!(test_cpu.sp, 1);
-    //     assert_eq!(test_cpu.bus.get_stack(), [0x0F, 0x0C]);
+        test_cpu.tick(); 
+        assert_eq!(test_cpu.sp, 0xFFFC);
+        assert_eq!(test_cpu.cycles, 8);
 
-    //     test_cpu.set_flag(Flag::Zero, false);
+        test_cpu.set_flag(Flag::Zero, false);
 
-    //     test_cpu.tick();
-    //     assert_eq!(test_cpu.sp, 0);
-    //     assert_eq!(test_cpu.bus.get_stack(), []);
-    //     assert_eq!(test_cpu.pc, 0x0F0C);
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFE);
+        assert_eq!(test_cpu.pc, 0x0000);
+        assert_eq!(test_cpu.cycles, 28);
 
   
-    // }
+    }
 
-    // #[test]
-    // fn test_ret_c() {
-    //     let rom_data = vec![0xD8, 0xD8];
-    //     let mut test_cpu = create_test_cpu(rom_data);
-        
-    //     test_cpu.bus.stack_push(0x0F);
-    //     test_cpu.bus.stack_push(0x0C);
-    //     test_cpu.set_flag(Flag::Carry, false);
-    //     test_cpu.sp = 1;
+    #[test]
+    fn test_ret_c() {
+        let rom_data = vec![0xD8, 0xD8];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_flag(Flag::Carry, false);
+        test_cpu.sp = 0xFFFC;
  
-    //     test_cpu.tick(); 
-    //     assert_eq!(test_cpu.sp, 1);
-    //     assert_eq!(test_cpu.bus.get_stack(), [0x0F, 0x0C]);
+        test_cpu.tick(); 
+        assert_eq!(test_cpu.sp, 0xFFFC);
+        assert_eq!(test_cpu.cycles, 8);
 
-    //     test_cpu.set_flag(Flag::Carry, true);
+        test_cpu.set_flag(Flag::Carry, true);
 
-    //     test_cpu.tick();
-    //     assert_eq!(test_cpu.sp, 0);
-    //     assert_eq!(test_cpu.bus.get_stack(), []);
-    //     assert_eq!(test_cpu.pc, 0x0F0C);
-    // }
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFE);
+        assert_eq!(test_cpu.pc, 0x0000);
+        assert_eq!(test_cpu.cycles, 28);
+    }
 
-    // #[test]
-    // fn test_ret_nc() {
-    //     let rom_data = vec![0xD0, 0xD0];
-    //     let mut test_cpu = create_test_cpu(rom_data);
-        
-    //     test_cpu.bus.stack_push(0x0F);
-    //     test_cpu.bus.stack_push(0x0C);
-    //     test_cpu.set_flag(Flag::Carry, true);
-    //     test_cpu.sp = 1;
+    #[test]
+    fn test_ret_nc() {
+        let rom_data = vec![0xD0, 0xD0];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.set_flag(Flag::Carry, true);
+        test_cpu.sp = 0xFFFC;
  
-    //     test_cpu.tick(); 
-    //     assert_eq!(test_cpu.sp, 1);
-    //     assert_eq!(test_cpu.bus.get_stack(), [0x0F, 0x0C]);
+        test_cpu.tick(); 
+        assert_eq!(test_cpu.sp, 0xFFFC);
+        assert_eq!(test_cpu.cycles, 8);
 
-    //     test_cpu.set_flag(Flag::Carry, false);
+        test_cpu.set_flag(Flag::Carry, false);
 
-    //     test_cpu.tick();
-    //     assert_eq!(test_cpu.sp, 0);
-    //     assert_eq!(test_cpu.bus.get_stack(), []);
-    //     assert_eq!(test_cpu.pc, 0x0F0C);
-    // }
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFE);
+        assert_eq!(test_cpu.pc, 0x0000);
+        assert_eq!(test_cpu.cycles, 28);
+    }
 
     #[test]
     fn test_reti() {
