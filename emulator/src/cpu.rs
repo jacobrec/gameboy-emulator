@@ -832,9 +832,9 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
 
         test_cpu.set_register(RegisterLoc::B, 0x01);
-        test_cpu.tick(); 
+        test_cpu.tick();
 
-        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0xFF);
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
