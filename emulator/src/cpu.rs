@@ -198,105 +198,170 @@ impl CPU {
         let reg = Self::register_from_data(data);
         let regloc = Location::Register(reg);
         match data { // https://gbdev.io/gb-opcodes/optables/
-            0x00 => Instruction::Nop,
 
-            // top quarter
-            0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())), // LD BC n16
-            0x11 => Instruction::Load(Location::Register16(Register16Loc::DE), Location::Immediate16(self.next16())), // LD DE n16
+            // Top Quarter ~ 0x00 - 0x3F
+            0x00 => Instruction::Nop,
             0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), JmpFlag::NoZero), // JR NZ, r8
-            0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())), // LD HL n16
-            0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())), // LD SP n16
-            0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)), // LD (HL-) n16
+            // 0X30 => TODO: JR NZ, r8
+            // 0X40 => TODO: JR NC, r8
+
+            // LD (XX), d16
+            0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())),   // LD BC n16
+            0x11 => Instruction::Load(Location::Register16(Register16Loc::DE), Location::Immediate16(self.next16())),   // LD DE n16
+            0x21 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::Immediate16(self.next16())),   // LD HL n16
+            0x31 => Instruction::Load(Location::SP, Location::Immediate16(self.next16())),                              // LD SP n16
 
             // LD (XX), A
-            0x02 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD (BC), A
-            0x12 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD (DE), A
-            0x22 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD (HL+), A
-            0x32 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD (HL-), A
+            0x02 => Instruction::Load(Location::Indirect(Offset::BC), Location::Register(RegisterLoc::A)),      // LD (BC), A
+            0x12 => Instruction::Load(Location::Indirect(Offset::DE), Location::Register(RegisterLoc::A)),      // LD (DE), A
+            0x22 => Instruction::Load(Location::Indirect(Offset::HLInc), Location::Register(RegisterLoc::A)),   // LD (HL+), A
+            0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)),   // LD (HL-), A
+            
+            // 0x03 => TODO: INC BC
+            // 0x13 => TODO: INC DE
+            // 0x23 => TODO: INC HL
+            // 0x33 => TODO: INC SP
+           
+            // INC r8
+            0x04 => Instruction::Inc(RegisterLoc::B),       // INC B
+            0x14 => Instruction::Inc(RegisterLoc::D),       // INC D
+            0x24 => Instruction::Inc(RegisterLoc::H),       // INC H
+            0x34 => Instruction::Inc(RegisterLoc::MemHL),   // INC (HL)
+            
+            // DEC r8
+            0x05 => Instruction::Dec(RegisterLoc::B),       // DEC B
+            0x15 => Instruction::Dec(RegisterLoc::D),       // DEC D
+            0x25 => Instruction::Dec(RegisterLoc::H),       // DEC H
+            0x35 => Instruction::Dec(RegisterLoc::MemHL),   // DEC (HL)
+            
+            // LD r8, d8
+            0x06 => Instruction::Load(Location::Register(RegisterLoc::B), Location::Immediate(self.next())),        // LD B, d8
+            0x16 => Instruction::Load(Location::Register(RegisterLoc::D), Location::Immediate(self.next())),        // LD D, d8
+            0x26 => Instruction::Load(Location::Register(RegisterLoc::H), Location::Immediate(self.next())),        // LD H, d8
+            0x36 => Instruction::Load(Location::Register(RegisterLoc::MemHL), Location::Immediate(self.next())),    // LD (HL), d8
+ 
+            // 0x07 => TODO: RLCA
+            // 0x17 => TODO: RLA
+            // 0x27 => TODO: DAA
+            // 0x37 => TODO: SCF
 
+            // 0x08 => TODO: LD (a16), SP
+            // 0x18 => TODO: JR r8
+            // 0x28 => TODO: JR Z, r8
+            // 0x38 => TODO: JR C, r8
+
+            // ADD HL, r16
+            // 0x09 => TODO: ADD HL, BC
+            // 0x19 => TODO: ADD DL, DE
+            // 0x29 => TODO: ADD DL, HL
+            // 0x39 => TODO: ADD DL, SP   
+           
             // LD A, (XX)
-            0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
-            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (DE)
-            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (HL+)
-            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (HL-)
+            0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)),      // LD A, (BC)
+            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)),      // LD A, (DE)
+            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)),   // LD A, (HL+)
+            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)),   // LD A, (HL-)
 
-            // Increment implemented manually because we can't use the lower 3 bits to determine register 
-            0x04 => Instruction::Inc(RegisterLoc::B),
-            0x14 => Instruction::Inc(RegisterLoc::D),
-            0x24 => Instruction::Inc(RegisterLoc::H),
-            0x34 => Instruction::Inc(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
+            // INC r8
+            0x0C => Instruction::Inc(RegisterLoc::C), // INC C
+            0x1C => Instruction::Inc(RegisterLoc::E), // INC E
+            0x2C => Instruction::Inc(RegisterLoc::L), // INC L
+            0x3C => Instruction::Inc(RegisterLoc::A), // INC A
 
-            0x0C => Instruction::Inc(RegisterLoc::C),
-            0x1C => Instruction::Inc(RegisterLoc::E),
-            0x2C => Instruction::Inc(RegisterLoc::L),
-            0x3C => Instruction::Inc(RegisterLoc::A),
+            // DEC r8
+            0x0D => Instruction::Dec(RegisterLoc::C), // DEC C
+            0x1D => Instruction::Dec(RegisterLoc::E), // DEC E
+            0x2D => Instruction::Dec(RegisterLoc::L), // DEC L
+            0x3D => Instruction::Dec(RegisterLoc::A), // DEC A
+            
+            // LD r8, d8
+            0x0E => Instruction::Load(Location::Register(RegisterLoc::C), Location::Immediate(self.next())), // LD C, d8
+            0x1E => Instruction::Load(Location::Register(RegisterLoc::E), Location::Immediate(self.next())), // LD E, d8
+            0x2E => Instruction::Load(Location::Register(RegisterLoc::L), Location::Immediate(self.next())), // LD L, d8
+            0x3E => Instruction::Load(Location::Register(RegisterLoc::A), Location::Immediate(self.next())), // LD A, d8
+            
+            // 0x0F => TODO: RRCA
+            // 0x1F => TODO: RRA
+            // 0x2F => TODO: CPL
+            // 0x3F => TODO: CCF
 
-            // Decrement implemented manually because we can't use the lower 3 bits to determine register 
-            0x05 => Instruction::Dec(RegisterLoc::B),
-            0x15 => Instruction::Dec(RegisterLoc::D),
-            0x25 => Instruction::Dec(RegisterLoc::H),
-            0x35 => Instruction::Dec(RegisterLoc::MemHL), // Getting data from (HL) not yet implemented
-
-            0x0D => Instruction::Dec(RegisterLoc::C),
-            0x1D => Instruction::Dec(RegisterLoc::E),
-            0x2D => Instruction::Dec(RegisterLoc::L),
-            0x3D => Instruction::Dec(RegisterLoc::A),
-
-            0x06 => Instruction::Load(Location::Register(RegisterLoc::B), Location::Immediate(self.next())),
-            0x16 => Instruction::Load(Location::Register(RegisterLoc::D), Location::Immediate(self.next())),
-            0x26 => Instruction::Load(Location::Register(RegisterLoc::H), Location::Immediate(self.next())),
-            0x36 => Instruction::Load(Location::Register(RegisterLoc::MemHL), Location::Immediate(self.next())),
-            0x0E => Instruction::Load(Location::Register(RegisterLoc::C), Location::Immediate(self.next())),
-            0x1E => Instruction::Load(Location::Register(RegisterLoc::E), Location::Immediate(self.next())),
-            0x2E => Instruction::Load(Location::Register(RegisterLoc::L), Location::Immediate(self.next())),
-            0x3E => Instruction::Load(Location::Register(RegisterLoc::A), Location::Immediate(self.next())),
-
-            // middle 2 quarters
+            // Middle 2 Quarters ~ 0x40 - 0xBF
             0x76 => Instruction::Halt,
-            0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regloc),
-            0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regloc),
-            0x50..=0x57 => Instruction::Load(Location::Register(RegisterLoc::D), regloc),
-            0x58..=0x5F => Instruction::Load(Location::Register(RegisterLoc::E), regloc),
-            0x60..=0x67 => Instruction::Load(Location::Register(RegisterLoc::H), regloc),
-            0x68..=0x6F => Instruction::Load(Location::Register(RegisterLoc::L), regloc),
-            0x70..=0x77 => Instruction::Load(Location::Register(RegisterLoc::MemHL), regloc),
-            0x78..=0x7F => Instruction::Load(Location::Register(RegisterLoc::A), regloc),
-            0x80..=0x87 => Instruction::Add(reg),
-            0x88..=0x8F => Instruction::Adc(reg),
-            0x90..=0x97 => Instruction::Sub(reg),
-            0x98..=0x9F => Instruction::Sbc(reg),
-            0xA0..=0xA7 => Instruction::And(reg),
-            0xA8..=0xAF => Instruction::Xor(reg),
-            0xB0..=0xB7 => Instruction::Or(reg),
-            0xB8..=0xBF => Instruction::Cp(reg),
+            0x40..=0x47 => Instruction::Load(Location::Register(RegisterLoc::B), regloc),       // LD B r8
+            0x48..=0x4F => Instruction::Load(Location::Register(RegisterLoc::C), regloc),       // LD C r8
+            0x50..=0x57 => Instruction::Load(Location::Register(RegisterLoc::D), regloc),       // LD D r8
+            0x58..=0x5F => Instruction::Load(Location::Register(RegisterLoc::E), regloc),       // LD E r8
+            0x60..=0x67 => Instruction::Load(Location::Register(RegisterLoc::H), regloc),       // LD H r8
+            0x68..=0x6F => Instruction::Load(Location::Register(RegisterLoc::L), regloc),       // LD L r8
+            0x70..=0x77 => Instruction::Load(Location::Register(RegisterLoc::MemHL), regloc),   // LD (HL) r8
+            0x78..=0x7F => Instruction::Load(Location::Register(RegisterLoc::A), regloc),       // LD A r8
+            0x80..=0x87 => Instruction::Add(reg),   // ADD A r8
+            0x88..=0x8F => Instruction::Adc(reg),   // ADC A r8
+            0x90..=0x97 => Instruction::Sub(reg),   // SUB A r8
+            0x98..=0x9F => Instruction::Sbc(reg),   // SBC A r8
+            0xA0..=0xA7 => Instruction::And(reg),   // AND A r8
+            0xA8..=0xAF => Instruction::Xor(reg),   // XOR A r8
+            0xB0..=0xB7 => Instruction::Or(reg),    // OR A r8
+            0xB8..=0xBF => Instruction::Cp(reg),    // CP A r8
 
             //TODO: Implement register_from_data function that can read 16 bit registers  
             // Bottom quarter ~ 0xC0 - 0xFF
-            0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),
-            0xC1 => Instruction::Pop(Register16Loc::BC),
-            0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),
-            0xC5 => Instruction::Push(Register16Loc::BC),
-            0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),
-            0xC9 => Instruction::Ret(None),
-            0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),
-            0xCD => Instruction::Call(None, self.next16()),
+            0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),                    // RET NZ
+            0xC1 => Instruction::Pop(Register16Loc::BC),                        // POP BC
+            // 0xC2 => TODO: JP NZ, a16
+            // 0xC3 => TODO: JP a16
+            0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),    // CALL NZ, a16
+            0xC5 => Instruction::Push(Register16Loc::BC),                       // PUSH BC
+            // 0xC6 => TODO: ADD A, d8
+            // 0xC7 => TODO: RST 00H
+            0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),                      // RET Z
+            0xC9 => Instruction::Ret(None),                                     // RET
+            // 0xCA => TODO: JP Z, a16
+            // 0xCB => TODO: PREFIX
+            0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),      // CALL Z, a16
+            0xCD => Instruction::Call(None, self.next16()),                     // CALL a16
+            // 0xCE => TODO: ADC A, d8
+            // 0xCF => RST 08H
 
-            0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),
-            0xD1 => Instruction::Pop(Register16Loc::DE),
-            0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),
-            0xD5 => Instruction::Push(Register16Loc::DE),
-            0xD8 => Instruction::Ret(Some(JmpFlag::Carry)), 
-            0xD9 => Instruction::Reti,
-            0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),
+            0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),                   // RET NC
+            0xD1 => Instruction::Pop(Register16Loc::DE),                        // POP DE
+            // 0xD2 => TODO: JP NC, a16
+            0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),   // CALL NC, a16
+            0xD5 => Instruction::Push(Register16Loc::DE),                       // PUSH DE
+            // 0xD6 => TODO: SUB d8
+            // 0xD7 => TODO: RST 10H
+            0xD8 => Instruction::Ret(Some(JmpFlag::Carry)),                     // RET C
+            0xD9 => Instruction::Reti,                                          // RETI
+            // 0xDA => TODO: JP C, a16
+            0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),     // CALL C, a16
+            // 0xDE => TODO: SBC A, d8
+            // 0xDF => TODO: RST 18H
 
             0xE0 => Instruction::Load(Location::ZeroPageAbsolute(self.next()), Location::Register(RegisterLoc::A)), // LD (a8), A
-            0xE1 => Instruction::Pop(Register16Loc::HL),
-            0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),
-            0xE5 => Instruction::Push(Register16Loc::HL),
+            0xE1 => Instruction::Pop(Register16Loc::HL),                                                            // POP HL
+            0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),                     // LD (C), A
+            0xE5 => Instruction::Push(Register16Loc::HL),                                                           // PUSH HL
+            // 0XE6 => TODO: AND d8
+            // 0XE7 => TODO: RST 20H
+            // 0XE8 => TODO: ADD SP, r8
+            // 0XE9 => TODO: JP HL
+            // 0XEA => TODO: LD (a16), A
+            // 0XEE => TODO: XOR d8
+            // 0XEF => TODO: RST 28H
 
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
-            0xF1 => Instruction::Pop(Register16Loc::AF), 
-            0xF5 => Instruction::Push(Register16Loc::AF), 
+            0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
+            // 0XF2 => TODO: LD A, (C)
+            // 0XF3 => TODO: DI
+            0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
+            // 0XF6 => TODO: OR d8
+            // 0XF7 => TODO: RST 30H
+            // 0XF8 => TODO: LD HL, SP + r8
+            // 0XF9 => TODO: LD SP, HL
+            // 0XFA => TODO: LD A, (a16)
+            // 0XFB => TODO: EI
+            // 0XFE => TODO: CP d8
+            // 0XFF => TODO: RST 38H
 
             0xCB => self.next_op_extended(),
 
