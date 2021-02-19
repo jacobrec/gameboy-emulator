@@ -83,7 +83,7 @@ pub enum Instruction {
     Call (Option<JmpFlag>, u16),
     Ret (Option<JmpFlag>),
     Reti,
-    RST(u8),
+    Rst(u8),
     Jmp (Jump, JmpFlag),
     Halt,
     Nop
@@ -193,7 +193,7 @@ impl Display for Instruction {
             Self::Pop(r)        => ("POP", format!(" {}", r)),
             Self::Push(r)       => ("PUSH", format!(" {}", r)),
             Self::Reti          => ("RETI", String::new()),
-            Self::RST(n)        => ("RST", format!(" {}", n)),
+            Self::Rst(n)        => ("RST", format!(" {}", n)),
             Self::Call(cc, l)   => {
                 match cc {
                     Some(flag) => ("Call", format!(" {}, ${:04X}", flag, l)),

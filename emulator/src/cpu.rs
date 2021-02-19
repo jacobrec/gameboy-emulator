@@ -313,7 +313,7 @@ impl CPU {
             0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),    // CALL NZ, a16
             0xC5 => Instruction::Push(Register16Loc::BC),                       // PUSH BC
             // 0xC6 => TODO: ADD A, d8
-            0xC7 => Instruction::RST(0x00),
+            0xC7 => Instruction::Rst(0x00),
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),                      // RET Z
             0xC9 => Instruction::Ret(None),                                     // RET
             // 0xCA => TODO: JP Z, a16
@@ -321,7 +321,7 @@ impl CPU {
             0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),      // CALL Z, a16
             0xCD => Instruction::Call(None, self.next16()),                     // CALL a16
             // 0xCE => TODO: ADC A, d8
-            0xCF => Instruction::RST(0x08),
+            0xCF => Instruction::Rst(0x08),
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),                   // RET NC
             0xD1 => Instruction::Pop(Register16Loc::DE),                        // POP DE
@@ -329,25 +329,25 @@ impl CPU {
             0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),   // CALL NC, a16
             0xD5 => Instruction::Push(Register16Loc::DE),                       // PUSH DE
             // 0xD6 => TODO: SUB d8
-            0xD7 => Instruction::RST(0x10),
+            0xD7 => Instruction::Rst(0x10),
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)),                     // RET C
             0xD9 => Instruction::Reti,                                          // RETI
             // 0xDA => TODO: JP C, a16
             0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),     // CALL C, a16
             // 0xDE => TODO: SBC A, d8
-            0xDF => Instruction::RST(0x18),
+            0xDF => Instruction::Rst(0x18),
 
             0xE0 => Instruction::Load(Location::ZeroPageAbsolute(self.next()), Location::Register(RegisterLoc::A)), // LD (a8), A
             0xE1 => Instruction::Pop(Register16Loc::HL),                                                            // POP HL
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),                     // LD (C), A
             0xE5 => Instruction::Push(Register16Loc::HL),                                                           // PUSH HL
             // 0XE6 => TODO: AND d8
-            0xE7 => Instruction::RST(0x20),
+            0xE7 => Instruction::Rst(0x20),
             // 0XE8 => TODO: ADD SP, r8
             // 0XE9 => TODO: JP HL
             // 0XEA => TODO: LD (a16), A
             // 0XEE => TODO: XOR d8
-            0xEF => Instruction::RST(0x28),
+            0xEF => Instruction::Rst(0x28),
 
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
@@ -355,13 +355,13 @@ impl CPU {
             // 0XF3 => TODO: DI
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             // 0XF6 => TODO: OR d8
-            0xF7 => Instruction::RST(0x30),
+            0xF7 => Instruction::Rst(0x30),
             // 0XF8 => TODO: LD HL, SP + r8
             // 0XF9 => TODO: LD SP, HL
             // 0XFA => TODO: LD A, (a16)
             // 0XFB => TODO: EI
             // 0XFE => TODO: CP d8
-            0xFF => Instruction::RST(0x38),
+            0xFF => Instruction::Rst(0x38),
 
             0xCB => self.next_op_extended(),
 
@@ -644,7 +644,7 @@ impl CPU {
                     self.set_pc(l);
                 }
             },
-            Instruction::RST(vec) => {
+            Instruction::Rst(vec) => {
                 self.stack_push(self.pc());
                 self.set_pc(vec as u16);
             },
