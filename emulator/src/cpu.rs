@@ -313,7 +313,7 @@ impl CPU {
             0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),    // CALL NZ, a16
             0xC5 => Instruction::Push(Register16Loc::BC),                       // PUSH BC
             // 0xC6 => TODO: ADD A, d8
-            // 0xC7 => TODO: RST 00H
+            0xC7 => Instruction::RST(0x00),
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),                      // RET Z
             0xC9 => Instruction::Ret(None),                                     // RET
             // 0xCA => TODO: JP Z, a16
@@ -321,7 +321,7 @@ impl CPU {
             0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),      // CALL Z, a16
             0xCD => Instruction::Call(None, self.next16()),                     // CALL a16
             // 0xCE => TODO: ADC A, d8
-            // 0xCF => RST 08H
+            0xCF => Instruction::RST(0x08),
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),                   // RET NC
             0xD1 => Instruction::Pop(Register16Loc::DE),                        // POP DE
@@ -329,25 +329,25 @@ impl CPU {
             0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),   // CALL NC, a16
             0xD5 => Instruction::Push(Register16Loc::DE),                       // PUSH DE
             // 0xD6 => TODO: SUB d8
-            // 0xD7 => TODO: RST 10H
+            0xD7 => Instruction::RST(0x10),
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)),                     // RET C
             0xD9 => Instruction::Reti,                                          // RETI
             // 0xDA => TODO: JP C, a16
             0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),     // CALL C, a16
             // 0xDE => TODO: SBC A, d8
-            // 0xDF => TODO: RST 18H
+            0xDF => Instruction::RST(0x18),
 
             0xE0 => Instruction::Load(Location::ZeroPageAbsolute(self.next()), Location::Register(RegisterLoc::A)), // LD (a8), A
             0xE1 => Instruction::Pop(Register16Loc::HL),                                                            // POP HL
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),                     // LD (C), A
             0xE5 => Instruction::Push(Register16Loc::HL),                                                           // PUSH HL
             // 0XE6 => TODO: AND d8
-            // 0XE7 => TODO: RST 20H
+            0xE7 => Instruction::RST(0x20),
             // 0XE8 => TODO: ADD SP, r8
             // 0XE9 => TODO: JP HL
             // 0XEA => TODO: LD (a16), A
             // 0XEE => TODO: XOR d8
-            // 0XEF => TODO: RST 28H
+            0xEF => Instruction::RST(0x28),
 
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
@@ -355,13 +355,13 @@ impl CPU {
             // 0XF3 => TODO: DI
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             // 0XF6 => TODO: OR d8
-            // 0XF7 => TODO: RST 30H
+            0xF7 => Instruction::RST(0x30),
             // 0XF8 => TODO: LD HL, SP + r8
             // 0XF9 => TODO: LD SP, HL
             // 0XFA => TODO: LD A, (a16)
             // 0XFB => TODO: EI
             // 0XFE => TODO: CP d8
-            // 0XFF => TODO: RST 38H
+            0xFF => Instruction::RST(0x38),
 
             0xCB => self.next_op_extended(),
 
@@ -409,15 +409,15 @@ impl CPU {
 
     fn stack_pop(&mut self)  -> u16{
 
-        let low_data = self.bus.stack_pop(self.sp as usize);
+        let low_data = self.bus.stack_pop(self.sp as usize) as u16;
         self.sp += 1;
         self.clock();
 
-        let high_data = self.bus.stack_pop(self.sp as usize);
+        let high_data = (self.bus.stack_pop(self.sp as usize) as u16) << 8;
         self.sp += 1;
         self.clock();
 
-        (high_data as u16) << 8  | low_data as u16
+        high_data | low_data 
         
     }
 
@@ -620,6 +620,7 @@ impl CPU {
             },
             Instruction::Reti => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RETI
                 // Return from subroutine and enable interupts 
+                unimplemented!();
             },
             Instruction::Ret(cc) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RET_cc
                 if let Some(flag) = cc { 
@@ -642,6 +643,10 @@ impl CPU {
                     self.stack_push(self.pc());
                     self.set_pc(l);
                 }
+            },
+            Instruction::RST(vec) => {
+                self.stack_push(self.pc());
+                self.set_pc(vec as u16);
             },
             Instruction::Jmp(j, f) => {
                 let b = self.check_jmp_flag(f);
@@ -848,7 +853,7 @@ mod test {
 
     #[test]
     fn test_reti() {
-        assert_eq!(1, 1);
+        unimplemented!();
     }
 
     #[test]
@@ -1046,5 +1051,40 @@ mod test {
        assert_eq!(test_cpu.cycles, 16);
        test_cpu.tick();
        assert_eq!(test_cpu.cycles, 20);
+    }
+
+
+    #[test]
+    fn test_rst() {
+        /*
+        * XOR A
+        * RST 0x08
+        * XOR C
+        * NOP * 5 ~ for padding
+        * XOR B
+        * RET
+        * This hould execute XOR A, then XOR B, then XOR C in that exact order
+        */ 
+        let rom_data = vec![0xAF, 0xCF, 0xA9, 0x00, 0x00,  0x00, 0x00, 0x00, 0xA8, 0xC9];
+        let mut test_cpu = create_test_cpu(rom_data);
+        test_cpu.sp = 0xFFFE;
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 4);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFC);
+        assert_eq!(test_cpu.cycles, 20);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 24);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.sp, 0xFFFE);
+        assert_eq!(test_cpu.pc, 0x0002);
+        assert_eq!(test_cpu.cycles, 40);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 44);
     }
 }
