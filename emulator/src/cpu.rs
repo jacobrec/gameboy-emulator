@@ -1,4 +1,5 @@
 use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
+use crate::utils::*;
 
 enum Flag {
     Zero, AddSub, HalfCarry, Carry
@@ -191,44 +192,6 @@ impl CPU {
         }
     }
 
-    fn is_add_half_carry(&self, target: u8, value: u8) -> bool {
-        ((target & 0x0F).wrapping_add(value & 0x0F)) & 0x10 == 0x10
-    }
-
-    fn is_add_carry(&self, target: u8, value: u8) -> bool {
-        let (val, overflow) = target.overflowing_add(value);
-        return overflow
-    }
-
-    fn is_add_half_carry16(&self, target: u16, value: u16) -> bool {
-        ((target & 0x00FF).wrapping_add(value & 0x00FF)) & 0x0100 == 0x0100
-    }
-
-    fn is_add_carry16(&self, target: u16, value: u16) -> bool {
-        let (val, overflow) = target.overflowing_add(value);
-        return overflow
-    }
-
-    fn is_subtract_half_carry(&self, target: u8, value: u8) -> bool {
-        let (val, overflow) = (target & 0x0F).overflowing_sub(value & 0x0F);
-        return if overflow { true } else { val < 0 }
-    }
-
-    fn is_subtract_carry(&self, target: u8, value: u8) -> bool {
-        let (val, overflow) = target.overflowing_sub(value);
-        return overflow
-    }
-
-    fn is_subtract_half_carry16(&self, target: u16, value: u16) -> bool {
-        let (val, overflow) = (target & 0x00FF).overflowing_sub(value & 0x00FF);
-        return if overflow { true } else { val < 0 }
-    }
-
-    fn is_subtract_carry16(&self, target: u16, value: u16) -> bool {
-        let (val, overflow) = target.overflowing_sub(value);
-        return overflow
-    }
-
     fn next_op(&mut self) -> Instruction {
         let data = self.next();
         
@@ -251,7 +214,13 @@ impl CPU {
             0x22 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD (HL+), A
             0x32 => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD (HL-), A
 
-            // Increment implemented manuall because can't use the lower 3 bits to determine register 
+            // LD A, (XX)
+            0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
+            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (DE)
+            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (HL+)
+            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (HL-)
+
+            // Increment implemented manually because we can't use the lower 3 bits to determine register 
             0x04 => Instruction::Inc(RegisterLoc::B),
             0x14 => Instruction::Inc(RegisterLoc::D),
             0x24 => Instruction::Inc(RegisterLoc::H),
@@ -262,13 +231,7 @@ impl CPU {
             0x2C => Instruction::Inc(RegisterLoc::L),
             0x3C => Instruction::Inc(RegisterLoc::A),
 
-            // LD A, (XX)
-            0x0A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::BC)), // LD A, (BC)
-            0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)), // LD A, (DE)
-            0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)), // LD A, (HL+)
-            0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)), // LD A, (HL-)
-
-            // Increment implemented manuall because can't use the lower 3 bits to determine register 
+            // Decrement implemented manually because we can't use the lower 3 bits to determine register 
             0x05 => Instruction::Dec(RegisterLoc::B),
             0x15 => Instruction::Dec(RegisterLoc::D),
             0x25 => Instruction::Dec(RegisterLoc::H),
@@ -484,8 +447,8 @@ impl CPU {
                 let a_val: u8 = self.get_register(RegisterLoc::A);
                 let reg_val: u8 = self.get_register(r);
 
-                let is_half_carry = self.is_add_half_carry(a_val, reg_val);
-                let is_carry = self.is_add_carry(a_val, reg_val);
+                let is_half_carry = is_add_half_carry(a_val, reg_val);
+                let is_carry = is_add_carry(a_val, reg_val);
                 let new_val = a_val.wrapping_add(reg_val);
                 
                 self.set_register(RegisterLoc::A, new_val);
@@ -499,8 +462,8 @@ impl CPU {
                 let a_val: u8 = self.get_register(RegisterLoc::A);
                 let reg_val: u8 = self.get_register(r);
 
-                let is_half_carry = self.is_subtract_half_carry(a_val, reg_val);
-                let is_carry = self.is_subtract_carry(a_val, reg_val);
+                let is_half_carry = is_subtract_half_carry(a_val, reg_val);
+                let is_carry = is_subtract_carry(a_val, reg_val);
                 let new_val = a_val.wrapping_sub(reg_val);
                 
                 self.set_register(RegisterLoc::A, new_val);
@@ -536,7 +499,7 @@ impl CPU {
             Instruction::Inc(r) => {
                 
                 let old_val: u8 = self.get_register(r);
-                let is_half_carry = self.is_add_half_carry(old_val, 1 as u8);
+                let is_half_carry = is_add_half_carry(old_val, 1 as u8);
                 let new_val = old_val.wrapping_add(1);
                 
                 self.set_register(r, new_val);
@@ -547,7 +510,7 @@ impl CPU {
             Instruction::Dec(r) => {
 
                 let old_val: u8 = self.get_register(r);
-                let is_half_carry = self.is_subtract_half_carry(old_val, 1 as u8);
+                let is_half_carry = is_subtract_half_carry(old_val, 1 as u8);
                 let new_val = old_val.wrapping_sub(1);
                 
                 self.set_register(r, new_val);
