@@ -80,6 +80,7 @@ pub enum Instruction {
     Set (u8, RegisterLoc),
     Pop (Register16Loc),
     Push (Register16Loc),
+    Call (Option<JmpFlag>, u16),
     Ret (Option<JmpFlag>),
     Reti,
     Jmp (Jump, JmpFlag),
@@ -174,8 +175,8 @@ impl Display for Instruction {
             Self::And(r)        => ("AND", format!(" {}", r)),
             Self::Xor(r)        => ("XOR", format!(" {}", r)),
             Self::Or(r)         => ("OR", format!(" {}", r)),
-            Self::Inc(r)         => ("INC", format!(" {}", r)),
-            Self::Dec(r)         => ("DEC", format!(" {}", r)),
+            Self::Inc(r)        => ("INC", format!(" {}", r)),
+            Self::Dec(r)        => ("DEC", format!(" {}", r)),
             Self::Cp(r)         => ("CP", format!(" {}", r)),
             Self::Rlc(r)        => ("RLC", format!(" {}", r)),
             Self::Rrc(r)        => ("RRC", format!(" {}", r)),
@@ -191,18 +192,18 @@ impl Display for Instruction {
             Self::Pop(r)        => ("POP", format!(" {}", r)),
             Self::Push(r)       => ("PUSH", format!(" {}", r)),
             Self::Reti          => ("RETI", String::new()),
-            Self::Ret(cc)       => {
-                if let Some(flag) = cc {
-                    (match flag {
-                        JmpFlag::NoZero => "NZ",
-                        JmpFlag::Zero   => "Z",
-                        JmpFlag::Carry  => "C",
-                        JmpFlag::NoCarry=> "NC",
-                    }, format!("RET {}", flag))
+            Self::Call(cc, l)   => {
+                match cc {
+                    Some(flag) => ("Call", format!(" {}, ${:04X}", flag, l)),
+                    None => ("CALL", format!(" ${:04X}", l))
                 }
-                else {
-                    ("RET", String::new())
-                }      
+            }
+
+            Self::Ret(cc)       => {
+                match cc {
+                    Some(flag) => ("RET", format!("{}", flag)),
+                    None => ("RET", String::new()),
+                }
             }
             Self::Jmp(j, f)    => {
                 (match j {

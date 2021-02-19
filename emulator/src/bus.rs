@@ -59,6 +59,7 @@ impl Bus {
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", ""); 0},
+            0xFF80..=0xFFFE => self.ram[loc as usize], // HRAM
             _ => panic!("Unimplemented read range: {:04X}", loc)
         }
     }
@@ -72,6 +73,7 @@ impl Bus {
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
+            0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
             _ => panic!("Unimplemented write range: {:04X}", loc)
         }
     }

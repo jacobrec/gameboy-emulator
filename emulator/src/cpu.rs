@@ -39,6 +39,7 @@ impl CPU {
     fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
     fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
     fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
+    fn pc(&self) -> u16 {self.pc}
 
     fn set_a(&mut self, v: u8) {self.registers[6] = v}
     fn set_b(&mut self, v: u8) {self.registers[4] = v}
@@ -310,15 +311,20 @@ impl CPU {
             // Bottom quarter ~ 0xC0 - 0xFF
             0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),
             0xC1 => Instruction::Pop(Register16Loc::BC),
+            0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),
             0xC5 => Instruction::Push(Register16Loc::BC),
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),
             0xC9 => Instruction::Ret(None),
+            0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),
+            0xCD => Instruction::Call(None, self.next16()),
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),
             0xD1 => Instruction::Pop(Register16Loc::DE),
+            0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),
             0xD5 => Instruction::Push(Register16Loc::DE),
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)), 
             0xD9 => Instruction::Reti,
+            0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),
 
             0xE0 => Instruction::Load(Location::ZeroPageAbsolute(self.next()), Location::Register(RegisterLoc::A)), // LD (a8), A
             0xE1 => Instruction::Pop(Register16Loc::HL),
@@ -594,12 +600,21 @@ impl CPU {
                         let loc = self.stack_pop();
                         self.set_pc(loc);
                     }
-
-                } else { 
+                } else {
                     let loc = self.stack_pop();
                     self.set_pc(loc);
                 }
-            }
+            },
+            Instruction::Call(None, l) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RET_cc
+                self.stack_push(self.pc());
+                self.set_pc(l);
+            },
+            Instruction::Call(Some(flag), l) => {
+                if self.check_jmp_flag(flag) {
+                    self.stack_push(self.pc());
+                    self.set_pc(l);
+                }
+            },
             Instruction::Jmp(j, f) => {
                 let b = self.check_jmp_flag(f);
                 if b {
@@ -934,5 +949,74 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::Zero), true);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), true);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+    }
+
+    #[test]
+    fn test_call() {
+        // XOR A
+        // CALL 0x0005
+        // XOR C
+        // XOR B
+        // RET
+        // This should execute XOR A, then XOR B, then XOR C in that order
+       let rom_data = vec![0xAF, 0xCD, 0x05, 0x00, 0xA9,  0xA8, 0xC9];
+       let mut test_cpu = create_test_cpu(rom_data);
+       test_cpu.sp = 0xFFFE;
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 4);
+       test_cpu.tick();
+       assert_eq!(test_cpu.sp, 0xFFFC);
+       assert_eq!(test_cpu.cycles, 28);
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 32);
+       test_cpu.tick();
+       assert_eq!(test_cpu.sp, 0xFFFE);
+       assert_eq!(test_cpu.pc, 0x0004);
+       assert_eq!(test_cpu.cycles, 48);
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 52);
+    }
+
+    #[test]
+    fn test_call_cc() {
+        // XOR A
+        // CALL Z, 0x0005
+        // XOR C
+        // XOR B
+        // RET
+        // This should execute XOR A, then XOR B, then XOR C in that order
+       let rom_data = vec![0xAF, 0xCC, 0x05, 0x00, 0xA9,  0xA8, 0xC9];
+       let mut test_cpu = create_test_cpu(rom_data);
+       test_cpu.sp = 0xFFFE;
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 4);
+       test_cpu.tick();
+       assert_eq!(test_cpu.sp, 0xFFFC);
+       assert_eq!(test_cpu.cycles, 28);
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 32);
+       test_cpu.tick();
+       assert_eq!(test_cpu.sp, 0xFFFE);
+       assert_eq!(test_cpu.pc, 0x0004);
+       assert_eq!(test_cpu.cycles, 48);
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 52);
+
+        // XOR A
+        // CALL NZ, 0x0005
+        // XOR C
+        // XOR B
+        // RET
+        // This should execute XOR A, then XOR C in that order
+       let rom_data = vec![0xAF, 0xC4, 0x05, 0x00, 0xA9,  0xA8, 0xC9];
+       let mut test_cpu = create_test_cpu(rom_data);
+       test_cpu.sp = 0xFFFE;
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 4);
+       test_cpu.tick();
+       assert_eq!(test_cpu.sp, 0xFFFE);
+       assert_eq!(test_cpu.cycles, 16);
+       test_cpu.tick();
+       assert_eq!(test_cpu.cycles, 20);
     }
 }
