@@ -1,6 +1,12 @@
 use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
 use crate::utils::*;
 
+
+enum Rotate {
+    Right,
+    Left,
+}
+
 enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
@@ -240,8 +246,8 @@ impl CPU {
             0x26 => Instruction::Load(Location::Register(RegisterLoc::H), Location::Immediate(self.next())),        // LD H, d8
             0x36 => Instruction::Load(Location::Register(RegisterLoc::MemHL), Location::Immediate(self.next())),    // LD (HL), d8
  
-            // 0x07 => TODO: RLCA
-            // 0x17 => TODO: RLA
+            0x07 => Instruction::Rlca,
+            0x17 => Instruction::Rla,
             // 0x27 => TODO: DAA
             // 0x37 => TODO: SCF
 
@@ -280,8 +286,8 @@ impl CPU {
             0x2E => Instruction::Load(Location::Register(RegisterLoc::L), Location::Immediate(self.next())), // LD L, d8
             0x3E => Instruction::Load(Location::Register(RegisterLoc::A), Location::Immediate(self.next())), // LD A, d8
             
-            // 0x0F => TODO: RRCA
-            // 0x1F => TODO: RRA
+            0x0F => Instruction::Rrca,
+            0x1F => Instruction::Rra,
             // 0x2F => TODO: CPL
             // 0x3F => TODO: CCF
 
@@ -659,10 +665,61 @@ impl CPU {
                     self.pc = dest;
                 }
             },
+            Instruction::Rl(r) => {
+                self.rotate_register(r, Rotate::Left, true);
+            },
+            Instruction::Rr(r) => {
+                self.rotate_register(r, Rotate::Right, true);
+            },
+            Instruction::Rlc(r) => {
+                self.rotate_register(r, Rotate::Left, false);
+            },
+            Instruction::Rrc(r) => {
+                self.rotate_register(r, Rotate::Right, false);
+            },
+            Instruction::Rla => {
+                self.rotate_register(RegisterLoc::A, Rotate::Left, true);
+                self.set_flag(Flag::Zero, false);
+            },
+            Instruction::Rra => {
+                self.rotate_register(RegisterLoc::A, Rotate::Right, true);
+                self.set_flag(Flag::Zero, false);
+            },
+            Instruction::Rlca => {
+                self.rotate_register(RegisterLoc::A, Rotate::Left, false);
+                self.set_flag(Flag::Zero, false);
+            }
+            Instruction::Rrca => {
+                self.rotate_register(RegisterLoc::A, Rotate::Right, false);
+                self.set_flag(Flag::Zero, false);
+            },
             _ => unimplemented!("TODO")
         }
     }
 
+    fn rotate_register(&mut self, r: RegisterLoc, dir: Rotate, withcarry: bool) {
+        let val = self.get_register(r);
+        let old_c = if self.get_flag(Flag::Carry) { 1 } else { 0 };
+
+        let (c, new_val) = match dir {
+            Rotate::Left => {
+                let c = val >> 7;
+                let new_val = val << 1 | if withcarry { old_c } else { c };
+                (c, new_val)
+            },
+            Rotate::Right => {
+                let c = val & 1;
+                let new_val = val >> 1 | (if withcarry { old_c } else { c }) << 7;
+                (c, new_val)
+            }
+        };
+
+        self.set_register(r, new_val);
+        self.set_flag(Flag::Zero, new_val == 0);
+        self.set_flag(Flag::AddSub, true);
+        self.set_flag(Flag::HalfCarry, false);
+        self.set_flag(Flag::Carry, c == 1);
+    }
 }
 
 #[cfg(test)]
@@ -1086,5 +1143,53 @@ mod test {
 
         test_cpu.tick();
         assert_eq!(test_cpu.cycles, 44);
+    }
+
+    #[test]
+    fn test_rl() {
+        /*
+         * LD A, 0b10000001
+         * RL A ; A should be 0b00000010 after
+         * RL A ; A should be 0b00000101
+         */
+        let rom_data = vec![0x3E, 0x81, 0xCB, 0x17, 0xCB, 0x17];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.a(), 0b00000010);
+        assert!(test_cpu.get_flag(Flag::Carry));
+        assert!(!test_cpu.get_flag(Flag::Zero));
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 24);
+        assert_eq!(test_cpu.a(), 0b00000101);
+        assert!(!test_cpu.get_flag(Flag::Carry));
+        assert!(!test_cpu.get_flag(Flag::Zero));
+    }
+
+    #[test]
+    fn test_rrc() {
+        /*
+         * LD A, 0b10000001
+         * RRC A ; A should be 0b11000000 after
+         * RRCA  ; A should be 0b01100000
+         */
+        let rom_data = vec![0x3E, 0x81, 0xCB, 0x0F, 0x0F];
+        let mut test_cpu = create_test_cpu(rom_data);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.a(), 0b11000000);
+        assert!(test_cpu.get_flag(Flag::Carry));
+        assert!(!test_cpu.get_flag(Flag::Zero));
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 20);
+        assert_eq!(test_cpu.a(), 0b01100000);
+        assert!(!test_cpu.get_flag(Flag::Carry));
+        assert!(!test_cpu.get_flag(Flag::Zero));
     }
 }
