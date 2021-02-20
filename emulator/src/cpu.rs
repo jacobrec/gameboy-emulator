@@ -205,7 +205,7 @@ impl CPU {
 
             // Top Quarter ~ 0x00 - 0x3F
             0x00 => Instruction::Nop,
-            0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), JmpFlag::NoZero), // JR NZ, r8
+            0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::NoZero)), // JR NZ, r8
             // 0X30 => TODO: JR NZ, r8
             // 0X40 => TODO: JR NC, r8
 
@@ -250,7 +250,7 @@ impl CPU {
             // 0x37 => TODO: SCF
 
             // 0x08 => TODO: LD (a16), SP
-            // 0x18 => TODO: JR r8
+            0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None), //TODO: JR r8
             // 0x28 => TODO: JR Z, r8
             // 0x38 => TODO: JR C, r8
 
@@ -308,11 +308,10 @@ impl CPU {
             0xB0..=0xB7 => Instruction::Or(reg),    // OR A r8
             0xB8..=0xBF => Instruction::Cp(reg),    // CP A r8
 
-            //TODO: Implement register_from_data function that can read 16 bit registers  
             // Bottom quarter ~ 0xC0 - 0xFF
             0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),                    // RET NZ
             0xC1 => Instruction::Pop(Register16Loc::BC),                        // POP BC
-            // 0xC2 => TODO: JP NZ, a16
+            0xC2 => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::NoZero)),
             // 0xC3 => TODO: JP a16
             0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),    // CALL NZ, a16
             0xC5 => Instruction::Push(Register16Loc::BC),                       // PUSH BC
@@ -320,7 +319,7 @@ impl CPU {
             0xC7 => Instruction::Rst(0x00),
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),                      // RET Z
             0xC9 => Instruction::Ret(None),                                     // RET
-            // 0xCA => TODO: JP Z, a16
+            0xCA => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::Zero)),
             // 0xCB => TODO: PREFIX
             0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),      // CALL Z, a16
             0xCD => Instruction::Call(None, self.next16()),                     // CALL a16
@@ -329,14 +328,14 @@ impl CPU {
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),                   // RET NC
             0xD1 => Instruction::Pop(Register16Loc::DE),                        // POP DE
-            // 0xD2 => TODO: JP NC, a16
+            0xD2 => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::NoCarry)),
             0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),   // CALL NC, a16
             0xD5 => Instruction::Push(Register16Loc::DE),                       // PUSH DE
             // 0xD6 => TODO: SUB d8
             0xD7 => Instruction::Rst(0x10),
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)),                     // RET C
             0xD9 => Instruction::Reti,                                          // RETI
-            // 0xDA => TODO: JP C, a16
+            0xDA => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::Carry)),
             0xDC => Instruction::Call(Some(JmpFlag::Carry), self.next16()),     // CALL C, a16
             // 0xDE => TODO: SBC A, d8
             0xDF => Instruction::Rst(0x18),
@@ -348,7 +347,7 @@ impl CPU {
             // 0XE6 => TODO: AND d8
             0xE7 => Instruction::Rst(0x20),
             // 0XE8 => TODO: ADD SP, r8
-            // 0XE9 => TODO: JP HL
+            0xE9 => Instruction::Jmp(Jump::Absolute(self.hl()), None),
             // 0XEA => TODO: LD (a16), A
             // 0XEE => TODO: XOR d8
             0xEF => Instruction::Rst(0x28),
@@ -679,7 +678,7 @@ impl CPU {
                 self.stack_push(self.pc());
                 self.set_pc(vec as u16);
             },
-            Instruction::Jmp(j, f) => {
+            Instruction::Jmp(j, Some(f)) => {
                 let b = self.check_jmp_flag(f);
                 if b {
                     let dest = match j {
@@ -689,6 +688,18 @@ impl CPU {
                     self.clock();
                     self.pc = dest;
                 }
+            },
+            Instruction::Jmp(j, None) => {
+
+                let dest = match j {
+                    Jump::Relative(v8) => {
+                        self.clock();
+                        ((self.pc as i32) + (v8 as i32)) as u16
+                    },
+                    Jump::Absolute(v16) => v16,
+                };
+                self.pc = dest;
+        
             },
             Instruction::Rl(r) => {
                 self.rotate_register(r, Rotate::Left, true);

@@ -90,7 +90,7 @@ pub enum Instruction {
     Ret (Option<JmpFlag>),
     Reti,
     Rst(u8),
-    Jmp (Jump, JmpFlag),
+    Jmp (Jump, Option<JmpFlag>),
     Halt,
     Nop
 }
@@ -220,10 +220,20 @@ impl Display for Instruction {
                 }
             }
             Self::Jmp(j, f)    => {
-                (match j {
-                    Jump::Absolute(_) => "JP",
-                    Jump::Relative(_) => "JR"
-                }, format!(" {},{}", f, j))
+                match j {
+                    Jump::Absolute(_) => {
+                        match f {
+                            Some(flag) => ("JP", format!("{}", flag)),
+                            None => ("JP", String::new())
+                        }
+                    },
+                    Jump::Relative(_) => {
+                        match f {
+                            Some(flag) => ("JR", format!(" {}", flag)),
+                            None => ("JR", String::new())
+                        }
+                    }
+                }
             }
             Self::Halt  => ("HALT", String::new()),
         };
