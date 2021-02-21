@@ -32,6 +32,7 @@ pub enum Register16Loc {
     DE,
     HL,
     AF,
+    SP
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -88,6 +89,9 @@ pub enum Instruction {
     Push (Register16Loc),
     Call (Option<JmpFlag>, u16),
     Ret (Option<JmpFlag>),
+    Inc16(Register16Loc),
+    Dec16(Register16Loc),
+    AddHL16(Register16Loc),
     Reti,
     Rst(u8),
     Jmp (Jump, Option<JmpFlag>),
@@ -139,6 +143,7 @@ impl Display for Register16Loc {
             Self::DE => "DE",
             Self::HL => "HL",
             Self::AF => "AF",
+            Self::SP => "SP",
         };
         write!(f, "{}", s)
     }
@@ -204,6 +209,9 @@ impl Display for Instruction {
             Self::Set(i, r)     => ("SET", format!(" {},{}", i, r)),
             Self::Pop(r)        => ("POP", format!(" {}", r)),
             Self::Push(r)       => ("PUSH", format!(" {}", r)),
+            Self::Inc16(r)      => ("INC", format!(" {}", r)),
+            Self::Dec16(r)      => ("DEC", format!(" {}", r)),
+            Self::AddHL16(r)    => ("ADD", format!("HL,{}", r)),
             Self::Reti          => ("RETI", String::new()),
             Self::Rst(n)        => ("RST", format!(" {}", n)),
             Self::Call(cc, l)   => {

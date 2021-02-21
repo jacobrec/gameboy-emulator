@@ -119,6 +119,7 @@ impl CPU {
             Register16Loc::DE => self.de(),
             Register16Loc::HL => self.hl(),
             Register16Loc::AF => self.af(),
+            Register16Loc::SP => self.sp,
         }
     }
 
@@ -128,6 +129,7 @@ impl CPU {
             Register16Loc::DE => self.set_de(val),
             Register16Loc::HL => self.set_hl(val),
             Register16Loc::AF => self.set_af(val),
+            Register16Loc::SP => self.sp = val,
         }
     }
 
@@ -221,11 +223,12 @@ impl CPU {
             0x22 => Instruction::Load(Location::Indirect(Offset::HLInc), Location::Register(RegisterLoc::A)),   // LD (HL+), A
             0x32 => Instruction::Load(Location::Indirect(Offset::HLDec), Location::Register(RegisterLoc::A)),   // LD (HL-), A
             
-            // 0x03 => TODO: INC BC
-            // 0x13 => TODO: INC DE
-            // 0x23 => TODO: INC HL
-            // 0x33 => TODO: INC SP
-           
+            // INC r16
+            0x03 => Instruction::Inc16(Register16Loc::BC),
+            0x13 => Instruction::Inc16(Register16Loc::DE),
+            0x23 => Instruction::Inc16(Register16Loc::HL),
+            0x33 => Instruction::Inc16(Register16Loc::SP),
+
             // INC r8
             0x04 => Instruction::Inc(RegisterLoc::B),       // INC B
             0x14 => Instruction::Inc(RegisterLoc::D),       // INC D
@@ -265,6 +268,12 @@ impl CPU {
             0x1A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::DE)),      // LD A, (DE)
             0x2A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLInc)),   // LD A, (HL+)
             0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)),   // LD A, (HL-)
+
+            // DEC r16
+            0xB3 => Instruction::Dec16(Register16Loc::BC),
+            0xB3 => Instruction::Dec16(Register16Loc::DE),
+            0xB3 => Instruction::Dec16(Register16Loc::HL),
+            0xB3 => Instruction::Dec16(Register16Loc::SP),
 
             // INC r8
             0x0C => Instruction::Inc(RegisterLoc::C), // INC C
@@ -628,6 +637,7 @@ impl CPU {
                     Register16Loc::AF => { 
                         self.set_af(stack_val);
                     },
+                    Register16Loc::SP => panic!("SP is not a valid register for pop"),
 
                 }
             },
@@ -645,6 +655,7 @@ impl CPU {
                     Register16Loc::AF => { 
                         self.stack_push(self.af());
                     },
+                    Register16Loc::SP => panic!("SP is not a valid register for push"),
                 }
                 self.clock();
             },
@@ -738,7 +749,15 @@ impl CPU {
             Instruction::Ccf => {
                 self.set_flag(Flag::Carry, !self.get_flag(Flag::Carry));
             },
-            _ => unimplemented!("TODO")
+            Instruction::Inc16(r16) => {
+                // No flags change here
+                self.set_register16(r16, self.get_register16(r16).wrapping_add(1))
+            },
+            Instruction::Dec16(r16) => {
+                // No flags change here
+                self.set_register16(r16, self.get_register16(r16).wrapping_sub(1))
+            },
+            _ => unimplemented!("TODO"),
         }
     }
 
