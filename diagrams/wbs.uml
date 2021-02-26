@@ -22,8 +22,18 @@
 *** FR15 - CPU.MiscellaneousOperations
 *** FR15 - CPU.Speed
 ** PPU
+*** FR18 - PPU.Background
+*** FR19 - PPU.Scrolling
+*** FR20 - PPU.Window
+*** FR21 - PPU.Sprites
+*** FR22 - PPU.Timing
+*** FR23 - PPU.Palettes
 ** APU
-** Inturrupt Controller
-
-
+*** FR24 - APU.Channels
+*** FR25 - APU.Terminals
+*** FR26 - APU.Registers
+*** FR27 - APU.WaveRAM
+** Interrupt Controller
+*** FR28 - Interrupt.Flag
+*** FR29 - Interrupt.Handle
 @endwbs
