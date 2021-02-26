@@ -19,8 +19,8 @@
 *** FR13 - CPU.StackOperations
 *** FR14 - CPU.BitShiftAndRotate
 *** FR15 - CPU.ControlFlowOperations
-*** FR15 - CPU.MiscellaneousOperations
-*** FR15 - CPU.Speed
+*** FR16 - CPU.MiscellaneousOperations
+*** FR17 - CPU.Speed
 ** PPU
 *** FR18 - PPU.Background
 *** FR19 - PPU.Scrolling
