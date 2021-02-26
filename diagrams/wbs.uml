@@ -51,11 +51,30 @@
 *** FR17 - CPU.Speed
 ** PPU
 *** FR18 - PPU.Background
+**** Draw background tiles to screen
+**** Background layer should be behind all other layers
+**** Background layer should not support transparency
 *** FR19 - PPU.Scrolling
+**** Add Scroll registers
+**** Enable scrolling on both X and Y Axis
+**** Ensure scrolling is checked after each line
 *** FR20 - PPU.Window
+**** Render a non moving window layer to the screen
+**** Ensure window layer is ontop of all layers
+**** Add a window layer render switch to make it easy to enable or disable the window
 *** FR21 - PPU.Sprites
+**** Render 10 sprites per line, and if there's more in a line don't bother rendering them
+**** Render 40 sprites per frame, and if there's more in a line don't bother rendering
+**** Enable globally configurable 8x16 or 8x8 sprites
 *** FR22 - PPU.Timing
+**** OAM scan takes correct length of time
+**** H-Blank takes correct length of time (this is a variable length)
+**** Call V-BLANK appropriately
+**** Run correct number of PPU Cycles per CPU Cycle
+**** Ensure one frame happens at exactly 59.7Hz
 *** FR23 - PPU.Palettes
+**** Create configurable color palettes that map to colors 1-4 or transparency
+**** Each palettes should map to ARGB32 colors for easy of displaying
 ** APU
 *** FR24 - APU.Channels
 **** 2 wave generator channels need to be made
