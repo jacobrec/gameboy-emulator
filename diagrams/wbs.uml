@@ -71,6 +71,7 @@
 **** Create cpu clock 
 **** Ensure clock runs at 4MHz
 ** PPU
+*** FR18 - PPU.Background
 **** Draw background tiles to screen
 **** Background layer should be behind all other layers
 **** Background layer should not support transparency
