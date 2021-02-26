@@ -2,12 +2,31 @@
 * PWA Gameboy Emulator
 ** Application
 *** FR1 - APP.PWA
+**** Design and build user interface
+***** Create button and screen interface
 *** FR2 - App.Delete
+**** Design and build user interface
+***** Create button to delete ROM data
+**** Remove save state data from browser
+***** Clear data stored in localdb or localstorage
 *** FR3 - App.Upload
+**** Design and build user interface
+***** Create button to receive ROM file as input
+**** Receive input from browser to take in a ROM file
+***** Load ROM file into emulator memory
 ** Quality of life
 *** FR4 - Extra.Mute
+**** Add mute toggle interface
+**** Stop emulator from playing sound
 *** FR5 - Extra.Save
+**** Add save button interface
+**** Save game into browser
+***** Serialize game state
+***** Store serialized game state in browser localdb or localstorage
 *** FR6 - Extra.Load
+**** Add load button interface
+**** Receive saved state data input from browser
+***** Load previous save state into emulator memory
 ** Emulator Controls
 *** FR7 - Controls.Touchpad
 *** FR8 - Controls.CustomKeymap
