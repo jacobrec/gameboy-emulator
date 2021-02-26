@@ -52,28 +52,27 @@
 **** Create direct, indirect and immediate load operations for 16-bit registers
 *** FR12 - CPU.ArithmeticOpCodes
 **** Create arithmetic operations for 8-bit registers
-***** Create opertaions for add, sub, and, or, xor, pre-inc, post-dec, complement and decimal adjust
 **** Create arithmetic operations for 16-bit registers
-***** Create opertaions for add, sub, and, or, xor, pre-inc, post-dec, complement and decimal adjust
 *** FR13 - CPU.StackOperations
-**** Create operations
+**** Create stack operations
 ***** Create push, pop, load, and store stack pointer operations
 *** FR14 - CPU.BitShiftAndRotate
 **** Create 8-bit shift, bit set, bit reset and register rotate operations
 *** FR15 - CPU.ControlFlowOperations
-**** Create jump, call and return operations for 8 and 16 bit reigsters
+**** Create jump, call and return operations for 8-bit reigsters
+**** Create jump, call and return operations for 16-bit reigsters
 *** FR16 - CPU.MiscellaneousOperations
 **** Create carry flag set/clear operations
 **** Create NOP, halt, stop, reset, swap nibble operations
 **** Create operations for enabling and disabling interrupts
-*** FR17 - CPU.Speed
-**** Create cpu clock 
-**** Ensure clock runs at 4MHz
+*** FR17 - CPU.Speed 
+**** Create CPU clock 
+***** Ensure clock runs at 4MHz
 ** PPU
 *** FR18 - PPU.Background
 **** Draw background tiles to screen
-**** Background layer should be behind all other layers
-**** Background layer should not support transparency
+**** Ensure background layer is behind all other layers
+**** Ensure background layer does not support transparency
 *** FR19 - PPU.Scrolling
 **** Add Scroll registers
 **** Enable scrolling on both X and Y Axis
@@ -87,19 +86,19 @@
 **** Render 40 sprites per frame, and if there's more in a line don't bother rendering
 **** Enable globally configurable 8x16 or 8x8 sprites
 *** FR22 - PPU.Timing
-**** OAM scan takes correct length of time
-**** H-Blank takes correct length of time (this is a variable length)
+**** Ensure OAM scan takes correct length of time
+**** Ensure H-Blank takes correct length of time (this is a variable length)
 **** Call V-BLANK appropriately
 **** Run correct number of PPU Cycles per CPU Cycle
 **** Ensure one frame happens at exactly 59.7Hz
 *** FR23 - PPU.Palettes
 **** Create configurable color palettes that map to colors 1-4 or transparency
-**** Each palettes should map to ARGB32 colors for easy of displaying
+**** Ensure each palette maps to ARGB32 colors for easy of displaying
 ** APU
 *** FR24 - APU.Channels
-**** 2 wave generator channels need to be made
-**** A waveram channel needs to be made
-**** A noise generator needs to be made
+**** Create 2 wave generator channels
+**** Create a waveram channel 
+**** Create a noise generator 
 *** FR25 - APU.Terminals
 **** The terminals should produce the left and right sound data
 **** Convert from GB memory to data which is easier to play
@@ -114,7 +113,7 @@
 ** Interrupt Controller
 *** FR28 - Interrupt.Flag
 **** Create interrupt enable, disable flags
-**** Create the instructions that can set and clear this flags
+**** Create the instructions that can set and clear the flags
 **** Ensure interrupts are only called when allowed
 *** FR29 - Interrupt.Handle
 **** Create an interrupt vector mapped to specific points in memory
