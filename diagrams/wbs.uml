@@ -29,8 +29,17 @@
 ***** Load previous save state into emulator memory
 ** Emulator Controls
 *** FR7 - Controls.Touchpad
+**** Design touchpad interface
+**** Handle touchpad events when they are triggered
+***** Read in touchpad events and convert them into instructions for emulator 
 *** FR8 - Controls.CustomKeymap
+**** Design custom keymap interface
+**** Let user select specific action for specific keypress
 *** FR9 - Controls.CustomTouchpad
+**** Design custom touchpad interface
+**** Let user decide the position of the on screen button pad
+***** Let user enable custom touchpad interface
+***** Let user drag touchpas to new position on screen
 ** CPU
 *** FR10 - CPU.Register
 *** FR11 - CPU.LoadAndStoreOpcodes 
