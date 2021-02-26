@@ -10,7 +10,7 @@
 **** Design and build user interface
 ***** Create button to delete ROM data
 **** Remove save state data from browser
-***** Clear data stored in indexedDB or localstorage
+***** Clear data stored in browser
 *** FR3 - App.Upload
 **** Design and build user interface
 ***** Create button to receive ROM file as input
@@ -24,7 +24,7 @@
 **** Add save button interface
 **** Save game into browser
 ***** Serialize game state
-***** Store serialized game state in browser indexedDB or localstorage
+***** Store serialized game state in browser
 *** FR6 - Extra.Load
 **** Add load button interface
 **** Receive saved state data input from browser
@@ -34,7 +34,7 @@
 *** FR7 - Controls.Touchpad
 **** Design touchpad interface
 **** Handle touchpad events when they are triggered
-***** Read in touchpad events and convert them into instructions for emulator 
+***** Read in touchpad events and convert them into instructions for emulator
 *** FR8 - Controls.CustomKeymap
 **** Design custom keymap interface
 **** Let user select specific action for specific keypress
@@ -65,8 +65,8 @@
 **** Create carry flag set/clear operations
 **** Create NOP, halt, stop, reset, swap nibble operations
 **** Create operations for enabling and disabling interrupts
-*** FR17 - CPU.Speed 
-**** Create CPU clock 
+*** FR17 - CPU.Speed
+**** Create CPU clock
 ***** Ensure clock runs at 4MHz
 ** PPU
 *** FR18 - PPU.Background
@@ -97,8 +97,8 @@
 ** APU
 *** FR24 - APU.Channels
 **** Create 2 wave generator channels
-**** Create a waveram channel 
-**** Create a noise generator 
+**** Create a waveram channel
+**** Create a noise generator
 *** FR25 - APU.Terminals
 **** The terminals should produce the left and right sound data
 **** Convert from GB memory to data which is easier to play
