@@ -54,5 +54,13 @@
 *** FR27 - APU.WaveRAM
 ** Interrupt Controller
 *** FR28 - Interrupt.Flag
+**** Create interrupt enable, disable flags
+**** Create the instructions that can set and clear this flags
+**** Ensure interrupts are only called when allowed
 *** FR29 - Interrupt.Handle
+**** Create an interrupt vector mapped to specific points in memory
+**** Trigger an interrupt whenever the JoyPad is pressed
+**** Create an interrupt timer
+**** Trigger an interrupt whenever the timer overflows
+**** Trigger V-BLANK, and LCD STAT interrupts from the PPU
 @endwbs
