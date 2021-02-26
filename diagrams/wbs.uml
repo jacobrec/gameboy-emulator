@@ -1,0 +1,15 @@
+@startwbs
+* PWA Gameboy Emulator
+** Application
+*** FR1 - APP.PWA
+*** FR2 - App.Delete
+*** FR3 - App.Upload
+** Quality of life
+** Emulator Controls
+** CPU
+** PPU
+** APU
+** Inturrupt Controller
+
+
+@endwbs
