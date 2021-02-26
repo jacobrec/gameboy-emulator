@@ -8,7 +8,7 @@
 **** Design and build user interface
 ***** Create button to delete ROM data
 **** Remove save state data from browser
-***** Clear data stored in indexdb or localstorage
+***** Clear data stored in indexedDB or localstorage
 *** FR3 - App.Upload
 **** Design and build user interface
 ***** Create button to receive ROM file as input
@@ -22,7 +22,7 @@
 **** Add save button interface
 **** Save game into browser
 ***** Serialize game state
-***** Store serialized game state in browser indexdb or localstorage
+***** Store serialized game state in browser indexedDB or localstorage
 *** FR6 - Extra.Load
 **** Add load button interface
 **** Receive saved state data input from browser
