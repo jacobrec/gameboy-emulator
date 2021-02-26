@@ -8,7 +8,7 @@
 **** Design and build user interface
 ***** Create button to delete ROM data
 **** Remove save state data from browser
-***** Clear data stored in localdb or localstorage
+***** Clear data stored in indexedDB or localstorage
 *** FR3 - App.Upload
 **** Design and build user interface
 ***** Create button to receive ROM file as input
@@ -22,7 +22,7 @@
 **** Add save button interface
 **** Save game into browser
 ***** Serialize game state
-***** Store serialized game state in browser localdb or localstorage
+***** Store serialized game state in browser indexedDB or localstorage
 *** FR6 - Extra.Load
 **** Add load button interface
 **** Receive saved state data input from browser
@@ -58,9 +58,20 @@
 *** FR23 - PPU.Palettes
 ** APU
 *** FR24 - APU.Channels
+**** 2 wave generator channels need to be made
+**** A waveram channel needs to be made
+**** A noise generator needs to be made
 *** FR25 - APU.Terminals
+**** The terminals should produce the left and right sound data
+**** Convert from GB memory to data which is easier to play
 *** FR26 - APU.Registers
+**** Create the APU Registers
+**** Memory map their location so they are readable and writable from the CPU
+**** Control the 4 channels
+**** Control the 2 terminals from these registers
 *** FR27 - APU.WaveRAM
+**** Create read and writable memory for the waveform RAM
+**** Produce sound data from the waveform RAM
 ** Interrupt Controller
 *** FR28 - Interrupt.Flag
 **** Create interrupt enable, disable flags
