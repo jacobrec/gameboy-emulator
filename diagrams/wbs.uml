@@ -3,9 +3,7 @@
 ** Application
 *** FR1 - APP.PWA
 **** Design and build user interface
-***** Create button interface
-***** Create screen interface
-***** Create audio interface
+***** Create button and screen interface
 *** FR2 - App.Delete
 **** Design and build user interface
 ***** Create button to delete ROM data
@@ -28,7 +26,6 @@
 *** FR6 - Extra.Load
 **** Add load button interface
 **** Receive saved state data input from browser
-***** Deserialize game state
 ***** Load previous save state into emulator memory
 ** Emulator Controls
 *** FR7 - Controls.Touchpad
@@ -42,42 +39,41 @@
 **** Design custom touchpad interface
 **** Let user decide the position of the on screen button pad
 ***** Let user enable custom touchpad interface
-***** Let user drag touchpad to new position on screen
+***** Let user drag touchpas to new position on screen
 ** CPU
 *** FR10 - CPU.Register
-*** FR11 - CPU.LoadAndStoreOpcodes 
+**** Create the 8-bit CPU registers
+**** Create the 16-bit SP and PC registers
+**** Allow the 8-bit CPU registers be grouped to form 16-bit reigsters
+*** FR11 - CPU.LoadAndStoreOpcodes
+**** Create direct, indirect and immediate load operations for 8-bit registers
+**** Create direct, indirect and immediate load operations for 16-bit registers
 *** FR12 - CPU.ArithmeticOpCodes
+**** Create arithmetic operations for 8-bit registers
+***** Create opertaions for add, sub, and, or, xor, pre-inc, post-dec, complement and decimal adjust
+**** Create arithmetic operations for 16-bit registers
+***** Create opertaions for add, sub, and, or, xor, pre-inc, post-dec, complement and decimal adjust
 *** FR13 - CPU.StackOperations
+**** Create operations
+***** Create push, pop, load, and store stack pointer operations
 *** FR14 - CPU.BitShiftAndRotate
+**** Create 8-bit shift, bit set, bit reset and register rotate operations
 *** FR15 - CPU.ControlFlowOperations
+**** Create jump, call and return operations for 8 and 16 bit reigsters
 *** FR16 - CPU.MiscellaneousOperations
+**** Create carry flag set/clear operations
+**** Create NOP, halt, stop, reset, swap nibble operations
+**** Create operations for enabling and disabling interrupts
 *** FR17 - CPU.Speed
+**** Create cpu clock 
+**** Ensure clock runs at 4MHz
 ** PPU
 *** FR18 - PPU.Background
-**** Draw background tiles to screen
-**** Background layer should be behind all other layers
-**** Background layer should not support transparency
 *** FR19 - PPU.Scrolling
-**** Add Scroll registers
-**** Enable scrolling on both X and Y Axis
-**** Ensure scrolling is checked after each line
 *** FR20 - PPU.Window
-**** Render a non moving window layer to the screen
-**** Ensure window layer is ontop of all layers
-**** Add a window layer render switch to make it easy to enable or disable the window
 *** FR21 - PPU.Sprites
-**** Render 10 sprites per line, and if there's more in a line don't bother rendering them
-**** Render 40 sprites per frame, and if there's more in a line don't bother rendering
-**** Enable globally configurable 8x16 or 8x8 sprites
 *** FR22 - PPU.Timing
-**** OAM scan takes correct length of time
-**** H-Blank takes correct length of time (this is a variable length)
-**** Call V-BLANK appropriately
-**** Run correct number of PPU Cycles per CPU Cycle
-**** Ensure one frame happens at exactly 59.7Hz
 *** FR23 - PPU.Palettes
-**** Create configurable color palettes that map to colors 1-4 or transparency
-**** Each palettes should map to ARGB32 colors for easy of displaying
 ** APU
 *** FR24 - APU.Channels
 **** 2 wave generator channels need to be made
