@@ -46,8 +46,7 @@
 ** CPU
 *** FR10 - CPU.Register
 **** Create the 8-bit CPU registers
-**** Create the 16-bit SP and PC registers
-**** Allow the 8-bit CPU registers be grouped to form 16-bit reigsters
+**** Create the 16-bit CPU, SP and PC registers
 *** FR11 - CPU.LoadAndStoreOpcodes
 **** Create direct, indirect and immediate load operations for 8-bit registers
 **** Create direct, indirect and immediate load operations for 16-bit registers
