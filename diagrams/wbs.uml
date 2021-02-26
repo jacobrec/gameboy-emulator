@@ -3,7 +3,9 @@
 ** Application
 *** FR1 - APP.PWA
 **** Design and build user interface
-***** Create button and screen interface
+***** Create button interface
+***** Create screen interface
+***** Create audio interface
 *** FR2 - App.Delete
 **** Design and build user interface
 ***** Create button to delete ROM data
@@ -26,6 +28,7 @@
 *** FR6 - Extra.Load
 **** Add load button interface
 **** Receive saved state data input from browser
+***** Deserialize game state
 ***** Load previous save state into emulator memory
 ** Emulator Controls
 *** FR7 - Controls.Touchpad
@@ -39,7 +42,7 @@
 **** Design custom touchpad interface
 **** Let user decide the position of the on screen button pad
 ***** Let user enable custom touchpad interface
-***** Let user drag touchpas to new position on screen
+***** Let user drag touchpad to new position on screen
 ** CPU
 *** FR10 - CPU.Register
 *** FR11 - CPU.LoadAndStoreOpcodes 
