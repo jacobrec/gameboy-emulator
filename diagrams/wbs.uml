@@ -5,8 +5,22 @@
 *** FR2 - App.Delete
 *** FR3 - App.Upload
 ** Quality of life
+*** FR4 - Extra.Mute
+*** FR5 - Extra.Save
+*** FR6 - Extra.Load
 ** Emulator Controls
+*** FR7 - Controls.Touchpad
+*** FR8 - Controls.CustomKeymap
+*** FR9 - Controls.CustomTouchpad
 ** CPU
+*** FR10 - CPU.Register
+*** FR11 - CPU.LoadAndStoreOpcodes 
+*** FR12 - CPU.ArithmeticOpCodes
+*** FR13 - CPU.StackOperations
+*** FR14 - CPU.BitShiftAndRotate
+*** FR15 - CPU.ControlFlowOperations
+*** FR15 - CPU.MiscellaneousOperations
+*** FR15 - CPU.Speed
 ** PPU
 ** APU
 ** Inturrupt Controller
