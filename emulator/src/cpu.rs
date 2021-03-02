@@ -370,7 +370,7 @@ impl CPU {
             // 0XF8 => TODO: LD HL, SP + r8
             // 0XF9 => TODO: LD SP, HL
             // 0XFA => TODO: LD A, (a16)
-            // 0XFB => TODO: EI
+            0xFB => Instruction::EI,
             0xFE => Instruction::CpImm(self.next()),                                                                // CP d8
             0xFF => Instruction::Rst(0x38),
 
@@ -860,6 +860,10 @@ impl CPU {
             Instruction::Dec16(r16) => {
                 // No flags change here
                 self.set_register16(r16, self.get_register16(r16).wrapping_sub(1))
+            },
+            Instruction::EI => {
+                // TODO: Set IME flag on a 1 cycle delay?
+                // Putting this here to avoid crashes
             },
             _ => unimplemented!("TODO"),
         }
