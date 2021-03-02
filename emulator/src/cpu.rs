@@ -387,10 +387,10 @@ impl CPU {
             0x08..=0x0F => Instruction::Rrc(reg),
             0x10..=0x17 => Instruction::Rl(reg),
             0x18..=0x1F => Instruction::Rr(reg),
-            0x20..=0x27 => Instruction::Sla(reg),
-            0x28..=0x2F => Instruction::Sra(reg),
-            0x30..=0x37 => Instruction::Swap(reg),
-            0x38..=0x3F => Instruction::Srl(reg),
+            0x20..=0x27 => Instruction::Sla(reg),       // TODO: IMPLEMENT
+            0x28..=0x2F => Instruction::Sra(reg),       // TODO: IMPLEMENT
+            0x30..=0x37 => Instruction::Swap(reg),      // TODO: IMPLEMENT
+            0x38..=0x3F => Instruction::Srl(reg),       // TODO: IMPLEMENT
             0x40..=0x47 => Instruction::Bit(0, reg),
             0x48..=0x4F => Instruction::Bit(1, reg),
             0x50..=0x57 => Instruction::Bit(2, reg),
@@ -519,6 +519,14 @@ impl CPU {
                 self.set_flag(Flag::Zero, !eq1);
                 self.set_flag(Flag::AddSub, false);
                 self.set_flag(Flag::HalfCarry, true);
+            },
+            Instruction::Set(v3, r) => {
+                let val = self.get_register(r) | (1 << v3);
+                self.set_register(r, val);
+            },
+            Instruction::Res(v3, r) => {
+                let val = self.get_register(r) & !(1 << v3);
+                self.set_register(r, val);
             },
             Instruction::Add(r) => {
                 
@@ -1871,5 +1879,109 @@ mod test {
     #[test]
     fn test_jmp() {
         unimplemented!();
+    }
+
+    #[test]
+    fn test_bit() {
+        let rom_data = vec![0xCB,0x7F,0xCB,0x65,0xCB,0x46,0xCB,0x4E];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::A, 0x80);
+        test_cpu.set_register(RegisterLoc::L, 0xEF);
+
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+
+        // Reset HL
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        // 1 CYCLES
+        test_cpu.set_register(RegisterLoc::MemHL, 0xFE);
+
+        test_cpu.tick();
+        // 3 CYCLES
+        assert_eq!(test_cpu.cycles, 32);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+
+        test_cpu.tick();
+        // 3 CYCLES
+        assert_eq!(test_cpu.cycles, 44);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+    }
+
+    #[test]
+    fn test_set() {
+        let rom_data = vec![0xCB,0xDF,0xCB,0xFD,0xCB,0xDE];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::A, 0x80);
+        test_cpu.set_register(RegisterLoc::L, 0x3B);
+        
+
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x88);
+
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.get_register(RegisterLoc::L), 0xBB);
+
+        // Reset HL
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        // 1 CYCLE
+        test_cpu.set_register(RegisterLoc::MemHL, 0x00);
+
+        test_cpu.tick();
+        // 4 CYCLES
+        assert_eq!(test_cpu.cycles, 36);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0x08);
+    }
+
+    #[test]
+    fn test_res() {
+        let rom_data = vec![0xCB,0xBF,0xCB,0x8D,0xCB,0x9E];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::A, 0x80);
+        test_cpu.set_register(RegisterLoc::L, 0x3B);
+        
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+
+        test_cpu.tick();
+        // 2 CYCLES
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.get_register(RegisterLoc::L), 0x39);
+
+        // Reset HL
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        // 1 CYCLE
+        test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
+
+        test_cpu.tick();
+        // 4 CYCLES
+        assert_eq!(test_cpu.cycles, 36);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0xF7);
     }
 }
