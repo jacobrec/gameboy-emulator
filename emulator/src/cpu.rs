@@ -321,7 +321,7 @@ impl CPU {
             0xC0 => Instruction::Ret(Some(JmpFlag::NoZero)),                                    // RET NZ
             0xC1 => Instruction::Pop(Register16Loc::BC),                                        // POP BC
             0xC2 => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::NoZero)),     // JP NZ, a16
-            // 0xC3 => TODO: JP a16
+            0xC3 => {self.clock(); Instruction::Jmp(Jump::Absolute(self.next16()), None)},      // JP a16
             0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),                    // CALL NZ, a16
             0xC5 => Instruction::Push(Register16Loc::BC),                                       // PUSH BC
             0xC6 => Instruction::AddImm(self.next()),                                       // ADD A, d8
@@ -1866,5 +1866,10 @@ mod test {
         test_cpu.tick();
         assert_eq!(test_cpu.cycles, 8);
         assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+    }
+
+    #[test]
+    fn test_jmp() {
+        unimplemented!();
     }
 }
