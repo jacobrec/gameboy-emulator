@@ -254,8 +254,8 @@ impl CPU {
 
             // 0x08 => TODO: LD (a16), SP
             0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None), //TODO: JR r8
-            // 0x28 => TODO: JR Z, r8
-            // 0x38 => TODO: JR C, r8
+            0x28 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Zero)),
+            0x38 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Carry)),
 
             // ADD HL, r16
             0x09 => Instruction::AddHL16(Register16Loc::BC), // ADD HL, BC
