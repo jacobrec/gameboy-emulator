@@ -270,10 +270,10 @@ impl CPU {
             0x3A => Instruction::Load(Location::Register(RegisterLoc::A), Location::Indirect(Offset::HLDec)),   // LD A, (HL-)
 
             // DEC r16
-            0xB3 => Instruction::Dec16(Register16Loc::BC), // DEC BC
-            0xB3 => Instruction::Dec16(Register16Loc::DE), // DEC DE
-            0xB3 => Instruction::Dec16(Register16Loc::HL), // DEC HL
-            0xB3 => Instruction::Dec16(Register16Loc::SP), // DEC SP
+            0x0B => Instruction::Dec16(Register16Loc::BC), // DEC BC
+            0x1B => Instruction::Dec16(Register16Loc::DE), // DEC DE
+            0x2B => Instruction::Dec16(Register16Loc::HL), // DEC HL
+            0x3B => Instruction::Dec16(Register16Loc::SP), // DEC SP
 
             // INC r8
             0x0C => Instruction::Inc(RegisterLoc::C), // INC C
