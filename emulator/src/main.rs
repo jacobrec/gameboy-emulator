@@ -27,10 +27,12 @@ enum Display {
 struct Args {
     display: Display,
 }
-
+fn cleanup_screen() {
+        println!("{}[0m{}[?1049l", ESC, ESC);
+}
 impl Drop for Display {
     fn drop(&mut self) {
-        print!("{}[0m", ESC);
+        cleanup_screen();
     }
 }
 
@@ -39,7 +41,8 @@ fn get_args () -> Args {
     let mut display = Display::CPU;
     if args.iter().any(|x| x == "--ascii") {
         display = Display::AsciiHalf;
-        println!("Display: Ascii")
+        println!("Display: Ascii");
+        print!("{}[?1049h", ESC);
     }
     Args {display}
 }
@@ -62,9 +65,8 @@ fn ascii_half_print(screen: &ppu::Canvas) {
             let ctop = (row * 2) * ppu::SCREEN_HEIGHT + col;
             let cbot = (row * 2 + 1) * ppu::SCREEN_HEIGHT + col;
             print_pixel_pair(screen[ctop], screen[cbot]);
-
         }
-        println!("");
+        println!("{}[0m", ESC);
     }
     println!("{}[0m", ESC);
     println!("Frame")
@@ -97,6 +99,12 @@ fn main() {
 
     let args = get_args();
 
+    ctrlc::set_handler(move || {
+        cleanup_screen();
+        println!("Bye!");
+        std::process::exit(0x01);
+    }).expect("Error setting Ctrl-C handler");
     main_loop(gameboy, args);
+    cleanup_screen();
 
 }
