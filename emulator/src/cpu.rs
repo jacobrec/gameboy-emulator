@@ -458,7 +458,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        print!("{:<15} => ", format!("{}", op));
+        //print!("{:<15} => ", format!("{}", op));
         fn isLoc16Bit (l: Location) -> bool {
             match l {
                 Location::Immediate16(_) => true,
