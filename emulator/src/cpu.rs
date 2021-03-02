@@ -356,7 +356,7 @@ impl CPU {
             0xE7 => Instruction::Rst(0x20),
             0xE8 => Instruction::AddSp(self.next() as i8),                                                          // ADD SP, r8
             0xE9 => Instruction::Jmp(Jump::Absolute(self.hl()), None),
-            // 0XEA => TODO: LD (a16), A
+            0xEA => Instruction::Load(Location::IndirectLiteral(self.next16()), Location::Register(RegisterLoc::A)),
             0xEE => Instruction::XorImm(self.next()),                                                               // XOR d8
             0xEF => Instruction::Rst(0x28),
 
@@ -492,6 +492,7 @@ impl CPU {
                         Location::Register(r) => self.get_register(r),
                         Location::ZeroPageC => self.read(0xFF00 + (self.c() as u16)),
                         Location::ZeroPageAbsolute(v) => self.read(0xFF00 + (v as u16)),
+                        Location::IndirectLiteral(u) => self.read(u),
                         Location::Indirect(off) => {
                             let loc = self.indirect_lookup(off);
                             self.read(loc)
@@ -504,6 +505,7 @@ impl CPU {
                         Location::Register(r) => self.set_register(r, v8),
                         Location::ZeroPageC => self.write(0xFF00 + (self.c() as u16), v8),
                         Location::ZeroPageAbsolute(v) => self.write(0xFF00 + (v as u16), v8),
+                        Location::IndirectLiteral(u) => self.write(u, v8),
                         Location::Indirect(off) => {
                             let loc = self.indirect_lookup(off);
                             self.write(loc, v8)
