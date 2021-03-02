@@ -48,7 +48,6 @@ fn get_args () -> Args {
 }
 
 fn ascii_half_print(screen: &ppu::Canvas) {
-    let top_half = "▀";
     fn format_rgba_num(mut num: u32) -> String {
         num = num >> 8; let b = num & 0xFF;
         num = num >> 8; let g = num & 0xFF;
@@ -56,10 +55,12 @@ fn ascii_half_print(screen: &ppu::Canvas) {
         return format!("{};{};{}", r, g, b)
     }
     fn print_pixel_pair(topcolor: u32, bottomcolor: u32) {
+        let top_half = "▀";
         let fg = format_rgba_num(topcolor);
         let bg = format_rgba_num(bottomcolor);
-        print!("{}[48;2;{};38;2;{}m", ESC, fg, bg)
+        print!("{}[48;2;{};38;2;{}m{}", ESC, fg, bg, top_half)
     }
+    print!("{}[1;1f", ESC);
     for row in 0..(ppu::SCREEN_HEIGHT/2) {
         for col in 0..(ppu::SCREEN_WIDTH) {
             let ctop = (row * 2) * ppu::SCREEN_HEIGHT + col;
@@ -70,7 +71,6 @@ fn ascii_half_print(screen: &ppu::Canvas) {
     }
     println!("{}[0m", ESC);
     println!("Frame")
-
 }
 
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
