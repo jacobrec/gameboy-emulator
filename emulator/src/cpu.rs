@@ -1877,8 +1877,83 @@ mod test {
     }
 
     #[test]
-    fn test_jmp() {
-        unimplemented!();
+    fn test_jmp_absolute() {
+        /*
+         * JP HL
+         * JP 0x0002
+         */
+        let rom_data = vec![0xE9, 0, 0, 0xC3,0x02,0x00];
+        let mut test_cpu = create_test_cpu(rom_data);
+        test_cpu.set_hl(0x0003);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 4);
+        assert_eq!(test_cpu.pc, 0x0003);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 20);
+        assert_eq!(test_cpu.pc, 0x0002);
+    }
+
+    #[test]
+    fn test_jmp_absolute_cc() {
+        /* 
+         * CCs will pass
+         * JP NZ, 0x0012 
+         * JP NC, 0x0003
+         * JP Z, 0x0015
+         * JP C, 0x0006
+         * 
+         * CCs will fail i.e. no jump will be taken
+         * JP NZ, 0x0000 
+         * JP NC, 0x0000 
+         * JP Z, 0x0000 
+         * JP C, 0x0000 
+        */
+        let rom_data = vec![0xC2, 0x12, 0x00, 0xCA, 0x15, 0x00, 0xC2, 0x00, 0x00, 0xD2, 0x00, 0x00,
+        0xCA, 0x00, 0x00, 0xDA, 0x00, 0x00, 0xD2, 0x03, 0x00, 0xDA, 0x06, 0x00];
+        let mut test_cpu = create_test_cpu(rom_data);
+        test_cpu.set_flag(Flag::Zero, false);
+        test_cpu.set_flag(Flag::Carry, false);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 16);
+        assert_eq!(test_cpu.pc, 0x0012);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 32);
+        assert_eq!(test_cpu.pc, 0x0003);
+
+        test_cpu.set_flag(Flag::Zero, true);
+        test_cpu.set_flag(Flag::Carry, true);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 48);
+        assert_eq!(test_cpu.pc, 0x0015);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 64);
+        assert_eq!(test_cpu.pc, 0x0006);
+
+        
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 76);
+        assert_eq!(test_cpu.pc, 0x0009);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 88);
+        assert_eq!(test_cpu.pc, 0x000C);
+
+        test_cpu.set_flag(Flag::Zero, false);
+        test_cpu.set_flag(Flag::Carry, false);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 100);
+        assert_eq!(test_cpu.pc, 0x000F);
+
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 112);
+        assert_eq!(test_cpu.pc, 0x0012);
     }
 
     #[test]
