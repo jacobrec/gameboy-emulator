@@ -20,6 +20,7 @@ fn open_file(filename: &str) -> Vec<u8> {
     file.read(&mut buffer).expect("read error");
     buffer
 }
+#[derive(Clone, Copy)]
 enum Display {
     CPU,
     AsciiHalf,
@@ -27,12 +28,15 @@ enum Display {
 struct Args {
     display: Display,
 }
-fn cleanup_screen() {
-        println!("{}[0m{}[?1049l", ESC, ESC);
+fn cleanup_screen(d: Display) {
+    match d {
+        Display::CPU => (),
+        Display::AsciiHalf => println!("{}[0m{}[?1049l", ESC, ESC),
+    }
 }
-impl Drop for Display {
+impl Drop for Args {
     fn drop(&mut self) {
-        cleanup_screen();
+        cleanup_screen(self.display);
     }
 }
 
@@ -98,13 +102,12 @@ fn main() {
         .build();
 
     let args = get_args();
+    let d = args.display;
 
     ctrlc::set_handler(move || {
-        cleanup_screen();
+        cleanup_screen(d);
         println!("Bye!");
         std::process::exit(0x01);
     }).expect("Error setting Ctrl-C handler");
     main_loop(gameboy, args);
-    cleanup_screen();
-
 }
