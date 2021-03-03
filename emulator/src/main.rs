@@ -85,7 +85,7 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
             Display::CPU => gameboy.print_cpu_state(),
             Display::AsciiHalf => {
                 let duration = start.elapsed();
-                if duration.as_secs_f64() > (1.0 / 59.7) {
+                if duration.as_secs_f64() > (1.0 / 17.0) {
                     start = Instant::now();
                     ascii_half_print(&gameboy.get_screen())
                 }
