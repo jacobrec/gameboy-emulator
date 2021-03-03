@@ -194,25 +194,31 @@ impl PPU {
     fn window_tilemap_loc(&self) -> u16 {
         self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
     }
+    fn decode_tile(&self, loc: usize) -> [PixelData; 8] {
+        //println!("Tile loc: {:04X}", loc + 0x8000);
+        let bg_tile_low = self.vram[loc];
+        let bg_tile_high = self.vram[loc+1];
+        let gen = move |i: usize| {
+            ((bg_tile_high >> (7 - i)) << 1) | (bg_tile_low >> (7 - i))
+        };
+        let mut v = [PixelData{value: 0, src: PixelSrc::BG}; 8];
+        for i in 0..v.len() {
+            v[i].value = gen(i)
+        }
+        v
+
+    }
 
     fn fetch(&mut self) -> Option<[PixelData; 8]> {
         self.fetch_state += Wrapping(1);
         if let 7 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
-            let y = self.registers[LY] + self.registers[SCY];
+            let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
             let x = self.lx;
-            let idx = (y as usize) / 8 * 32 + (x as usize);
-            let bg_tile_low = self.vram[bg as usize + idx];
-            let bg_tile_high = self.vram[bg as usize + idx + 1];
-            let gen = move |i: usize| {
-                ((bg_tile_high >> (7 - i)) << 1) | (bg_tile_low >> (7 - i))
-            };
-            let mut v = [PixelData{value: 0, src: PixelSrc::BG}; 8];
-            for i in 0..v.len() {
-                v[i].value = gen(i)
-            }
-            Some(v)
+            let idx = (y as usize) / 8 * 32 + (x as usize) / 8;
+            let loc = bg as usize + idx;
+            Some(self.decode_tile(loc))
         } else {
             None
         }
