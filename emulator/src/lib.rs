@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 static mut X: u16 = 0;
 // TODO: Maybe don't use a static mut, and instead pass a reference to the
 // frontend for the gb object, and just get that back each update call
-static mut GAMEBOY: gameboy::Gameboy = gameboy::Gameboy::empty();
+// static mut GAMEBOY: gameboy::Gameboy = gameboy::Gameboy::empty();
 
 
 #[wasm_bindgen]
@@ -20,9 +20,9 @@ pub fn init(romdata: Vec<u8>) {
     let gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
-    unsafe {
-      GAMEBOY.set_state(gameboy)
-    }
+    // unsafe {
+      // GAMEBOY.set_state(gameboy)
+    // }
 }
 
 #[wasm_bindgen]

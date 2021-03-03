@@ -34,7 +34,7 @@ impl GameboyBuilder {
 }
 
 impl Gameboy {
-    pub const fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             cpu: CPU::new(crate::bus::Bus::new(ROM{ data:Vec::new() })),
         }

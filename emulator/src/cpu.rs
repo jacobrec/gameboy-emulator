@@ -22,7 +22,7 @@ impl CPU {
         return self.bus.get_screen()
     }
 
-    pub const fn new(bus: crate::bus::Bus) -> Self {
+    pub fn new(bus: crate::bus::Bus) -> Self {
         CPU {
             sp: 0,
             pc: 0,

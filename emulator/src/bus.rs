@@ -43,7 +43,7 @@ impl Bus {
         return self.ppu.get_screen()
     }
 
-    pub const fn new(rom: ROM) -> Self {
+    pub fn new(rom: ROM) -> Self {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
