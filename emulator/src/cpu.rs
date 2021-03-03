@@ -55,8 +55,6 @@ impl CPU {
     fn set_h(&mut self, v: u8) {self.registers[0] = v}
     fn set_l(&mut self, v: u8) {self.registers[1] = v}
 
-    // TODO: I'm not 100% sure which order things go in here
-    // Should be set low (C , E or L) then set high (B, D or H)
     fn set_af(&mut self, v: u16) {self.set_a((v >> 8) as u8); self.set_f((v & 0xFF) as u8)}
     fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
@@ -362,14 +360,14 @@ impl CPU {
 
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
-            // 0XF2 => TODO: LD A, (C)
+            0xF2 => Instruction::Load( Location::Register(RegisterLoc::A), Location::ZeroPageC),                    // LD A, (C)
             // 0XF3 => TODO: DI
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             0xF6 => Instruction::OrImm(self.next()),                                                                // OR d8
             0xF7 => Instruction::Rst(0x30),
-            // 0XF8 => TODO: LD HL, SP + r8
-            // 0XF9 => TODO: LD SP, HL
-            // 0XFA => TODO: LD A, (a16)
+            // 0xF8 => Instruction::Load( Location::Register(RegisterLoc::HL), Location::ZeroPageC),//TODO: LD HL, SP + r8
+            // 0xF9 => Instruction::Load(Location::SP, Location::Register16(Register16Loc::HL)), // LD SP, HL
+            0xFA => Instruction::Load( Location::Register(RegisterLoc::A), Location::IndirectLiteral(self.next16())),           // LD A, (a16)
             0xFB => Instruction::EI,
             0xFE => Instruction::CpImm(self.next()),                                                                // CP d8
             0xFF => Instruction::Rst(0x38),
