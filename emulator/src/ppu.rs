@@ -65,10 +65,10 @@ pub struct PPU {
     screen: Canvas,
     vram: [u8; 0x2000],
     registers: [u8; 0x10],
-    mode: Mode,
     tick: usize,
     scanline: usize,
     oamRAM: [Sprite; 40],
+    activeSprites: [Option<usize>; 10],
 }
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
@@ -79,6 +79,7 @@ const color01: u32 = 0x7BC67BFF;
 const color10: u32 = 0x6B8C42FF;
 const color11: u32 = 0x5A3921FF;
 
+#[derive(Copy, Clone, Debug)]
 struct Sprite {
     pos_x: u8,
     pos_y: u8,
@@ -87,7 +88,7 @@ struct Sprite {
 }
 
 impl Sprite {
-    fn new() -> Self {
+    const fn new() -> Self {
         Sprite {
             pos_x: 0,
             pos_y: 0,
@@ -125,10 +126,10 @@ impl PPU {
             screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT],
             vram: [0u8; 0x2000],
             registers: [0u8; 0x10],
-            oamRAM: [Sprite::new(), 40],
-            mode: Mode::HBlank,
+            oamRAM: [Sprite::new(); 40],
             tick: 0,
             scanline: 0,
+            activeSprites: [None; 10],
         }
     }
 
@@ -138,15 +139,15 @@ impl PPU {
 
     pub fn tick(&mut self) {
         self.tick += 1;
-        match self.mode {
+        match self.get_mode() {
             Mode::HBlank => {
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] >= 143 {
                         // Send vblank interrupt
-                        self.mode = Mode::VBlank;
+                        self.set_mode(Mode::VBlank);
                     } else {
-                        self.mode = Mode::OAM;
+                        self.set_mode(Mode::OAM);
                     }
                     self.tick = 0;
                 }
@@ -156,20 +157,47 @@ impl PPU {
                     self.registers[LY] += 1;
                     if self.registers[LY] > EFFECTIVE_SCAN_COUNT {
                         self.registers[LY] = 0;
-                        self.mode = Mode::OAM;
+                        self.set_mode(Mode::OAM);
                     }
                     self.tick = 0;
                 }
 
             },
             Mode::OAM => {
-                if self.tick > OAM_WIDTH {
-                    self.mode = Mode::VRAM;
+                if self.tick == 0 {
+                } else if self.tick == OAM_WIDTH {
+                } else if self.tick > OAM_WIDTH {
+                    self.set_mode(Mode::VRAM);
                 }
             },
             Mode::VRAM => {
                 // render a pixel
             },
+        }
+    }
+    fn set_mode(&mut self, mode: Mode) {
+        const MODE_HBLANK: u8 = 0b00;
+        const MODE_VBLANK: u8 = 0b01;
+        const MODE_OAM: u8    = 0b10;
+        const MODE_VRAM: u8   = 0b11;
+
+        let v = match mode {
+            Mode::HBlank => 0b00,
+            Mode::VBlank => 0b01,
+            Mode::OAM => 0b10,
+            Mode::VRAM => 0b11,
+        };
+
+        self.registers[LCD_STATUS_REGISTER] &= 0b11111100;
+        self.registers[LCD_STATUS_REGISTER] |= v;
+    }
+    fn get_mode(&self) -> Mode {
+        match self.registers[LCD_STATUS_REGISTER] & 0b11 {
+            0b00 => Mode::HBlank,
+            0b01 => Mode::VBlank,
+            0b10 => Mode::OAM,
+            0b11 => Mode::VRAM,
+            _ => unreachable!("exhaustive match pattern")
         }
     }
 
@@ -182,23 +210,24 @@ impl PPU {
         let l = loc as usize - 0x8000;
         self.vram[l]
     }
-
     pub fn writeOAM(&mut self, loc: u16, val: u8) {
         let l = (loc as usize - 0xFE00) / 4;
-        match loc % 4 {
-            0 => self.oamRAM[l] = val,
-            1 => self.oamRAM[l] = val,
-            2 => self.oamRAM[l] = val,
-            3 => self.oamRAM[l] = val,
+        match loc & 0b11 {
+            0 => self.oamRAM[l].pos_x = val,
+            1 => self.oamRAM[l].pos_y = val,
+            2 => self.oamRAM[l].tile = val,
+            3 => self.oamRAM[l].flags = val,
+            _ => unreachable!("exhaustive match pattern")
         }
     }
     pub fn readOAM(&self, loc: u16) -> u8 {
         let l = (loc as usize - 0xFE00) / 4;
-        match loc % 4 {
+        match loc & 0b11 {
             0 => self.oamRAM[l].pos_x,
             1 => self.oamRAM[l].pos_y,
             2 => self.oamRAM[l].tile,
             3 => self.oamRAM[l].flags,
+            _ => unreachable!("exhaustive match pattern")
         }
     }
 
