@@ -33,7 +33,7 @@ const LCD_STATUS_REGISTER: usize = 1;
 
 // scroll x and y
 const SCY: usize = 2; // https://gbdev.io/pandocs/#ff42-scy-scroll-y-r-w-ff43-scx-scroll-x-r-w
-const SXY: usize = 3; // https://gbdev.io/pandocs/#ff42-scy-scroll-y-r-w-ff43-scx-scroll-x-r-w
+const SCX: usize = 3; // https://gbdev.io/pandocs/#ff42-scy-scroll-y-r-w-ff43-scx-scroll-x-r-w
 
 // current line, read only
 const LY: usize = 4; // https://gbdev.io/pandocs/#ff44-ly-lcdc-y-coordinate-r
@@ -75,6 +75,8 @@ pub struct PPU {
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
     fetch_state: Wrapping<u8>,
+    lx: u8,
+    is_window: bool,
 }
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
@@ -153,6 +155,8 @@ impl PPU {
             pixel_fifo: VecDeque::new(),
             pixels_pushed: 0,
             fetch_state: Wrapping(0),
+            is_window: false,
+            lx: 0,
         }
     }
 
@@ -176,12 +180,41 @@ impl PPU {
         }
     }
 
+    fn tilemap_loc(&self, num: u8) -> u16 {
+        if num > 0 {
+            return 0x1C00 // 9C00 - 8000
+        } else {
+            return 0x1800 // 9800 - 8000
+        }
+
+    }
+    fn background_tilemap_loc(&self) -> u16 {
+        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000)
+    }
+    fn window_tilemap_loc(&self) -> u16 {
+        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
+    }
+
     fn fetch(&mut self) -> Option<[PixelData; 8]> {
         self.fetch_state += Wrapping(1);
-        match (self.fetch_state & Wrapping(0b111)).0 {
-            7 => Some([PixelData{value: 0b11, src: PixelSrc::BG}; 8]),
-            // TODO: BG/Wind/Obj lookup
-            _ => None
+        if let 7 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
+            // TODO: Window/Obj lookup
+            let bg = self.background_tilemap_loc();
+            let y = self.registers[LY] + self.registers[SCY];
+            let x = self.lx;
+            let idx = (y as usize) / 8 * 32 + (x as usize);
+            let bg_tile_low = self.vram[bg as usize + idx];
+            let bg_tile_high = self.vram[bg as usize + idx + 1];
+            let gen = move |i: usize| {
+                ((bg_tile_high >> (7 - i)) << 1) | (bg_tile_low >> (7 - i))
+            };
+            let mut v = [PixelData{value: 0, src: PixelSrc::BG}; 8];
+            for i in 0..v.len() {
+                v[i].value = gen(i)
+            }
+            Some(v)
+        } else {
+            None
         }
     }
 
@@ -248,13 +281,26 @@ impl PPU {
                 // Push
                 //
                 // When we hit window, the fifo is cleared, and the fetch switches to window
+                let in_window = self.pixels_pushed >= self.registers[WX] as usize && self.registers[LY] >= self.registers[WY];
+                let valid_window = in_window && self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0;
+                if valid_window && !self.is_window { // window enabled
+                    self.is_window = true;
+                    self.pixel_fifo.clear();
+                } else if self.is_window && !valid_window {
+                    self.is_window = false;
+                    self.pixel_fifo.clear();
+                }
+
                 if self.pixel_fifo.len() > 8 {
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
                     let color = self.lookup_color(p);
-                    self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
-                    self.pixels_pushed += 1;
+                    if self.lx >= self.registers[SCX] {
+                        self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
+                        self.pixels_pushed += 1;
+                    }
+                    self.lx += 1
                 }
 
                 let new_pixels = self.fetch();
@@ -265,6 +311,7 @@ impl PPU {
                 }
                 if self.pixels_pushed >= 160 {
                     self.pixels_pushed = 0;
+                    self.lx = 0;
                     self.set_mode(Mode::HBlank);
                 }
             },
