@@ -332,11 +332,6 @@ impl PPU {
         }
     }
     fn set_mode(&mut self, mode: Mode) {
-        const MODE_HBLANK: u8 = 0b00;
-        const MODE_VBLANK: u8 = 0b01;
-        const MODE_OAM: u8    = 0b10;
-        const MODE_VRAM: u8   = 0b11;
-
         let v = match mode {
             Mode::HBlank => 0b00,
             Mode::VBlank => 0b01,

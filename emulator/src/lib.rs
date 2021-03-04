@@ -17,9 +17,10 @@ static mut X: u16 = 0;
 #[wasm_bindgen]
 pub fn init(romdata: Vec<u8>) {
     utils::set_panic_hook();
-    let gameboy = gameboy::GameboyBuilder::new()
+    let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
+    gameboy.tick();
     // unsafe {
       // GAMEBOY.set_state(gameboy)
     // }

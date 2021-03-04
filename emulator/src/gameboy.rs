@@ -65,7 +65,7 @@ impl ROM {
         ROM {data}
     }
     pub fn read(&self, loc: u16) -> u8 {
-       if loc < 0x00FF  && self.is_bootrom() {
+       if loc < 0x00FF && self.is_bootrom() {
            self.data[loc as usize]
        } else if loc < 0x4000 { // Bank 0
            0 // TODO Static bank
