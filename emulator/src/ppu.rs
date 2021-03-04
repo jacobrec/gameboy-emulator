@@ -131,11 +131,11 @@ impl Sprite {
     }
 }
 
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone,Copy,Debug, PartialEq)]
 enum PixelSrc {
     BG, S1, S2
 }
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone,Copy,Debug, PartialEq)]
 struct PixelData {
     value: u8, // Really this is a 2 bit number
     src: PixelSrc,
@@ -201,10 +201,16 @@ impl PPU {
     }
     fn decode_tile(&self, loc: usize) -> [PixelData; 8] {
         //println!("Tile loc: {:04X}", loc + 0x8000);
-        let bg_tile_low = self.vram[loc];
-        let bg_tile_high = self.vram[loc + 1];
+        // let bg_tile_low = self.vram[loc];
+        // let bg_tile_high = self.vram[loc + 1];
+        // let testtile = [0xFF, 0x00, 0x24, 0xFF, 0xFF, 0x24, 0x00, 0xFF, 0xE7, 0x00, 0x42, 0xFF, 0xFF, 0x3C, 0x00, 0xFF];
+        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
+        let bg_tile_low = testtile[loc];
+        let bg_tile_high = testtile[loc + 1];
         let gen = move |i: usize| {
-            ((bg_tile_high >> (7 - i)) << 1) | (bg_tile_low >> (7 - i))
+            let bh = (bg_tile_high >> (7 - i)) & 1;
+            let bl = (bg_tile_low >> (7 - i)) & 1;
+            bh << 1 | bl
         };
         let mut v = [PixelData{value: 0, src: PixelSrc::BG}; 8];
         for i in 0..v.len() {
@@ -216,13 +222,14 @@ impl PPU {
 
     fn fetch(&mut self) -> Option<[PixelData; 8]> {
         self.fetch_state += Wrapping(1);
-        if let 7 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
+        if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
             let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
             let x = self.lx;
             let idx = (y as usize) / 8 * 32 + (x as usize) / 8;
-            let loc = bg as usize + idx + ((y & 0b111) as usize * 2);
+            // let loc = bg as usize + idx + ((y & 0b111) as usize * 2);
+            let loc = (y & 0b111) as usize * 2;
             Some(self.decode_tile(loc))
         } else {
             None
@@ -420,5 +427,96 @@ impl PPU {
             panic!("CGB functionallity is not supported")
         }
         self.registers[l]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn create_test_ppu() -> PPU {
+        PPU::new()
+    }
+
+    #[test]
+    fn test_pixel_color_lookup () {
+        let mut ppu = create_test_ppu();
+
+        ppu.registers[BGP] = 0b11100100;
+        assert_eq!(color00, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b00,
+        }));
+        assert_eq!(color01, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b01,
+        }));
+        assert_eq!(color10, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b10,
+        }));
+        assert_eq!(color11, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b11,
+        }));
+
+        ppu.registers[BGP] = 0b10110001;
+        assert_eq!(color01, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b00,
+        }));
+        assert_eq!(color00, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b01,
+        }));
+        assert_eq!(color11, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b10,
+        }));
+        assert_eq!(color10, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b11,
+        }));
+
+    }
+
+    #[test]
+    fn test_tile_decode () {
+        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
+        let mut ppu = create_test_ppu();
+        ppu.registers[BGP] = 0b11100100;
+        ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        for i in 0..testtile.len(){
+            ppu.vram[i+16] = testtile[i];
+        }
+
+        for i in 0..(32*32) {
+            ppu.vram[0x1800 + i] = 1;
+        }
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        let p00 = PixelData{src: PixelSrc::BG, value: 0b00};
+        let p01 = PixelData{src: PixelSrc::BG, value: 0b01};
+        let p10 = PixelData{src: PixelSrc::BG, value: 0b10};
+        let p11 = PixelData{src: PixelSrc::BG, value: 0b11};
+        assert_eq!(Some([p00, p00, p00, p00, p01, p01, p01, p01]), ppu.fetch());
+
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        ppu.lx = 0;
+        ppu.registers[LY] = 4;
+        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
+
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        ppu.lx = 0;
+        ppu.registers[LY] = 0;
+        ppu.registers[SCY] = 4;
+        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
+
+
     }
 }
