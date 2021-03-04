@@ -252,7 +252,7 @@ impl PPU {
             Mode::HBlank => {
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
-                    if self.registers[LY] >= 143 {
+                    if self.registers[LY] >= 144 {
                         // Send vblank interrupt
                         self.set_mode(Mode::VBlank);
                     } else {
@@ -545,11 +545,12 @@ mod test {
         ppu.registers[BGP] = 0b11100100;
         ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
         assert_eq!(ppu.get_mode(), Mode::HBlank);
-        let offset = 5;
+        let offset = 9;
         for i in 0..(TICK_WIDTH+1) {
             ppu.tick();
         }
         ppu.registers[LY] = 0;
+        ppu.registers[SCY] = 16;
         assert_eq!(ppu.get_mode(), Mode::OAM);
         for i in 0..testtile.len(){
             ppu.vram[i+offset*16] = testtile[i];
@@ -565,7 +566,8 @@ mod test {
             ppu.tick();
         }
 
-        for j in 0..8 {
+        let line = 144 - 8;
+        for j in line..(line+8) {
             for i in 0..8{
                 print!("{:X} ", ppu.screen[SCREEN_WIDTH*j + i]);
             }
@@ -588,11 +590,10 @@ mod test {
                             color11
                         }
                     };
-                println!("Checking ({}, {}) to be {}", i, j, format!("{:X}", should_color));
+                //println!("Checking ({}, {}) to be {}", i, j, format!("{:X}", should_color));
                 assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH * j + i]), format!("{:X}", should_color));
                 // assert_eq!(ppu.screen[i], should_color);
             }
         }
     }
-
 }
