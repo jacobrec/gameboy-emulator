@@ -162,7 +162,7 @@ impl PPU {
         self.screen
     }
 
-    pub fn lookup_color(&self, p: PixelData) -> u32 {
+    fn lookup_color(&self, p: PixelData) -> u32 {
         let palette = match p.src {
             PixelSrc::BG => self.registers[BGP],
             PixelSrc::S1 => self.registers[OBP0],
