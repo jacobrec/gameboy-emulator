@@ -188,8 +188,15 @@ impl PPU {
         }
 
     }
-    fn background_tilemap_loc(&self) -> u16 {
-        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000)
+    fn background_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+        let tile_idx = self.vram[tilemap_loc as usize];
+        if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
+            return tile_idx as usize * 16;
+        } else {
+            return ((tile_idx as i8) as isize * 16 + 0x1000) as usize;
+        }
+
     }
     fn window_tilemap_loc(&self) -> u16 {
         self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
@@ -197,7 +204,7 @@ impl PPU {
     fn decode_tile(&self, loc: usize) -> [PixelData; 8] {
         //println!("Tile loc: {:04X}", loc + 0x8000);
         let bg_tile_low = self.vram[loc];
-        let bg_tile_high = self.vram[loc+1];
+        let bg_tile_high = self.vram[loc + 1];
         let gen = move |i: usize| {
             ((bg_tile_high >> (7 - i)) << 1) | (bg_tile_low >> (7 - i))
         };
@@ -217,7 +224,7 @@ impl PPU {
             let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
             let x = self.lx;
             let idx = (y as usize) / 8 * 32 + (x as usize) / 8;
-            let loc = bg as usize + idx;
+            let loc = bg as usize + idx + ((y & 0b111) as usize * 2);
             Some(self.decode_tile(loc))
         } else {
             None
@@ -268,7 +275,6 @@ impl PPU {
                             break;
                         }
                     }
-                } else if self.tick > OAM_WIDTH {
                     self.set_mode(Mode::VRAM);
                 }
             },
@@ -315,10 +321,12 @@ impl PPU {
                         self.pixel_fifo.push_back(*p);
                     }
                 }
+
                 if self.pixels_pushed >= 160 {
                     self.pixels_pushed = 0;
                     self.lx = 0;
                     self.set_mode(Mode::HBlank);
+                    self.pixel_fifo.clear();
                 }
             },
         }
