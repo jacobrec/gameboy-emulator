@@ -8,7 +8,7 @@ Start:
     ld [$FF47], a
 
     ld	a,90
-	ld	[$FF40],a			; enable lcd
+	ld	[$FF40],a ; enable lcd
 
     ld b, 16
     ld HL, $8000
