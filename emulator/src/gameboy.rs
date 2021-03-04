@@ -68,7 +68,7 @@ impl ROM {
        if loc < 0x00FF && self.is_bootrom() {
            self.data[loc as usize]
        } else if loc < 0x4000 { // Bank 0
-           0 // TODO Static bank
+           0xFF // TODO Static bank
        } else { // Bank 1-N (Swappable)
            0 // TODO Swap banks
        }
