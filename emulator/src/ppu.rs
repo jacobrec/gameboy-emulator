@@ -215,10 +215,11 @@ impl PPU {
     fn window_tilemap_loc(&self) -> u16 {
         self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
     }
-    fn decode_tile(&self, loc: usize) -> [PixelData; 8] {
-        // println!("Tile loc: {:04X}", loc + 0x8000);
-        let bg_tile_low = self.vram[loc];
-        let bg_tile_high = self.vram[loc + 1];
+    fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
+        //println!("Tile loc: {:04X} on line {}. Effective y is {}", loc + 0x8000, line, self.registers[LY] + self.registers[SCY]);
+        let vloc = loc + line * 2;
+        let bg_tile_low = self.vram[vloc];
+        let bg_tile_high = self.vram[vloc + 1];
         let gen = move |i: usize| {
             let bh = (bg_tile_high >> (7 - i)) & 1;
             let bl = (bg_tile_low >> (7 - i)) & 1;
@@ -237,9 +238,9 @@ impl PPU {
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
-            let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
-            let loc = bg as usize + ((y & 0b111) as usize * 2);
-            Some(self.decode_tile(loc))
+            let y = self.registers[LY] + self.registers[SCY];
+            let loc = bg as usize;
+            Some(self.decode_tile(loc, (y & 0b111) as usize))
         } else {
             None
         }
@@ -333,7 +334,7 @@ impl PPU {
                 let new_pixels = self.fetch();
                 if let Some(px) = new_pixels {
                     for p in px.iter() {
-                        self.pixel_fifo.push_front(*p);
+                        self.pixel_fifo.push_back(*p);
                     }
                 }
 
@@ -492,7 +493,8 @@ mod test {
 
     #[test]
     fn test_tile_decode () {
-        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
+        let testtile = [0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00,
+                        0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF];
         let mut ppu = create_test_ppu();
         ppu.registers[BGP] = 0b11100100;
         ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
@@ -512,54 +514,84 @@ mod test {
         let p11 = PixelData{src: PixelSrc::BG, value: 0b11};
         assert_eq!(Some([p00, p00, p00, p00, p01, p01, p01, p01]), ppu.fetch());
 
+        ppu.lx = 0;
+        ppu.registers[LY] = 1;
         for i in 0..7 {
             assert_eq!(None, ppu.fetch())
         }
+        assert_eq!(Some([p00, p00, p00, p00, p01, p01, p01, p01]), ppu.fetch());
+
         ppu.lx = 0;
         ppu.registers[LY] = 4;
-        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
-
         for i in 0..7 {
             assert_eq!(None, ppu.fetch())
         }
+        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
+
         ppu.lx = 0;
         ppu.registers[LY] = 0;
-        ppu.registers[SCY] = 4;
+        ppu.registers[SCY] = 6;
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
         assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
     }
 
     #[test]
     fn test_ppu_tick () {
-        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
+        let testtile = [0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00,
+                        0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF];
         let mut ppu = create_test_ppu();
         ppu.registers[BGP] = 0b11100100;
         ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
         assert_eq!(ppu.get_mode(), Mode::HBlank);
+        let offset = 5;
         for i in 0..(TICK_WIDTH+1) {
             ppu.tick();
         }
+        ppu.registers[LY] = 0;
         assert_eq!(ppu.get_mode(), Mode::OAM);
         for i in 0..testtile.len(){
-            ppu.vram[i+16] = testtile[i];
+            ppu.vram[i+offset*16] = testtile[i];
         }
         for i in 0..(32*32) {
-            ppu.vram[0x1800 + i] = 1;
+            ppu.vram[0x1800 + i] = offset as u8;
         }
-        for i in 0..(80 + 250) {
+        for _ in 0..(80 + 250) {
             ppu.tick();
         }
         assert_eq!(ppu.get_mode(), Mode::HBlank);
+        while ppu.get_mode() != Mode::VBlank {
+            ppu.tick();
+        }
 
-        for i in 0..SCREEN_WIDTH {
-            let should_color =
-                if (i / 4) % 2 == 0 {
-                    color00
-                } else {
-                    color01
-                };
-            println!("Checking {} to be {}", i, format!("{:X}", should_color));
-            assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH + i]), format!("{:X}", should_color));
-            // assert_eq!(ppu.screen[i], should_color);
+        for j in 0..8 {
+            for i in 0..8{
+                print!("{:X} ", ppu.screen[SCREEN_WIDTH*j + i]);
+            }
+            println!();
+        }
+
+        for j in 0..SCREEN_HEIGHT {
+            for i in 0..SCREEN_WIDTH {
+                let should_color =
+                    if (i / 4) % 2 == 0 {
+                        if (j / 4) % 2 == 0 {
+                            color00
+                        } else {
+                            color10
+                        }
+                    } else {
+                        if (j / 4) % 2 == 0 {
+                            color01
+                        } else {
+                            color11
+                        }
+                    };
+                println!("Checking ({}, {}) to be {}", i, j, format!("{:X}", should_color));
+                assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH * j + i]), format!("{:X}", should_color));
+                // assert_eq!(ppu.screen[i], should_color);
+            }
         }
     }
 
