@@ -57,6 +57,7 @@ const OBP1: usize = 9; // https://gbdev.io/pandocs/#ff48-obp0-object-palette-0-d
 const WY: usize = 0xA;
 const WX: usize = 0xB;
 
+#[derive(Clone,Copy,Debug, PartialEq)]
 pub enum Mode {
     HBlank,
     VBlank,
@@ -141,6 +142,18 @@ struct PixelData {
     src: PixelSrc,
 }
 
+impl std::fmt::Display for PixelData {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = match self.src {
+            PixelSrc::BG => "BG",
+            PixelSrc::S1 => "S1",
+            PixelSrc::S2 => "S2",
+        };
+        write!(f, "<{}::{:02b}>", s, self.value)
+    }
+}
+
+
 impl PPU {
     pub fn new() -> Self {
         PPU {
@@ -188,7 +201,10 @@ impl PPU {
     }
     fn background_tilemap_loc(&self) -> usize {
         let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
-        let tile_idx = self.vram[tilemap_loc as usize];
+        let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
+        let x = self.lx;
+        let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
+        let tile_idx = self.vram[tilemap_loc as usize + offset];
         if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
             return tile_idx as usize * 16;
         } else {
@@ -200,13 +216,9 @@ impl PPU {
         self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
     }
     fn decode_tile(&self, loc: usize) -> [PixelData; 8] {
-        //println!("Tile loc: {:04X}", loc + 0x8000);
-        // let bg_tile_low = self.vram[loc];
-        // let bg_tile_high = self.vram[loc + 1];
-        // let testtile = [0xFF, 0x00, 0x24, 0xFF, 0xFF, 0x24, 0x00, 0xFF, 0xE7, 0x00, 0x42, 0xFF, 0xFF, 0x3C, 0x00, 0xFF];
-        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
-        let bg_tile_low = testtile[loc];
-        let bg_tile_high = testtile[loc + 1];
+        // println!("Tile loc: {:04X}", loc + 0x8000);
+        let bg_tile_low = self.vram[loc];
+        let bg_tile_high = self.vram[loc + 1];
         let gen = move |i: usize| {
             let bh = (bg_tile_high >> (7 - i)) & 1;
             let bl = (bg_tile_low >> (7 - i)) & 1;
@@ -226,10 +238,7 @@ impl PPU {
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
             let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
-            let x = self.lx;
-            let idx = (y as usize) / 8 * 32 + (x as usize) / 8;
-            // let loc = bg as usize + idx + ((y & 0b111) as usize * 2);
-            let loc = (y & 0b111) as usize * 2;
+            let loc = bg as usize + ((y & 0b111) as usize * 2);
             Some(self.decode_tile(loc))
         } else {
             None
@@ -313,6 +322,7 @@ impl PPU {
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
                     let color = self.lookup_color(p);
+                    //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
                     if self.lx >= self.registers[SCX] {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
@@ -323,7 +333,7 @@ impl PPU {
                 let new_pixels = self.fetch();
                 if let Some(px) = new_pixels {
                     for p in px.iter() {
-                        self.pixel_fifo.push_back(*p);
+                        self.pixel_fifo.push_front(*p);
                     }
                 }
 
@@ -516,7 +526,41 @@ mod test {
         ppu.registers[LY] = 0;
         ppu.registers[SCY] = 4;
         assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
-
-
     }
+
+    #[test]
+    fn test_ppu_tick () {
+        let testtile = [0x0F, 0x00, 0xF0, 0x00, 0x0F, 0x00, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0xFF, 0x0F, 0xFF, 0xF0, 0xFF];
+        let mut ppu = create_test_ppu();
+        ppu.registers[BGP] = 0b11100100;
+        ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        assert_eq!(ppu.get_mode(), Mode::HBlank);
+        for i in 0..(TICK_WIDTH+1) {
+            ppu.tick();
+        }
+        assert_eq!(ppu.get_mode(), Mode::OAM);
+        for i in 0..testtile.len(){
+            ppu.vram[i+16] = testtile[i];
+        }
+        for i in 0..(32*32) {
+            ppu.vram[0x1800 + i] = 1;
+        }
+        for i in 0..(80 + 250) {
+            ppu.tick();
+        }
+        assert_eq!(ppu.get_mode(), Mode::HBlank);
+
+        for i in 0..SCREEN_WIDTH {
+            let should_color =
+                if (i / 4) % 2 == 0 {
+                    color00
+                } else {
+                    color01
+                };
+            println!("Checking {} to be {}", i, format!("{:X}", should_color));
+            assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH + i]), format!("{:X}", should_color));
+            // assert_eq!(ppu.screen[i], should_color);
+        }
+    }
+
 }
