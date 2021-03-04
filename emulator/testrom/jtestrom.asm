@@ -7,8 +7,8 @@ Start:
     ld a, $e4
     ld [$FF47], a
 
-    ld	a,90
-	ld	[$FF40],a			; enable lcd
+    ld	a,$90
+	ld	[$FF40],a ; enable lcd
 
     ld b, 16
     ld HL, $8000
@@ -23,8 +23,8 @@ LoadTile:
     cp b
     jp NZ, LoadTile
 
+    halt
     jp Start
 
 Tile:
-    db $0F, $00, $F0, $00, $0F, $00, $F0, $00
-    db $0F, $FF, $F0, $FF, $0F, $FF, $F0, $FF
+    db $0F, $00, $0F, $00, $0F, $00, $0F, $00, $0F, $FF, $0F, $FF, $0F, $FF, $0F, $FF
