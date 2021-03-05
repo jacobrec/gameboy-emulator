@@ -322,7 +322,7 @@ impl CPU {
             0xC3 => {self.clock(); Instruction::Jmp(Jump::Absolute(self.next16()), None)},      // JP a16
             0xC4 => Instruction::Call(Some(JmpFlag::NoZero), self.next16()),                    // CALL NZ, a16
             0xC5 => Instruction::Push(Register16Loc::BC),                                       // PUSH BC
-            0xC6 => Instruction::AddImm(self.next()),                                       // ADD A, d8
+            0xC6 => Instruction::AddImm(self.next()),                                           // ADD A, d8
             0xC7 => Instruction::Rst(0x00),                                                     // RST 00H
             0xC8 => Instruction::Ret(Some(JmpFlag::Zero)),                                      // RET Z
             0xC9 => Instruction::Ret(None),                                                     // RET
@@ -365,11 +365,11 @@ impl CPU {
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             0xF6 => Instruction::OrImm(self.next()),                                                                // OR d8
             0xF7 => Instruction::Rst(0x30),
-            // 0xF8 => Instruction::Load( Location::Register(RegisterLoc::HL), Location::ZeroPageC),//TODO: LD HL, SP + r8
-            // 0xF9 => Instruction::Load(Location::SP, Location::Register16(Register16Loc::HL)), // LD SP, HL
-            0xFA => Instruction::Load( Location::Register(RegisterLoc::A), Location::IndirectLiteral(self.next16())),           // LD A, (a16)
+            0xF8 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::SPOffset(self.next_signed())),    // LD HL, SP + r8
+            0xF9 => {self.clock(); Instruction::Load(Location::SP, Location::Register16(Register16Loc::HL))},              // LD SP, HL
+            0xFA => Instruction::Load(Location::Register(RegisterLoc::A), Location::IndirectLiteral(self.next16())),       // LD A, (a16)
             0xFB => Instruction::EI,
-            0xFE => Instruction::CpImm(self.next()),                                                                // CP d8
+            0xFE => Instruction::CpImm(self.next()),                                                                        // CP d8
             0xFF => Instruction::Rst(0x38),
 
             0xCB => self.next_op_extended(),
@@ -461,6 +461,7 @@ impl CPU {
             match l {
                 Location::Immediate16(_) => true,
                 Location::SP => true,
+                Location::SPOffset(_) => true,
                 _ => false,
             }
         }
@@ -475,6 +476,17 @@ impl CPU {
                         Location::Immediate16(i) => i,
                         Location::Register16(r) => self.get_register16(r),
                         Location::SP => self.sp,
+                        Location::SPOffset(e8) => {
+                            self.clock();
+                            let sp_val = self.get_register16(Register16Loc::SP) as i32;
+                            let new_val = sp_val.wrapping_add(e8 as i32);
+
+                            self.set_flag(Flag::Zero, false);
+                            self.set_flag(Flag::AddSub, false);
+                            self.set_flag(Flag::HalfCarry, (sp_val & 0x0F) + ((e8 as i32) & 0x0F) > 0x0F); 
+                            self.set_flag(Flag::Carry, (sp_val & 0x00FF) + ((e8 as i32) & 0x00FF) > 0x00FF); 
+                            new_val as u16
+                        }
                         _ => panic!("8 bit src in 16 bit load")
                     };
 
