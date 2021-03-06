@@ -210,9 +210,9 @@ impl CPU {
 
             // Top Quarter ~ 0x00 - 0x3F
             0x00 => Instruction::Nop,
+            // 0X10 => TODO: STOP
             0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::NoZero)), // JR NZ, r8
-            // 0X30 => TODO: JR NZ, r8
-            // 0X40 => TODO: JR NC, r8
+            // 0x30 => TODO: JR NC, r8
 
             // LD (XX), d16
             0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())),   // LD BC n16
@@ -250,15 +250,15 @@ impl CPU {
             0x26 => Instruction::Load(Location::Register(RegisterLoc::H), Location::Immediate(self.next())),        // LD H, d8
             0x36 => Instruction::Load(Location::Register(RegisterLoc::MemHL), Location::Immediate(self.next())),    // LD (HL), d8
  
-            0x07 => Instruction::Rlca,
-            0x17 => Instruction::Rla,
+            0x07 => Instruction::Rlca,  // RLCA
+            0x17 => Instruction::Rla,   // RLA
             // 0x27 => TODO: DAA
-            // 0x37 => TODO: SCF
+            0x37 => Instruction::Scf,   // SCF
 
             // 0x08 => TODO: LD (a16), SP
-            0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None), //TODO: JR r8
-            0x28 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Zero)),
-            0x38 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Carry)),
+            0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None),                     // JR r8
+            0x28 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Zero)),      // JR Z, r8
+            0x38 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Carry)),     // JR C, r8
 
             // ADD HL, r16
             0x09 => Instruction::AddHL16(Register16Loc::BC), // ADD HL, BC
@@ -296,10 +296,10 @@ impl CPU {
             0x2E => Instruction::Load(Location::Register(RegisterLoc::L), Location::Immediate(self.next())), // LD L, d8
             0x3E => Instruction::Load(Location::Register(RegisterLoc::A), Location::Immediate(self.next())), // LD A, d8
             
-            0x0F => Instruction::Rrca,
-            0x1F => Instruction::Rra,
-            0x2F => Instruction::Cpl,
-            0x3F => Instruction::Ccf,
+            0x0F => Instruction::Rrca,  // RRCA
+            0x1F => Instruction::Rra,   // RRA
+            0x2F => Instruction::Cpl,   // CPL
+            0x3F => Instruction::Ccf,   // CCF
 
             // Middle 2 Quarters ~ 0x40 - 0xBF
             0x76 => Instruction::Halt,
@@ -335,7 +335,7 @@ impl CPU {
             0xCC => Instruction::Call(Some(JmpFlag::Zero), self.next16()),                      // CALL Z, a16
             0xCD => Instruction::Call(None, self.next16()),                                     // CALL a16
             0xCE => Instruction::AdcImm(self.next()),                                           // ADC A, d8
-            0xCF => Instruction::Rst(0x08),
+            0xCF => Instruction::Rst(0x08),                                                     // RST 08H
 
             0xD0 => Instruction::Ret(Some(JmpFlag::NoCarry)),                                   // RET NC
             0xD1 => Instruction::Pop(Register16Loc::DE),                                        // POP DE
@@ -343,7 +343,7 @@ impl CPU {
             0xD4 => Instruction::Call(Some(JmpFlag::NoCarry), self.next16()),                   // CALL NC, a16
             0xD5 => Instruction::Push(Register16Loc::DE),                                       // PUSH DE
             0xD6 => Instruction::SubImm(self.next()),                                           // SUB d8
-            0xD7 => Instruction::Rst(0x10),
+            0xD7 => Instruction::Rst(0x10),                                                     // RST 10H
             0xD8 => Instruction::Ret(Some(JmpFlag::Carry)),                                     // RET C
             0xD9 => Instruction::Reti,                                                          // RETI
             0xDA => Instruction::Jmp(Jump::Absolute(self.next16()), Some(JmpFlag::Carry)),      // JP C, a16
@@ -356,26 +356,26 @@ impl CPU {
             0xE2 => Instruction::Load(Location::ZeroPageC, Location::Register(RegisterLoc::A)),                     // LD (C), A
             0xE5 => Instruction::Push(Register16Loc::HL),                                                           // PUSH HL
             0xE6 => Instruction::AndImm(self.next()),                                                               // AND d8
-            0xE7 => Instruction::Rst(0x20),
+            0xE7 => Instruction::Rst(0x20),                                                                         // RST 20H
             0xE8 => Instruction::AddSp(self.next() as i8),                                                          // ADD SP, r8
-            0xE9 => Instruction::Jmp(Jump::Absolute(self.hl()), None),
-            0xEA => Instruction::Load(Location::IndirectLiteral(self.next16()), Location::Register(RegisterLoc::A)),
+            0xE9 => Instruction::Jmp(Jump::Absolute(self.hl()), None),                                              // JP HL
+            0xEA => Instruction::Load(Location::IndirectLiteral(self.next16()), Location::Register(RegisterLoc::A)),// LD (a16), A
             0xEE => Instruction::XorImm(self.next()),                                                               // XOR d8
-            0xEF => Instruction::Rst(0x28),
+            0xEF => Instruction::Rst(0x28),                                                                         // RST 28H
 
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
             0xF2 => Instruction::Load( Location::Register(RegisterLoc::A), Location::ZeroPageC),                    // LD A, (C)
-            0xF3 => Instruction::DI,
+            0xF3 => Instruction::DI,                                                                                // DI
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             0xF6 => Instruction::OrImm(self.next()),                                                                // OR d8
             0xF7 => Instruction::Rst(0x30),
-            0xF8 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::SPOffset(self.next_signed())),    // LD HL, SP + r8
-            0xF9 => {self.clock(); Instruction::Load(Location::SP, Location::Register16(Register16Loc::HL))},              // LD SP, HL
-            0xFA => Instruction::Load(Location::Register(RegisterLoc::A), Location::IndirectLiteral(self.next16())),       // LD A, (a16)
-            0xFB => Instruction::EI,
+            0xF8 => Instruction::Load(Location::Register16(Register16Loc::HL), Location::SPOffset(self.next_signed())),     // LD HL, SP + r8
+            0xF9 => {self.clock(); Instruction::Load(Location::SP, Location::Register16(Register16Loc::HL))},               // LD SP, HL
+            0xFA => Instruction::Load(Location::Register(RegisterLoc::A), Location::IndirectLiteral(self.next16())),        // LD A, (a16)
+            0xFB => Instruction::EI,                                                                                        // EI
             0xFE => Instruction::CpImm(self.next()),                                                                        // CP d8
-            0xFF => Instruction::Rst(0x38),
+            0xFF => Instruction::Rst(0x38),                                                                                 // RST 18H
 
             0xCB => self.next_op_extended(),
 
@@ -851,6 +851,49 @@ impl CPU {
             Instruction::Rrc(r) => {
                 self.rotate_register(r, Rotate::Right, false);
             },
+            Instruction::Sla(r) => {
+                let reg_val = self.get_register(r);
+                let result = reg_val << 1;
+                
+                self.set_register(r, result);
+
+                self.set_flag(Flag::Zero, result == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, reg_val & 0x80 == 0x80);
+            },
+            Instruction::Sra(r) => {
+                let reg_val = self.get_register(r);
+                let result = (reg_val >> 1) | (reg_val & 0x80);
+                
+                self.set_register(r, result);
+
+                self.set_flag(Flag::Zero, result == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, reg_val & 0x01 == 0x01);
+            },
+            Instruction::Swap(r) => {
+                let reg_val = self.get_register(r);
+                let result = (reg_val << 4) | (reg_val >> 4);
+
+                self.set_register(r, result);
+                self.set_flag(Flag::Zero, result == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, false);
+            },
+            Instruction::Srl(r) => {
+                let reg_val = self.get_register(r);
+                let result = reg_val >> 1;
+                
+                self.set_register(r, result);
+
+                self.set_flag(Flag::Zero, result == 0);
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, reg_val & 0x01 == 0x01);
+            },
             Instruction::Rla => {
                 self.rotate_register(RegisterLoc::A, Rotate::Left, true);
                 self.set_flag(Flag::Zero, false);
@@ -874,7 +917,14 @@ impl CPU {
                 self.set_flag(Flag::HalfCarry, true);
             },
             Instruction::Ccf => {
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
                 self.set_flag(Flag::Carry, !self.get_flag(Flag::Carry));
+            },
+            Instruction::Scf => {
+                self.set_flag(Flag::AddSub, false);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_flag(Flag::Carry, true);
             },
             Instruction::Inc16(r16) => {
                 // No flags change here
@@ -2078,5 +2128,123 @@ mod test {
         // 4 CYCLES
         assert_eq!(test_cpu.cycles, 36);
         assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0xF7);
+    }
+
+    #[test]
+    fn test_swap() {
+        let rom_data = vec![0xCB,0x37,0xCB,0x36];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::A, 0x00);
+        
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::A), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::MemHL, 0xF0);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0x0F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+    }
+
+    #[test]
+    fn test_sla() {
+        let rom_data = vec![0xCB,0x22,0xCB,0x26];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::D, 0x80);
+        test_cpu.set_flag(Flag::Carry, false);
+        
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
+        test_cpu.set_flag(Flag::Carry, false);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0xFE);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+    }
+
+    #[test]
+    fn test_sra() {
+        let rom_data = vec![0xCB,0x2A,0xCB,0x2E];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::D, 0x8A);
+        test_cpu.set_flag(Flag::Carry, false);
+        
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0xC5);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), false);
+
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::MemHL, 0x01);
+        test_cpu.set_flag(Flag::Carry, false);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+    }
+
+    #[test]
+    fn test_srl() {
+        let rom_data = vec![0xCB,0x3F,0xCB,0x3E];
+        let mut test_cpu = create_test_cpu(rom_data);
+        
+        test_cpu.set_register(RegisterLoc::A, 0x01);
+        test_cpu.set_flag(Flag::Carry, false);
+        
+        test_cpu.tick();
+        assert_eq!(test_cpu.cycles, 8);
+        assert_eq!(test_cpu.get_register(RegisterLoc::D), 0x00);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
+
+        test_cpu.set_register(RegisterLoc::H, 0x00);
+        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
+        test_cpu.set_flag(Flag::Carry, false);
+        test_cpu.tick();
+
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_register(RegisterLoc::MemHL), 0x7F);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
+        assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
+        assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
+        assert_eq!(test_cpu.get_flag(Flag::Carry), true);
     }
 }
