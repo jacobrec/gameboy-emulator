@@ -81,7 +81,6 @@ fn ascii_half_print(screen: &ppu::Screen) {
 }
 
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
-    ascii_half_print(&gameboy.get_screen());
     let mut start = Instant::now();
     loop {
         match args.display {
