@@ -106,6 +106,7 @@ pub enum Instruction {
     Reti,
     Rst(u8),
     Jmp (Jump, Option<JmpFlag>),
+    DI,
     EI,
     Halt,
     Nop
@@ -194,6 +195,7 @@ impl Display for Instruction {
         let (op, args) = match self {
             Self::Nop           => ("NOP", String::new()),
             Self::EI            => ("EI", String::new()),
+            Self::DI            => ("DI", String::new()),
             Self::Load(l1, l2)  => ("LD", format!(" {},{}", l1, l2)),
             Self::Add(r)        => ("ADD", format!(" {}", r)),
             Self::Adc(r)        => ("ADC", format!(" {}", r)),

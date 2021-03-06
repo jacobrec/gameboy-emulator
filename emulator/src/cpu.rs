@@ -13,6 +13,7 @@ pub struct CPU {
     registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
     sp: u16,
     pc: u16,
+    ime: u8,
     bus: crate::bus::Bus,
     cycles: usize,
 }
@@ -26,6 +27,7 @@ impl CPU {
         CPU {
             sp: 0,
             pc: 0,
+            ime: 0,
             registers: [0, 0, 0, 0, 0, 0, 0, 0],
             cycles: 0,
             bus
@@ -90,6 +92,9 @@ impl CPU {
     fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
     fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
+
+    fn set_ime(&mut self) {self.ime = 1}
+    fn clear_ime(&mut self) {self.ime = 0}
 
     pub fn get_flag(&self, f: Flag) -> bool {
         let bit = match f {
@@ -392,7 +397,7 @@ impl CPU {
             0xF0 => Instruction::Load(Location::Register(RegisterLoc::A), Location::ZeroPageAbsolute(self.next())), // LD A, (a8)
             0xF1 => Instruction::Pop(Register16Loc::AF),                                                            // POP AF
             0xF2 => Instruction::Load( Location::Register(RegisterLoc::A), Location::ZeroPageC),                    // LD A, (C)
-            // 0XF3 => TODO: DI
+            0xF3 => Instruction::DI,
             0xF5 => Instruction::Push(Register16Loc::AF),                                                           // PUSH AF
             0xF6 => Instruction::OrImm(self.next()),                                                                // OR d8
             0xF7 => Instruction::Rst(0x30),
@@ -913,6 +918,11 @@ impl CPU {
             Instruction::EI => {
                 // TODO: Set IME flag on a 1 cycle delay?
                 // Putting this here to avoid crashes
+                // self.set_ime();
+            },
+            Instruction::DI => {
+                self.clear_ime();
+                
             },
             _ => unimplemented!("TODO"),
         }
