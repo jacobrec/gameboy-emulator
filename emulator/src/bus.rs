@@ -39,7 +39,7 @@ pub struct Bus {
 }
 
 impl Bus {
-    pub fn get_screen(&self) -> crate::ppu::Canvas {
+    pub fn get_screen(&self) -> crate::ppu::Screen {
         return self.ppu.get_screen()
     }
 

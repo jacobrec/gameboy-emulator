@@ -3,6 +3,7 @@ use std::num::Wrapping;
 
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
+pub type Screen = [u8; SCREEN_WIDTH * SCREEN_HEIGHT]; // u8 array. This holds colors 0-3
 pub type Canvas = [u32; SCREEN_WIDTH * SCREEN_HEIGHT]; // rgba u32 array. This will get passed and loaded into canvas
 
 // https://gbdev.io/pandocs/#ff40-lcd-control-register
@@ -66,7 +67,7 @@ pub enum Mode {
 }
 
 pub struct PPU {
-    screen: Canvas,
+    screen: Screen,
     vram: [u8; 0x2000],
     registers: [u8; 0x10],
     tick: usize,
@@ -82,10 +83,14 @@ const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
 const EFFECTIVE_SCAN_COUNT: u8 = 153;
 
-const color00: u32 = 0xFFFFB5FF;
-const color01: u32 = 0x7BC67BFF;
-const color10: u32 = 0x6B8C42FF;
-const color11: u32 = 0x5A3921FF;
+// const color00: u32 = 0xFFFFB5FF;
+// const color01: u32 = 0x7BC67BFF;
+// const color10: u32 = 0x6B8C42FF;
+// const color11: u32 = 0x5A3921FF;
+const color00: u8 = 0b00;
+const color01: u8 = 0b01;
+const color10: u8 = 0b10;
+const color11: u8 = 0b11;
 
 #[derive(Copy, Clone, Debug)]
 struct Sprite {
@@ -171,11 +176,50 @@ impl PPU {
         }
     }
 
-    pub fn get_screen(&self) -> Canvas {
-        self.screen
+    pub fn get_canvas(&self) -> Canvas {
+        const color00: u32 = 0xFFFFB5FF;
+        const color01: u32 = 0x7BC67BFF;
+        const color10: u32 = 0x6B8C42FF;
+        const color11: u32 = 0x5A3921FF;
+        let mut canvas = [0u32; SCREEN_WIDTH * SCREEN_HEIGHT];
+        for i in 0..(SCREEN_WIDTH * SCREEN_HEIGHT) {
+            canvas[i] = match self.screen[i] {
+                0b00 => color00,
+                0b01 => color01,
+                0b10 => color10,
+                _ => color11,
+            }
+        }
+        canvas
+
     }
 
-    fn lookup_color(&self, p: PixelData) -> u32 {
+    pub fn get_screen(&self) -> Screen {
+        let mut fake_screen = [color00; SCREEN_WIDTH * SCREEN_HEIGHT];
+        //self.screen
+        for j in 0..SCREEN_HEIGHT {
+            for i in 0..SCREEN_WIDTH {
+                let should_color =
+                    if (i / 4) % 2 == 0 {
+                        if (j / 4) % 2 == 0 {
+                            color00
+                        } else {
+                            color10
+                        }
+                    } else {
+                        if (j / 4) % 2 == 0 {
+                            color01
+                        } else {
+                            color11
+                        }
+                    };
+                fake_screen[i + j * SCREEN_WIDTH] = should_color;
+            }
+        }
+        fake_screen
+    }
+
+    fn lookup_color(&self, p: PixelData) -> u8 {
         let palette = match p.src {
             PixelSrc::BG => self.registers[BGP],
             PixelSrc::S1 => self.registers[OBP0],

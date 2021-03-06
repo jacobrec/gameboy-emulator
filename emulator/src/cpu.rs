@@ -18,7 +18,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn get_screen(&self) -> crate::ppu::Canvas {
+    pub fn get_screen(&self) -> crate::ppu::Screen {
         return self.bus.get_screen()
     }
 

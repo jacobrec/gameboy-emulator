@@ -51,18 +51,21 @@ fn get_args () -> Args {
     Args {display}
 }
 
-fn ascii_half_print(screen: &ppu::Canvas) {
-    fn format_rgba_num(mut num: u32) -> String {
-        num = num >> 8; let b = num & 0xFF;
-        num = num >> 8; let g = num & 0xFF;
-        num = num >> 8; let r = num & 0xFF;
-        return format!("{};{};{}", r, g, b)
+fn ascii_half_print(screen: &ppu::Screen) {
+    fn format_color(mut num: u8) -> u8 {
+        match num & 0b11 {
+            0 => 97,
+            1 => 37,
+            2 => 90,
+            _ => 30,
+        }
+
     }
-    fn print_pixel_pair(topcolor: u32, bottomcolor: u32) {
+    fn print_pixel_pair(topcolor: u8, bottomcolor: u8) {
         let top_half = "▀";
-        let fg = format_rgba_num(topcolor);
-        let bg = format_rgba_num(bottomcolor);
-        print!("{}[48;2;{};38;2;{}m{}", ESC, fg, bg, top_half)
+        let fg = format_color(topcolor);
+        let bg = format_color(bottomcolor);
+        print!("{}[{};{}m{}", ESC, fg, bg + 10, top_half)
     }
     print!("{}[1;1f", ESC);
     for row in 0..(ppu::SCREEN_HEIGHT/2) {
@@ -71,7 +74,7 @@ fn ascii_half_print(screen: &ppu::Canvas) {
             let cbot = (row * 2 + 1) * ppu::SCREEN_HEIGHT + col;
             print_pixel_pair(screen[ctop], screen[cbot]);
         }
-        println!("{}[0m", ESC);
+        print!("{}[0m\n", ESC);
     }
     println!("{}[0m", ESC);
     println!("Frame")
@@ -96,8 +99,8 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
 }
 
 fn main() {
-    // let romdata = open_file("testrom/jbootrom.gb");
-    let romdata = open_file("bootrom.bin");
+    let romdata = open_file("testrom/jbootrom.gb");
+    //let romdata = open_file("bootrom.bin");
     let gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
