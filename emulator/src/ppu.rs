@@ -195,28 +195,7 @@ impl PPU {
     }
 
     pub fn get_screen(&self) -> Screen {
-        let mut fake_screen = [color00; SCREEN_WIDTH * SCREEN_HEIGHT];
-        //self.screen
-        for j in 0..SCREEN_HEIGHT {
-            for i in 0..SCREEN_WIDTH {
-                let should_color =
-                    if (i / 4) % 2 == 0 {
-                        if (j / 4) % 2 == 0 {
-                            color00
-                        } else {
-                            color10
-                        }
-                    } else {
-                        if (j / 4) % 2 == 0 {
-                            color01
-                        } else {
-                            color11
-                        }
-                    };
-                fake_screen[i + j * SCREEN_WIDTH] = should_color;
-            }
-        }
-        fake_screen
+        self.screen
     }
 
     fn lookup_color(&self, p: PixelData) -> u8 {
