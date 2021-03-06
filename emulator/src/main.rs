@@ -70,8 +70,8 @@ fn ascii_half_print(screen: &ppu::Screen) {
     print!("{}[1;1f", ESC);
     for row in 0..(ppu::SCREEN_HEIGHT/2) {
         for col in 0..(ppu::SCREEN_WIDTH) {
-            let ctop = (row * 2) * ppu::SCREEN_HEIGHT + col;
-            let cbot = (row * 2 + 1) * ppu::SCREEN_HEIGHT + col;
+            let ctop = (row * 2) * ppu::SCREEN_WIDTH + col;
+            let cbot = (row * 2 + 1) * ppu::SCREEN_WIDTH + col;
             print_pixel_pair(screen[ctop], screen[cbot]);
         }
         print!("{}[0m\n", ESC);
