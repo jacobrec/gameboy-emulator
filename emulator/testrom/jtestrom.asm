@@ -1,9 +1,5 @@
     SECTION "Main", ROM0[$0]
 Start:
-    ld sp, $fffe
-    xor a
-    ld hl, $9fff
-
     ld a, $e4
     ld [$FF47], a
 
@@ -23,8 +19,8 @@ LoadTile:
     cp b
     jp NZ, LoadTile
 
-    halt
-    jp Start
+Loop:
+    jp Loop
 
 Tile:
     db $0F, $00, $0F, $00, $0F, $00, $0F, $00, $0F, $FF, $0F, $FF, $0F, $FF, $0F, $FF
