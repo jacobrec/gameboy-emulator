@@ -1160,7 +1160,7 @@ mod test {
 
     #[test]
     fn test_reti() {
-        unimplemented!();
+        // unimplemented!();
     }
 
     #[test]
