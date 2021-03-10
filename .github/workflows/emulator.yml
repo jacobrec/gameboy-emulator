@@ -26,14 +26,14 @@ jobs:
       run: cargo test 
       working-directory: emulator
     
-    - name: Build
-      run: wasm-pack build
-      working-directory: emulator
-    
     - name: Run wasm tests
       run: wasm-pack test --headless --chrome --node -- --no-fail-fast
       working-directory: emulator
 
+    # - name: Build wasm target
+    #   run: wasm-pack build
+    #   working-directory: emulator
+    
     # - name: Use Node.js ${{ matrix.node-version }}
     #   uses: actions/setup-node@v1
     #   with:
