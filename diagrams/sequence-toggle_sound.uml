@@ -1,0 +1,7 @@
+@startuml
+actor User as user
+participant "PWE UI"  as pwe
+user -> pwe : User hits mute
+pwe -> pwe : PWE UI toggle sound state
+pwe -> user : sound is continously played to user, if sound state indicates it should
+@enduml
