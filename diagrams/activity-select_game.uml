@@ -1,0 +1,19 @@
+' PlantUML
+@startuml
+floating note left: User loads page
+start
+if (User selects) then (upload rom)
+
+    repeat
+        :File picker;
+        :Check if file looks like ROM file;
+    repeat while (File looks legit?) is (no)
+    ->yes;
+
+else (load existing)
+    :Show list of saves;
+    :User Selects from list;
+endif
+:Start Game;
+stop
+@enduml
