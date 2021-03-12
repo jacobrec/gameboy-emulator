@@ -1,0 +1,11 @@
+@startuml
+actor User as user
+participant "PWE UI"  as pwe
+participant Gameboy as gb
+
+user -> pwe : requests page load by navigating to url
+pwe -> gb : initialize gameboy state
+gb -> pwe : returns a reference to the Gameboy Emulator object
+pwe -> user : returns the html, css, js, and wasm of the homepage
+
+@enduml
