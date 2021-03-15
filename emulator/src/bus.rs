@@ -108,7 +108,7 @@ impl Bus {
     }
 
     pub fn set_recievables(&mut self, recievables: Recievables) {
-        // TODO: pass this to ppu to do vblank interrupts
+        self.ppu.set_recievables(recievables.clone())
     }
 
 

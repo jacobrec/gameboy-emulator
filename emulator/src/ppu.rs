@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::num::Wrapping;
+use crate::cpu_recievable::{Recievables, CpuRecievable::*, Interrupt};
 
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
@@ -78,6 +79,7 @@ pub struct PPU {
     fetch_state: Wrapping<u8>,
     lx: u8,
     is_window: bool,
+    recievables: Option<Recievables>,
 }
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
@@ -173,6 +175,7 @@ impl PPU {
             fetch_state: Wrapping(0),
             is_window: false,
             lx: 0,
+            recievables: None,
         }
     }
 
@@ -222,9 +225,13 @@ impl PPU {
         }
 
     }
+    fn get_effective_y(&self) -> u8 {
+        let y = ((self.registers[LY] as u16 + self.registers[SCY] as u16) & 0xFF) as u8;
+        y
+    }
     fn background_tilemap_loc(&self) -> usize {
         let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
-        let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
+        let y = self.get_effective_y();
         let x = self.lx;
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
         let tile_idx = self.vram[tilemap_loc as usize + offset];
@@ -261,7 +268,7 @@ impl PPU {
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
-            let y = self.registers[LY] + self.registers[SCY];
+            let y = self.get_effective_y();
             let loc = bg as usize;
             Some(self.decode_tile(loc, (y & 0b111) as usize))
         } else {
@@ -285,6 +292,12 @@ impl PPU {
                 }
             },
             Mode::VBlank => {
+                if self.tick == 0 {
+                    match &self.recievables {
+                        Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
+                        None => ()
+                    }
+                }
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] > EFFECTIVE_SCAN_COUNT {
@@ -461,6 +474,10 @@ impl PPU {
             panic!("CGB functionallity is not supported")
         }
         self.registers[l]
+    }
+
+    pub fn set_recievables(&mut self, recievables: Recievables) {
+        self.recievables = Some(recievables)
     }
 }
 
