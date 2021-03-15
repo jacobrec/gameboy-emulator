@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::num::Wrapping;
 use crate::cpu_recievable::{Recievables, CpuRecievable::*, Interrupt};
 
+// TODO: add LCD_STAT interrupts
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
 pub type Screen = [u8; SCREEN_WIDTH * SCREEN_HEIGHT]; // u8 array. This holds colors 0-3
@@ -278,6 +279,9 @@ impl PPU {
 
     pub fn tick(&mut self) {
         self.tick += 1;
+        self.registers[LCD_STATUS_REGISTER] &= 0b11111011 |
+            if self.registers[LY] == self.registers[LYC] { 1 }
+            else { 0 } << 2;
         match self.get_mode() {
             Mode::HBlank => {
                 if self.tick > TICK_WIDTH {
@@ -292,7 +296,7 @@ impl PPU {
                 }
             },
             Mode::VBlank => {
-                if self.tick == 0 {
+                if self.tick == 1 {
                     match &self.recievables {
                         Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
                         None => ()
