@@ -186,7 +186,7 @@ impl Display for Location {
             Self::SP => write!(f, "SP"),
             Self::SPOffset(e8) => write!(f, "(SP+{:X})", e8),
             Self::ZeroPageC => write!(f, "($FF00+C)"),
-            Self::ZeroPageAbsolute(v) => write!(f, "($FF00+${:X})", v),
+            Self::ZeroPageAbsolute(v) => write!(f, "($FF00+${:02X})", v),
         }
     }
 }
