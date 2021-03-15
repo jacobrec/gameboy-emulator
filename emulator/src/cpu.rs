@@ -307,7 +307,7 @@ impl CPU {
             0x00 => Instruction::Nop,
             // 0X10 => TODO: STOP
             0x20 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::NoZero)), // JR NZ, r8
-            // 0x30 => TODO: JR NC, r8
+            0x30 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::NoCarry)), // JR NC, r8
 
             // LD (XX), d16
             0x01 => Instruction::Load(Location::Register16(Register16Loc::BC), Location::Immediate16(self.next16())),   // LD BC n16
