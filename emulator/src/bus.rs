@@ -39,11 +39,11 @@ pub struct Bus {
 }
 
 impl Bus {
-    pub fn get_screen(&self) -> crate::ppu::Canvas {
+    pub fn get_screen(&self) -> crate::ppu::Screen {
         return self.ppu.get_screen()
     }
 
-    pub const fn new(rom: ROM) -> Self {
+    pub fn new(rom: ROM) -> Self {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
@@ -56,8 +56,10 @@ impl Bus {
             0xC000..=0xCFFF => self.ram[loc as usize],
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
+            0xFE00..=0xFE9F => self.ppu.readOAM(loc),
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
+            0xFF40..=0xFF4F => { self.ppu.read_reg(loc) },
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", ""); 0},
             0xFF80..=0xFFFE => self.ram[loc as usize], // HRAM
             _ => panic!("Unimplemented read range: {:04X}", loc)
@@ -70,8 +72,10 @@ impl Bus {
             0xC000..=0xCFFF => self.ram[loc as usize] = val,
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
+            0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
+            0xFF40..=0xFF4F => { self.ppu.write_reg(loc, val) },
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
             0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
             _ => panic!("Unimplemented write range: {:04X}", loc)

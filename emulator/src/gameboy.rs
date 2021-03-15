@@ -26,7 +26,7 @@ impl GameboyBuilder {
     pub fn build(&self) -> Gameboy {
         if let Some(rom) = self.rom.clone() {
           return Gameboy {
-              cpu: CPU::new(crate::bus::Bus::new(rom))
+              cpu: CPU::post_bootrom(crate::bus::Bus::new(rom))
           }
         }
         panic!("Builder not fully initialized")
@@ -34,7 +34,7 @@ impl GameboyBuilder {
 }
 
 impl Gameboy {
-    pub const fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             cpu: CPU::new(crate::bus::Bus::new(ROM{ data:Vec::new() })),
         }
@@ -47,7 +47,7 @@ impl Gameboy {
     pub fn tick(&mut self) {
         self.cpu.tick()
     }
-    pub fn get_screen(&self) -> crate::ppu::Canvas {
+    pub fn get_screen(&self) -> crate::ppu::Screen {
         return self.cpu.get_screen()
     }
 
@@ -65,10 +65,10 @@ impl ROM {
         ROM {data}
     }
     pub fn read(&self, loc: u16) -> u8 {
-       if loc < 0x00FF  && self.is_bootrom() {
+       if loc < 0x00FF && self.is_bootrom() {
            self.data[loc as usize]
        } else if loc < 0x4000 { // Bank 0
-           0 // TODO Static bank
+           self.data[loc as usize]
        } else { // Bank 1-N (Swappable)
            0 // TODO Swap banks
        }

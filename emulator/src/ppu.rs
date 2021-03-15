@@ -1,31 +1,622 @@
-pub type Canvas = [u32; 160 * 144]; // rgba u32 array. This will get passed and loaded into canvas
-pub struct PPU {
-    screen: Canvas,
-    vram: [u8; 0x2000],
+use std::collections::VecDeque;
+use std::num::Wrapping;
+
+pub const SCREEN_WIDTH: usize = 160;
+pub const SCREEN_HEIGHT: usize = 144;
+pub type Screen = [u8; SCREEN_WIDTH * SCREEN_HEIGHT]; // u8 array. This holds colors 0-3
+pub type Canvas = [u32; SCREEN_WIDTH * SCREEN_HEIGHT]; // rgba u32 array. This will get passed and loaded into canvas
+
+// https://gbdev.io/pandocs/#ff40-lcd-control-register
+// this register is a bitfield containing bits 76543210
+// Bit   Name                               Usage notes
+// 7     LCD Display Enable                 0=Off, 1=On
+// 6     Window Tile Map Display Select     0=9800-9BFF, 1=9C00-9FFF
+// 5     Window Display Enable              0=Off, 1=On
+// 4     BG & Window Tile Data Select       0=8800-97FF, 1=8000-8FFF
+// 3     BG Tile Map Display Select         0=9800-9BFF, 1=9C00-9FFF
+// 2     OBJ (Sprite) Size                  0=8x8, 1=8x16
+// 1     OBJ (Sprite) Display Enable        0=Off, 1=On
+// 0     BG and Window Display/Priority     0=Off, 1=On
+const LCD_CONTROL_REGISTER: usize = 0;
+
+// https://gbdev.io/pandocs/#lcd-status-register
+// Bit 6 - LYC=LY Coincidence Interrupt (1=Enable) (Read/Write)
+// Bit 5 - Mode 2 OAM Interrupt         (1=Enable) (Read/Write)
+// Bit 4 - Mode 1 V-Blank Interrupt     (1=Enable) (Read/Write)
+// Bit 3 - Mode 0 H-Blank Interrupt     (1=Enable) (Read/Write)
+// Bit 2 - Coincidence Flag  (0:LYC<>LY, 1:LYC=LY) (Read Only)
+// Bit 1-0 - Mode Flag       (Mode 0-3, see below) (Read Only)
+//           0: During H-Blank
+//           1: During V-Blank
+//           2: During Searching OAM
+//           3: During Transferring Data to LCD Driver
+const LCD_STATUS_REGISTER: usize = 1;
+
+// scroll x and y
+const SCY: usize = 2; // https://gbdev.io/pandocs/#ff42-scy-scroll-y-r-w-ff43-scx-scroll-x-r-w
+const SCX: usize = 3; // https://gbdev.io/pandocs/#ff42-scy-scroll-y-r-w-ff43-scx-scroll-x-r-w
+
+// current line, read only
+const LY: usize = 4; // https://gbdev.io/pandocs/#ff44-ly-lcdc-y-coordinate-r
+// This is read and writeable, bit 2 of lcd status is set if this equals ly
+const LYC: usize = 5; // https://gbdev.io/pandocs/#ff45-lyc-ly-compare-r-w
+
+const DMA: usize = 6; // https://gbdev.io/pandocs/#ff46-dma-dma-transfer-and-start-address-r-w
+
+// pallet, maps to the hex code below
+// bits 6-7: color for 11
+// bits 4-5: color for 10
+// bits 2-3: color for 01
+// bits 0-1: color for 00
+const BGP: usize = 7; // https://gbdev.io/pandocs/#ff47-bgp-bg-palette-data-r-w-non-cgb-mode-only
+// same as above, but bits 0-1 are ignore, as 00 is transparant for sprites
+const OBP0: usize = 8; // https://gbdev.io/pandocs/#ff48-obp0-object-palette-0-data-r-w-non-cgb-mode-only
+const OBP1: usize = 9; // https://gbdev.io/pandocs/#ff48-obp0-object-palette-0-data-r-w-non-cgb-mode-only
+
+// https://gbdev.io/pandocs/#ff4a-wy-window-y-position-r-w-ff4b-wx-window-x-position-7-r-w
+// Window x and y offsets
+const WY: usize = 0xA;
+const WX: usize = 0xB;
+
+#[derive(Clone,Copy,Debug, PartialEq)]
+pub enum Mode {
+    HBlank,
+    VBlank,
+    OAM,
+    VRAM,
 }
 
-impl PPU {
-    pub const fn new() -> Self {
-        PPU {
-            screen: [0u32; 160 * 144],
-            vram: [0u8; 0x2000],
+pub struct PPU {
+    screen: Screen,
+    vram: [u8; 0x2000],
+    registers: [u8; 0x10],
+    tick: usize,
+    oam_ram: [Sprite; 40],
+    active_sprites: [Option<usize>; 10],
+    pixel_fifo: VecDeque<PixelData>,
+    pixels_pushed: usize,
+    fetch_state: Wrapping<u8>,
+    lx: u8,
+    is_window: bool,
+}
+const TICK_WIDTH: usize = 456;
+const OAM_WIDTH: usize = 80;
+const EFFECTIVE_SCAN_COUNT: u8 = 153;
+
+// const color00: u32 = 0xFFFFB5FF;
+// const color01: u32 = 0x7BC67BFF;
+// const color10: u32 = 0x6B8C42FF;
+// const color11: u32 = 0x5A3921FF;
+const color00: u8 = 0b00;
+const color01: u8 = 0b01;
+const color10: u8 = 0b10;
+const color11: u8 = 0b11;
+
+#[derive(Copy, Clone, Debug)]
+struct Sprite {
+    pos_x: u8,
+    pos_y: u8,
+    tile: u8,
+    flags: u8,
+}
+
+impl Sprite {
+    const fn new() -> Self {
+        Sprite {
+            pos_x: 0,
+            pos_y: 0,
+            tile:  0,
+            flags: 0,
+        }
+    }
+    fn from_memory(mem: &[u8; 0x2000], loc: usize) -> Self {
+        let b3 = mem[loc+3];
+        Sprite {
+            pos_x: mem[loc],
+            pos_y: mem[loc+1],
+            tile:  mem[loc+2],
+            flags: mem[loc+3],
         }
     }
 
-    pub fn get_screen(&self) -> Canvas {
+    fn priority(&self) -> u8 {
+        (self.flags & 0b1000) >> 3
+    }
+    fn is_x_flipped(&self) -> bool {
+        self.flags & 0b0100 > 0
+    }
+    fn is_y_flipped(&self) -> bool {
+        self.flags & 0b0100 > 0
+    }
+    fn palette(&self) -> PixelSrc {
+        if self.flags & 0b0100 > 0 {
+            PixelSrc::S2
+        } else {
+            PixelSrc::S1
+        }
+    }
+}
+
+#[derive(Clone,Copy,Debug, PartialEq)]
+enum PixelSrc {
+    BG, S1, S2
+}
+#[derive(Clone,Copy,Debug, PartialEq)]
+struct PixelData {
+    value: u8, // Really this is a 2 bit number
+    src: PixelSrc,
+}
+
+impl std::fmt::Display for PixelData {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let s = match self.src {
+            PixelSrc::BG => "BG",
+            PixelSrc::S1 => "S1",
+            PixelSrc::S2 => "S2",
+        };
+        write!(f, "<{}::{:02b}>", s, self.value)
+    }
+}
+
+
+impl PPU {
+    pub fn new() -> Self {
+        PPU {
+            screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT],
+            vram: [0u8; 0x2000],
+            registers: [0u8; 0x10],
+            oam_ram: [Sprite::new(); 40],
+            tick: 0,
+            active_sprites: [None; 10],
+            pixel_fifo: VecDeque::new(),
+            pixels_pushed: 0,
+            fetch_state: Wrapping(0),
+            is_window: false,
+            lx: 0,
+        }
+    }
+
+    pub fn get_canvas(&self) -> Canvas {
+        const color00: u32 = 0xFFFFB5FF;
+        const color01: u32 = 0x7BC67BFF;
+        const color10: u32 = 0x6B8C42FF;
+        const color11: u32 = 0x5A3921FF;
+        let mut canvas = [0u32; SCREEN_WIDTH * SCREEN_HEIGHT];
+        for i in 0..(SCREEN_WIDTH * SCREEN_HEIGHT) {
+            canvas[i] = match self.screen[i] {
+                0b00 => color00,
+                0b01 => color01,
+                0b10 => color10,
+                _ => color11,
+            }
+        }
+        canvas
+
+    }
+
+    pub fn get_screen(&self) -> Screen {
         self.screen
     }
 
+    fn lookup_color(&self, p: PixelData) -> u8 {
+        let palette = match p.src {
+            PixelSrc::BG => self.registers[BGP],
+            PixelSrc::S1 => self.registers[OBP0],
+            PixelSrc::S2 => self.registers[OBP1],
+        };
+        let num = palette >> ((p.value & 0b11) << 1) & 0b11;
+        match num {
+            0b00 => color00,
+            0b01 => color01,
+            0b10 => color10,
+            0b11 => color11,
+            _ => unreachable!("number should be mod 4"),
+        }
+    }
+
+    fn tilemap_loc(&self, num: u8) -> u16 {
+        if num > 0 {
+            return 0x1C00 // 9C00 - 8000
+        } else {
+            return 0x1800 // 9800 - 8000
+        }
+
+    }
+    fn background_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+        let y = (self.registers[LY] + self.registers[SCY]) & 0xFF;
+        let x = self.lx;
+        let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
+        let tile_idx = self.vram[tilemap_loc as usize + offset];
+        if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
+            return tile_idx as usize * 16;
+        } else {
+            return ((tile_idx as i8) as isize * 16 + 0x1000) as usize;
+        }
+
+    }
+    fn window_tilemap_loc(&self) -> u16 {
+        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
+    }
+    fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
+        //println!("Tile loc: {:04X} on line {}. Effective y is {}", loc + 0x8000, line, self.registers[LY] + self.registers[SCY]);
+        let vloc = loc + line * 2;
+        let bg_tile_low = self.vram[vloc];
+        let bg_tile_high = self.vram[vloc + 1];
+        let gen = move |i: usize| {
+            let bh = (bg_tile_high >> (7 - i)) & 1;
+            let bl = (bg_tile_low >> (7 - i)) & 1;
+            bh << 1 | bl
+        };
+        let mut v = [PixelData{value: 0, src: PixelSrc::BG}; 8];
+        for i in 0..v.len() {
+            v[i].value = gen(i)
+        }
+        v
+
+    }
+
+    fn fetch(&mut self) -> Option<[PixelData; 8]> {
+        self.fetch_state += Wrapping(1);
+        if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
+            // TODO: Window/Obj lookup
+            let bg = self.background_tilemap_loc();
+            let y = self.registers[LY] + self.registers[SCY];
+            let loc = bg as usize;
+            Some(self.decode_tile(loc, (y & 0b111) as usize))
+        } else {
+            None
+        }
+    }
+
     pub fn tick(&mut self) {
+        self.tick += 1;
+        match self.get_mode() {
+            Mode::HBlank => {
+                if self.tick > TICK_WIDTH {
+                    self.registers[LY] += 1;
+                    if self.registers[LY] >= 144 {
+                        // Send vblank interrupt
+                        self.set_mode(Mode::VBlank);
+                    } else {
+                        self.set_mode(Mode::OAM);
+                    }
+                    self.tick = 0;
+                }
+            },
+            Mode::VBlank => {
+                if self.tick > TICK_WIDTH {
+                    self.registers[LY] += 1;
+                    if self.registers[LY] > EFFECTIVE_SCAN_COUNT {
+                        self.registers[LY] = 0;
+                        self.set_mode(Mode::OAM);
+                    }
+                    self.tick = 0;
+                }
+
+            },
+            Mode::OAM => {
+                if self.tick == 0 {
+                    self.active_sprites = [None; 10];
+                } else if self.tick == OAM_WIDTH {
+                    // OAM lookup, this is normally done over 20 dots, but we'll just do it at the end
+                    let mut i = 0;
+                    let s_size = 8;
+                    let ly = self.registers[LY];
+                    for j in 0..40 {
+                        let sj = self.oam_ram[j];
+                        if sj.pos_x != 0 && ly + 16 >= sj.pos_y && ly + 16 < sj.pos_y + s_size {
+                            self.active_sprites[i] = Some(j);
+                            i += 1;
+                        }
+                        if i >= 10 {
+                            break;
+                        }
+                    }
+                    self.set_mode(Mode::VRAM);
+                }
+            },
+            Mode::VRAM => {
+                // render a pixel
+                // 8 pixel cycle with fetcher
+                // FIFO runs at 4 MHz, Fetch runs at 2MHz
+                // FIFO     FETCH
+                // Push     Read Tile #
+                // Push
+                // Push     Read Data 0
+                // Push
+                // Push     Read Data 1
+                // Push
+                // Push     Idle
+                // Push
+                //
+                // When we hit window, the fifo is cleared, and the fetch switches to window
+                let in_window = self.pixels_pushed >= self.registers[WX] as usize && self.registers[LY] >= self.registers[WY];
+                let valid_window = in_window && self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0;
+                if valid_window && !self.is_window { // window enabled
+                    self.is_window = true;
+                    self.pixel_fifo.clear();
+                } else if self.is_window && !valid_window {
+                    self.is_window = false;
+                    self.pixel_fifo.clear();
+                }
+
+                if self.pixel_fifo.len() > 8 {
+                    let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
+                    let y = self.registers[LY];
+                    let x = self.pixels_pushed;
+                    let color = self.lookup_color(p);
+                    //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
+                    if self.lx >= self.registers[SCX] {
+                        self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
+                        self.pixels_pushed += 1;
+                    }
+                    self.lx += 1
+                }
+
+                let new_pixels = self.fetch();
+                if let Some(px) = new_pixels {
+                    for p in px.iter() {
+                        self.pixel_fifo.push_back(*p);
+                    }
+                }
+
+                if self.pixels_pushed >= 160 {
+                    self.pixels_pushed = 0;
+                    self.lx = 0;
+                    self.set_mode(Mode::HBlank);
+                    self.pixel_fifo.clear();
+                }
+            },
+        }
+    }
+    fn set_mode(&mut self, mode: Mode) {
+        let v = match mode {
+            Mode::HBlank => 0b00,
+            Mode::VBlank => 0b01,
+            Mode::OAM => 0b10,
+            Mode::VRAM => 0b11,
+        };
+
+        self.registers[LCD_STATUS_REGISTER] &= 0b11111100;
+        self.registers[LCD_STATUS_REGISTER] |= v;
+    }
+    fn get_mode(&self) -> Mode {
+        match self.registers[LCD_STATUS_REGISTER] & 0b11 {
+            0b00 => Mode::HBlank,
+            0b01 => Mode::VBlank,
+            0b10 => Mode::OAM,
+            0b11 => Mode::VRAM,
+            _ => unreachable!("exhaustive match pattern")
+        }
     }
 
     // Both read and write expect loc to be in the address range 0x8000..=0x9FFF
     pub fn write(&mut self, loc: u16, val: u8) {
         let l = loc as usize - 0x8000;
-        self.vram[l] = val
+        match self.get_mode() {
+            Mode::VRAM => (),
+            _ => self.vram[l] = val,
+        }
     }
     pub fn read(&self, loc: u16) -> u8 {
         let l = loc as usize - 0x8000;
-        self.vram[l]
+        match self.get_mode() {
+            Mode::VRAM => 0xFF,
+            _ => self.vram[l],
+        }
+    }
+    pub fn writeOAM(&mut self, loc: u16, val: u8) {
+        let l = (loc as usize - 0xFE00) / 4;
+        match self.get_mode() {
+            Mode::VRAM => (),
+            Mode::OAM => (),
+            _ => match loc & 0b11 {
+                0 => self.oam_ram[l].pos_x = val,
+                1 => self.oam_ram[l].pos_y = val,
+                2 => self.oam_ram[l].tile = val,
+                3 => self.oam_ram[l].flags = val,
+                _ => unreachable!("exhaustive match pattern")
+            }
+        }
+    }
+    pub fn readOAM(&self, loc: u16) -> u8 {
+        let l = (loc as usize - 0xFE00) / 4;
+        match self.get_mode() {
+            Mode::VRAM => 0xFF,
+            Mode::OAM => 0xFF,
+            _ => match loc & 0b11 {
+                    0 => self.oam_ram[l].pos_x,
+                    1 => self.oam_ram[l].pos_y,
+                    2 => self.oam_ram[l].tile,
+                    3 => self.oam_ram[l].flags,
+                    _ => unreachable!("exhaustive match pattern")
+                }
+        }
+    }
+
+    pub fn write_reg(&mut self, loc: u16, val: u8) {
+        let l = loc as usize - 0xFF40;
+        self.registers[l] = val;
+        if l > 0xB {
+            panic!("CGB functionallity is not supported")
+        } else if l == DMA {
+            // TODO: Start DMA transfer
+            // This will be tricky, as we'll have to block of CPU
+            // access to memory while the transfer happens, as well as do the
+            // transfer with proper timing.
+            // Writing here replaces the whole OAM block with new data
+            // at a rate of 1 byte per cycle.
+            // For example, if you were to go LD $FF46, $10, the DMA would spend the next
+            // 160 cycles copying memory from 1000-109F to FE00-FE9F
+            // For example, if you were to go LD $FF46, $49, the DMA would spend the next
+            // 160 cycles copying the 160 bytes from 4900-499F to FE00-FE9F
+        } else if l == LY {
+            panic!("0xFF44 is read only")
+        }
+    }
+    pub fn read_reg(&self, loc: u16) -> u8 {
+        let l = loc as usize - 0xFF40;
+        if l > 0xB {
+            panic!("CGB functionallity is not supported")
+        }
+        self.registers[l]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn create_test_ppu() -> PPU {
+        PPU::new()
+    }
+
+    #[test]
+    fn test_pixel_color_lookup () {
+        let mut ppu = create_test_ppu();
+
+        ppu.registers[BGP] = 0b11100100;
+        assert_eq!(color00, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b00,
+        }));
+        assert_eq!(color01, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b01,
+        }));
+        assert_eq!(color10, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b10,
+        }));
+        assert_eq!(color11, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b11,
+        }));
+
+        ppu.registers[BGP] = 0b10110001;
+        assert_eq!(color01, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b00,
+        }));
+        assert_eq!(color00, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b01,
+        }));
+        assert_eq!(color11, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b10,
+        }));
+        assert_eq!(color10, ppu.lookup_color(PixelData{
+            src: PixelSrc::BG,
+            value: 0b11,
+        }));
+
+    }
+
+    #[test]
+    fn test_tile_decode () {
+        let testtile = [0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00,
+                        0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF];
+        let mut ppu = create_test_ppu();
+        ppu.registers[BGP] = 0b11100100;
+        ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        for i in 0..testtile.len(){
+            ppu.vram[i+16] = testtile[i];
+        }
+
+        for i in 0..(32*32) {
+            ppu.vram[0x1800 + i] = 1;
+        }
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        let p00 = PixelData{src: PixelSrc::BG, value: 0b00};
+        let p01 = PixelData{src: PixelSrc::BG, value: 0b01};
+        let p10 = PixelData{src: PixelSrc::BG, value: 0b10};
+        let p11 = PixelData{src: PixelSrc::BG, value: 0b11};
+        assert_eq!(Some([p00, p00, p00, p00, p01, p01, p01, p01]), ppu.fetch());
+
+        ppu.lx = 0;
+        ppu.registers[LY] = 1;
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        assert_eq!(Some([p00, p00, p00, p00, p01, p01, p01, p01]), ppu.fetch());
+
+        ppu.lx = 0;
+        ppu.registers[LY] = 4;
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
+
+        ppu.lx = 0;
+        ppu.registers[LY] = 0;
+        ppu.registers[SCY] = 6;
+        for i in 0..7 {
+            assert_eq!(None, ppu.fetch())
+        }
+        assert_eq!(Some([p10, p10, p10, p10, p11, p11, p11, p11]), ppu.fetch());
+    }
+
+    #[test]
+    fn test_ppu_tick () {
+        let testtile = [0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00,
+                        0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF];
+        let mut ppu = create_test_ppu();
+        ppu.registers[BGP] = 0b11100100;
+        ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        assert_eq!(ppu.get_mode(), Mode::HBlank);
+        let offset = 9;
+        for i in 0..(TICK_WIDTH+1) {
+            ppu.tick();
+        }
+        ppu.registers[LY] = 0;
+        ppu.registers[SCY] = 16;
+        assert_eq!(ppu.get_mode(), Mode::OAM);
+        for i in 0..testtile.len(){
+            ppu.vram[i+offset*16] = testtile[i];
+        }
+        for i in 0..(32*32) {
+            ppu.vram[0x1800 + i] = offset as u8;
+        }
+        for _ in 0..(80 + 250) {
+            ppu.tick();
+        }
+        assert_eq!(ppu.get_mode(), Mode::HBlank);
+        while ppu.get_mode() != Mode::VBlank {
+            ppu.tick();
+        }
+
+        let line = 144 - 8;
+        for j in line..(line+8) {
+            for i in 0..8{
+                print!("{:X} ", ppu.screen[SCREEN_WIDTH*j + i]);
+            }
+            println!();
+        }
+
+        for j in 0..SCREEN_HEIGHT {
+            for i in 0..SCREEN_WIDTH {
+                let should_color =
+                    if (i / 4) % 2 == 0 {
+                        if (j / 4) % 2 == 0 {
+                            color00
+                        } else {
+                            color10
+                        }
+                    } else {
+                        if (j / 4) % 2 == 0 {
+                            color01
+                        } else {
+                            color11
+                        }
+                    };
+                //println!("Checking ({}, {}) to be {}", i, j, format!("{:X}", should_color));
+                assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH * j + i]), format!("{:X}", should_color));
+                // assert_eq!(ppu.screen[i], should_color);
+            }
+        }
     }
 }
