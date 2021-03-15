@@ -37,6 +37,8 @@ pub struct Bus {
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
+    pub reg_ie: InterruptRegister, // 0xFFFF
+    pub reg_if: InterruptRegister, // 0xFF0F
 }
 
 impl Bus {
@@ -48,7 +50,9 @@ impl Bus {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
-        Bus { rom, ram, ppu, apu }
+        let reg_if = InterruptRegister { data: 0 };
+        let reg_ie = InterruptRegister { data: 0 };
+        Bus { rom, ram, ppu, apu, reg_if, reg_ie }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -58,11 +62,13 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
             0xFE00..=0xFE9F => self.ppu.readOAM(loc),
+            0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
             0xFF40..=0xFF4F => { self.ppu.read_reg(loc) },
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", ""); 0},
             0xFF80..=0xFFFE => self.ram[loc as usize], // HRAM
+            0xFFFF => self.reg_ie.data,
             _ => panic!("Unimplemented read range: {:04X}", loc)
         }
     }
@@ -74,11 +80,13 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
+            0xFF0F => self.reg_if.data = val,
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
             0xFF40..=0xFF4F => { self.ppu.write_reg(loc, val) },
             0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
             0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
+            0xFFFF => self.reg_ie.data = val,
             _ => panic!("Unimplemented write range: {:04X}", loc)
         }
     }
@@ -100,8 +108,32 @@ impl Bus {
     }
 
     pub fn set_recievables(&mut self, recievables: Recievables) {
-
+        // TODO: pass this to ppu to do vblank interrupts
     }
 
 
+}
+
+pub struct InterruptRegister {
+    pub data: u8,
+}
+impl InterruptRegister {
+    pub fn has_interrupts(&mut self) -> bool {
+        (self.data & 0b11111) > 0
+    }
+    pub fn get_vblank(&mut self) -> bool {
+        (self.data & 0b1) > 0
+    }
+    pub fn get_lcdstat(&mut self) -> bool {
+        (self.data & 0b10) > 0
+    }
+    pub fn get_joypad(&mut self) -> bool {
+        (self.data & 0b100) > 0
+    }
+    pub fn get_timer(&mut self) -> bool {
+        (self.data & 0b1000) > 0
+    }
+    pub fn get_serial(&mut self) -> bool {
+        (self.data & 0b10000) > 0
+    }
 }

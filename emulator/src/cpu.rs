@@ -12,45 +12,16 @@ enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
 
-struct InterruptRegister {
-    data: u8,
-}
-
-struct InterruptEnable {
-    global: bool,
-    reg: InterruptRegister,
-}
-impl InterruptRegister {
-    pub fn has_interrupts(&mut self) -> bool {
-        (self.data & 0b11111) > 0
-    }
-    pub fn get_vblank(&mut self) -> bool {
-        (self.data & 0b1) > 0
-    }
-    pub fn get_lcdstat(&mut self) -> bool {
-        (self.data & 0b10) > 0
-    }
-    pub fn get_joypad(&mut self) -> bool {
-        (self.data & 0b100) > 0
-    }
-    pub fn get_timer(&mut self) -> bool {
-        (self.data & 0b1000) > 0
-    }
-    pub fn get_serial(&mut self) -> bool {
-        (self.data & 0b10000) > 0
-    }
-}
 
 pub struct CPU {
     registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
     sp: u16,
     pc: u16,
-    ime: InterruptEnable,
-    interrupt_register: InterruptRegister,
     bus: crate::bus::Bus,
     cycles: usize,
     debug_print: bool,
     recievables: Recievables,
+    ime: bool,
 }
 
 impl CPU {
@@ -64,13 +35,12 @@ impl CPU {
         CPU {
             sp: 0,
             pc: 0,
-            ime: InterruptEnable{global: true, reg: InterruptRegister { data: 0b11111 }},
-            interrupt_register: InterruptRegister { data: 0 },
             registers: [0, 0, 0, 0, 0, 0, 0, 0],
             cycles: 0,
             bus,
             debug_print: true,
             recievables,
+            ime: true,
         }
     }
 
@@ -135,10 +105,6 @@ impl CPU {
 
     pub fn set_debug_print(&mut self, b: bool) {
         self.debug_print = b
-    }
-
-    fn set_interrupts(&mut self, data: u8) {
-        self.ime.reg.data = data
     }
 
     pub fn get_flag(&self, f: Flag) -> bool {
@@ -221,7 +187,7 @@ impl CPU {
                 } else {
                    Delay(left - 1, op)
                 }),
-                Some(EnableInterrupts) => self.ime.global = true,
+                Some(EnableInterrupts) => self.ime = true,
                 Some(SendInterrupt(i)) => {
                     let x = match i {
                         Interrupt::VBlank => 0b1,
@@ -230,7 +196,7 @@ impl CPU {
                         Interrupt::Timer => 0b1000,
                         Interrupt::Serial => 0b10000,
                     };
-                    self.interrupt_register.data |= x;
+                    self.bus.reg_if.data |= x;
                 },
                 None => return,
             }
@@ -240,7 +206,7 @@ impl CPU {
     fn perform_interrupt(&mut self, id: u8) {
         // https://gbdev.io/pandocs/#interrupt-service-routine
         let loc: u8 = 0x40 + 0x8 * id;
-        self.interrupt_register.data &= !(1 << id);
+        self.bus.reg_if.data &= !(1 << id);
         self.clock();
         self.clock();
         self.stack_push(self.sp);
@@ -248,16 +214,16 @@ impl CPU {
     }
 
     fn interrupt(&mut self) {
-        if self.ime.global && self.interrupt_register.has_interrupts() {
-            if self.interrupt_register.get_vblank() && self.ime.reg.get_vblank() {
+        if self.ime && self.bus.reg_if.has_interrupts() {
+            if self.bus.reg_if.get_vblank() && self.bus.reg_ie.get_vblank() {
                 self.perform_interrupt(0);
-            } else if self.interrupt_register.get_lcdstat() && self.ime.reg.get_lcdstat() {
+            } else if self.bus.reg_if.get_lcdstat() && self.bus.reg_ie.get_lcdstat() {
                 self.perform_interrupt(1);
-            } else if self.interrupt_register.get_joypad() && self.ime.reg.get_joypad() {
+            } else if self.bus.reg_if.get_joypad() && self.bus.reg_ie.get_joypad() {
                 self.perform_interrupt(2);
-            } else if self.interrupt_register.get_timer() && self.ime.reg.get_timer() {
+            } else if self.bus.reg_if.get_timer() && self.bus.reg_ie.get_timer() {
                 self.perform_interrupt(3);
-            } else if self.interrupt_register.get_serial() && self.ime.reg.get_serial() {
+            } else if self.bus.reg_if.get_serial() && self.bus.reg_ie.get_serial() {
                 self.perform_interrupt(4);
             }
         }
@@ -1070,7 +1036,7 @@ impl CPU {
 
             },
             Instruction::DI => {
-                self.ime.global = false
+                self.ime = false
             },
             _ => unimplemented!("TODO"),
         }
