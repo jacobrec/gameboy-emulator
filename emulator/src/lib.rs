@@ -5,6 +5,7 @@ mod bus;
 mod ppu;
 mod instruction;
 mod gameboy;
+mod cpu_recievable;
 
 use wasm_bindgen::prelude::*;
 

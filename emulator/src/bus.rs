@@ -1,4 +1,5 @@
 use crate::gameboy::ROM;
+use crate::cpu_recievable::Recievables;
 
 /*
 Memory Map
@@ -97,5 +98,10 @@ impl Bus {
     pub fn stack_pop(&self, sp: usize) -> u8 {
         self.ram[sp]
     }
+
+    pub fn set_recievables(&mut self, recievables: Recievables) {
+
+    }
+
 
 }

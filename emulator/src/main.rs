@@ -10,6 +10,7 @@ mod ppu;
 mod apu;
 mod instruction;
 mod gameboy;
+mod cpu_recievable;
 
 static ESC: &str = "\u{001b}";
 
