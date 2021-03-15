@@ -54,6 +54,10 @@ impl Gameboy {
     pub fn print_cpu_state(&self) {
         self.cpu.print_state();
     }
+
+    pub fn set_debug_print(&mut self, b: bool) {
+        self.cpu.set_debug_print(b)
+    }
 }
 
 impl ROM {

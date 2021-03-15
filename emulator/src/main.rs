@@ -98,15 +98,20 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
 }
 
 fn main() {
-    //let romdata = open_file("cpu_instrs.gb");
-    let romdata = open_file("testrom/jtest.gb");
+    let romdata = open_file("cpu_instrs.gb");
+    // let romdata = open_file("testrom/jtest.gb");
     // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
-    let gameboy = gameboy::GameboyBuilder::new()
+    let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
 
     let args = get_args();
     let d = args.display;
+
+    match args.display {
+        Display::CPU => (),
+        Display::AsciiHalf => gameboy.set_debug_print(false)
+    }
 
     ctrlc::set_handler(move || {
         cleanup_screen(d);

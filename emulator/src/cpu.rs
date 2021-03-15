@@ -16,6 +16,7 @@ pub struct CPU {
     ime: u8,
     bus: crate::bus::Bus,
     cycles: usize,
+    debug_print: bool,
 }
 
 impl CPU {
@@ -30,7 +31,8 @@ impl CPU {
             ime: 0,
             registers: [0, 0, 0, 0, 0, 0, 0, 0],
             cycles: 0,
-            bus
+            bus,
+            debug_print: true,
         }
     }
 
@@ -92,6 +94,10 @@ impl CPU {
     fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
     fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
+
+    pub fn set_debug_print(&mut self, b: bool) {
+        self.debug_print = b
+    }
 
     fn set_ime(&mut self) {self.ime = 1}
     fn clear_ime(&mut self) {self.ime = 0}
@@ -492,7 +498,9 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        //print!("{:<15} => ", format!("{}", op));
+        if self.debug_print {
+            print!("{:<15} => ", format!("{}", op));
+        }
         fn isLoc16Bit (l: Location) -> bool {
             match l {
                 Location::Immediate16(_) => true,
