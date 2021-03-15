@@ -32,6 +32,37 @@ impl CPU {
         }
     }
 
+    pub fn post_bootrom(bus: crate::bus::Bus) -> Self {
+        // https://gbdev.io/pandocs/#power-up-sequence
+        let mut cpu = Self::new(bus);
+        cpu.set_af(0x01B0);
+        cpu.set_bc(0x0013);
+        cpu.set_de(0x00D8);
+        cpu.set_hl(0x014d);
+        cpu.sp = 0xFFFE;
+        cpu.pc = 0x100;
+        cpu.write(0xFF10, 0x80);
+        cpu.write(0xFF11, 0xBF);
+        cpu.write(0xFF12, 0xF3);
+        cpu.write(0xFF14, 0xBF);
+        cpu.write(0xFF16, 0x3F);
+        cpu.write(0xFF19, 0xBF);
+        cpu.write(0xFF1A, 0x7F);
+        cpu.write(0xFF1B, 0xFF);
+        cpu.write(0xFF1C, 0x9F);
+        cpu.write(0xFF1E, 0xBF);
+        cpu.write(0xFF20, 0xFF);
+        cpu.write(0xFF23, 0xBF);
+        cpu.write(0xFF24, 0x77);
+        cpu.write(0xFF25, 0xF3);
+        cpu.write(0xFF26, 0xF1);
+        cpu.write(0xFF40, 0x91);
+        cpu.write(0xFF47, 0xFC);
+        cpu.write(0xFF48, 0xFF);
+        cpu.write(0xFF49, 0xFF);
+        cpu
+    }
+
     fn a(&self) -> u8 {self.registers[6]}
     fn b(&self) -> u8 {self.registers[4]}
     fn c(&self) -> u8 {self.registers[5]}

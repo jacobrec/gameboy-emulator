@@ -26,7 +26,7 @@ impl GameboyBuilder {
     pub fn build(&self) -> Gameboy {
         if let Some(rom) = self.rom.clone() {
           return Gameboy {
-              cpu: CPU::new(crate::bus::Bus::new(rom))
+              cpu: CPU::post_bootrom(crate::bus::Bus::new(rom))
           }
         }
         panic!("Builder not fully initialized")
@@ -68,7 +68,7 @@ impl ROM {
        if loc < 0x00FF && self.is_bootrom() {
            self.data[loc as usize]
        } else if loc < 0x4000 { // Bank 0
-           0xFF // TODO Static bank
+           self.data[loc as usize]
        } else { // Bank 1-N (Swappable)
            0 // TODO Swap banks
        }

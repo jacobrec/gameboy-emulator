@@ -9,6 +9,7 @@ Start:
     ld b, 16
     ld HL, $8000
     ld DE, Tile
+
 LoadTile:
     ld a, [DE]
     ld [HL], a
@@ -19,9 +20,24 @@ LoadTile:
     cp b
     jp NZ, LoadTile
 
+
+    ld bc, $400
+    ld HL, $9800
+    xor a
+ClearTileMap:
+    ld [HL+], a
+    dec bc
+    cp b
+    jp NZ, ClearTileMap
+    cp c
+    jp NZ, ClearTileMap
+
 Loop:
     jp Loop
 
 Tile:
     DB $0f,$00,$2f,$24,$2f,$24,$0f,$00
     DB $f0,$0f,$f2,$4f,$fc,$3f,$f0,$0f
+
+SECTION "Entry", ROM0[$100]
+    jp Start
