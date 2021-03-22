@@ -58,6 +58,7 @@ impl Bus {
     pub fn read(&self, loc: u16) -> u8 {
         match loc {
             0x0000..=0x3FFF => self.rom.read(loc),
+            0x4000..=0x7FFF => self.rom.read(loc), // upper rom banks
             0xC000..=0xCFFF => self.ram[loc as usize],
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
@@ -76,6 +77,7 @@ impl Bus {
     pub fn write(&mut self, loc: u16, val: u8) {
         match loc {
             0x0000..=0x3FFF => self.rom.write(loc, val),
+            0x4000..=0x7FFF => self.rom.write(loc, val), // upper rom banks
             0xC000..=0xCFFF => self.ram[loc as usize] = val,
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
