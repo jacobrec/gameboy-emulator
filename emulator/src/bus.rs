@@ -1,4 +1,4 @@
-use crate::gameboy::ROM;
+use crate::cartridge::Cartridge;
 use crate::cpu_recievable::Recievables;
 
 /*
@@ -33,7 +33,7 @@ $FF70               CGB     WRAM Bank Select
 */
 
 pub struct Bus {
-    rom: ROM,
+    rom: Cartridge,
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
@@ -46,7 +46,7 @@ impl Bus {
         return self.ppu.get_screen()
     }
 
-    pub fn new(rom: ROM) -> Self {
+    pub fn new(rom: Cartridge) -> Self {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();

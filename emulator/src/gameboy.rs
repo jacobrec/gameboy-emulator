@@ -1,12 +1,9 @@
 use crate::cpu::CPU;
+use crate::cartridge::Cartridge;
 
-#[derive(Clone)]
-pub struct ROM {
-    data: Vec<u8>
-}
 
 pub struct GameboyBuilder {
-    rom: Option<ROM>,
+    rom: Option<Cartridge>,
 }
 
 pub struct Gameboy {
@@ -18,7 +15,7 @@ impl GameboyBuilder {
         return Self{rom: None}
     }
 
-    pub fn load_rom(mut self, rom: ROM) -> Self {
+    pub fn load_rom(mut self, rom: Cartridge) -> Self {
         self.rom = Some(rom);
         self
     }
@@ -34,12 +31,6 @@ impl GameboyBuilder {
 }
 
 impl Gameboy {
-    pub fn empty() -> Self {
-        Self {
-            cpu: CPU::new(crate::bus::Bus::new(ROM{ data:Vec::new() })),
-        }
-    }
-
     pub fn set_state(&mut self, new_state: Gameboy) {
         self.cpu = new_state.cpu;
     }
@@ -57,29 +48,5 @@ impl Gameboy {
 
     pub fn set_debug_print(&mut self, b: bool) {
         self.cpu.set_debug_print(b)
-    }
-}
-
-impl ROM {
-    pub fn is_bootrom(&self) -> bool {
-        true
-    }
-
-    pub fn from_data(data: Vec<u8>) -> Self {
-        ROM {data}
-    }
-    pub fn read(&self, loc: u16) -> u8 {
-       if loc < 0x00FF && self.is_bootrom() {
-           self.data[loc as usize]
-       } else if loc < 0x4000 { // Bank 0
-           self.data[loc as usize]
-       } else { // Bank 1-N (Swappable)
-           0 // TODO Swap banks
-       }
-    }
-    pub fn write(&mut self, loc: u16, val: u8) {
-        // Some cartriges provide writable memory for saving
-        // TODO: Find out which areas are write protected
-        self.data[loc as usize] = val
     }
 }
