@@ -12,6 +12,20 @@ enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
 
+#[derive(Debug,Clone,Copy)]
+pub struct DebugOptions {
+    pub debug_print: bool,
+    pub debug_step: bool,
+}
+impl DebugOptions {
+    pub fn default() -> Self {
+        Self {
+            debug_print: true,
+            debug_step: false,
+        }
+    }
+}
+
 
 pub struct CPU {
     registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
@@ -19,7 +33,7 @@ pub struct CPU {
     pc: u16,
     bus: crate::bus::Bus,
     cycles: usize,
-    debug_print: bool,
+    debug_options: DebugOptions,
     recievables: Recievables,
     ime: bool,
 }
@@ -38,7 +52,7 @@ impl CPU {
             registers: [0, 0, 0, 0, 0, 0, 0, 0],
             cycles: 0,
             bus,
-            debug_print: true,
+            debug_options: DebugOptions::default(),
             recievables,
             ime: true,
         }
@@ -115,8 +129,8 @@ impl CPU {
     fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
     fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
 
-    pub fn set_debug_print(&mut self, b: bool) {
-        self.debug_print = b
+    pub fn set_debug_options(&mut self, b: DebugOptions) {
+        self.debug_options = b
     }
 
     pub fn get_flag(&self, f: Flag) -> bool {
@@ -246,6 +260,11 @@ impl CPU {
         self.interrupt();
         let instruction = self.next_op();
         self.execute(instruction);
+        if self.debug_options.debug_step {
+            use std::io::{self, BufRead};
+            let stdin = io::stdin();
+            let line1 = stdin.lock().lines().next().unwrap().unwrap();
+        }
     }
 
     pub fn print_state(&self) {
@@ -568,7 +587,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        if self.debug_print {
+        if self.debug_options.debug_print {
             print!("{:<15} => ", format!("{}", op));
         }
         fn isLoc16Bit (l: Location) -> bool {

@@ -325,7 +325,10 @@ impl PPU {
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] >= 144 {
-                        // Send vblank interrupt
+                        match &self.recievables {
+                            Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
+                            None => ()
+                        }
                         self.set_mode(Mode::VBlank);
                     } else {
                         self.set_mode(Mode::OAM);
@@ -334,12 +337,6 @@ impl PPU {
                 }
             },
             Mode::VBlank => {
-                if self.tick == 1 {
-                    match &self.recievables {
-                        Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
-                        None => ()
-                    }
-                }
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] > EFFECTIVE_SCAN_COUNT {

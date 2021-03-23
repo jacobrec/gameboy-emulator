@@ -41,6 +41,7 @@ pub struct Bus {
     ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
+    timer: crate::timer::Timer,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
     testfile: File, // TODO: remove. This is for testing only. Specifcally to hold the outputted serial data when running blargg's testroms
@@ -55,6 +56,7 @@ impl Bus {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
+        let timer = crate::timer::Timer::new();
         let reg_if = InterruptRegister { data: 0 };
         let reg_ie = InterruptRegister { data: 0 };
 
@@ -63,7 +65,7 @@ impl Bus {
             .create(true)
             .open("serial")
             .unwrap();
-        Bus { rom, ram, ppu, apu, reg_if, reg_ie, testfile }
+        Bus { rom, ram, ppu, apu, timer, reg_if, reg_ie, testfile }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -74,6 +76,7 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
             0xFE00..=0xFE9F => self.ppu.readOAM(loc),
+            0xFF04..=0xFF07 => self.timer.read(loc),
             0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
@@ -95,6 +98,7 @@ impl Bus {
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
             0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
             0xFF02 => (), // Serial transfer control
+            0xFF04..=0xFF07 => self.timer.write(loc, val),
             0xFF0F => self.reg_if.data = val,
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
@@ -135,7 +139,8 @@ impl Bus {
     }
 
     pub fn set_recievables(&mut self, recievables: Recievables) {
-        self.ppu.set_recievables(recievables.clone())
+        self.ppu.set_recievables(recievables.clone());
+        self.timer.set_recievables(recievables.clone());
     }
 
 

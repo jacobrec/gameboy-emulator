@@ -1,9 +1,14 @@
-    SECTION "Main", ROM0[$0]
+    SECTION "Init", ROM0[$100]
+Init:
+    nop
+    jp Start
+
+    SECTION "Main", ROM0[$150]
 Start:
     ld a, $e4
     ld [$FF47], a
 
-    ld	a,$90
+    ld	a,$91
 	ld	[$FF40],a ; enable lcd
 
     ld b, 16
@@ -38,6 +43,3 @@ Loop:
 Tile:
     DB $0f,$00,$2f,$24,$2f,$24,$0f,$00
     DB $f0,$0f,$f2,$4f,$fc,$3f,$f0,$0f
-
-SECTION "Entry", ROM0[$100]
-    jp Start

@@ -6,6 +6,7 @@ use std::time::{Duration, Instant};
 mod utils;
 mod cartridge;
 mod cpu;
+mod timer;
 mod bus;
 mod ppu;
 mod apu;
@@ -29,6 +30,7 @@ enum Display {
 }
 struct Args {
     display: Display,
+    stepmode: bool,
 }
 fn cleanup_screen(d: Display) {
     match d {
@@ -45,12 +47,17 @@ impl Drop for Args {
 fn get_args () -> Args {
     let args: Vec<String> = env::args().collect();
     let mut display = Display::CPU;
+    let mut stepmode = false;
     if args.iter().any(|x| x == "--ascii") {
         display = Display::AsciiHalf;
         println!("Display: Ascii");
         print!("{}[?1049h", ESC);
     }
-    Args {display}
+
+    if args.iter().any(|x| x == "--step") {
+        stepmode = true;
+    }
+    Args {display, stepmode}
 }
 
 fn ascii_half_print(screen: &ppu::Screen) {
@@ -109,11 +116,15 @@ fn main() {
 
     let args = get_args();
     let d = args.display;
+    let mut db = cpu::DebugOptions::default();
 
     match args.display {
         Display::CPU => (),
-        Display::AsciiHalf => gameboy.set_debug_print(false)
+        Display::AsciiHalf => db.debug_print = false,
     }
+
+    db.debug_step = args.stepmode;
+    gameboy.set_debug_options(db);
 
     ctrlc::set_handler(move || {
         cleanup_screen(d);

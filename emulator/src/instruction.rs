@@ -179,10 +179,10 @@ impl Display for Location {
         match self {
             Self::Register(rl) => write!(f, "{}", rl),
             Self::Register16(rl) => write!(f, "{}", rl),
-            Self::Immediate(b) => write!(f, "${:X}", b),
-            Self::Immediate16(b) => write!(f, "${:X}", b),
+            Self::Immediate(b) => write!(f, "${:02X}", b),
+            Self::Immediate16(b) => write!(f, "${:04X}", b),
             Self::Indirect(offset) => write!(f, "({})", offset),
-            Self::IndirectLiteral(offset) => write!(f, "({})", offset),
+            Self::IndirectLiteral(offset) => write!(f, "(${:04X})", offset),
             Self::SP => write!(f, "SP"),
             Self::SPOffset(e8) => write!(f, "(SP+{:X})", e8),
             Self::ZeroPageC => write!(f, "($FF00+C)"),
