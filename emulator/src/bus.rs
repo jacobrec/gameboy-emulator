@@ -1,6 +1,10 @@
 use crate::cartridge::Cartridge;
 use crate::cpu_recievable::Recievables;
 
+use std::fs::OpenOptions;
+use std::fs::File;
+use std::io::Write;
+
 /*
 Memory Map
 ==========
@@ -39,6 +43,7 @@ pub struct Bus {
     apu: crate::apu::APU,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
+    testfile: File, // TODO: remove. This is for testing only. Specifcally to hold the outputted serial data when running blargg's testroms
 }
 
 impl Bus {
@@ -52,7 +57,13 @@ impl Bus {
         let apu = crate::apu::APU::new();
         let reg_if = InterruptRegister { data: 0 };
         let reg_ie = InterruptRegister { data: 0 };
-        Bus { rom, ram, ppu, apu, reg_if, reg_ie }
+
+        let mut testfile: File = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open("serial")
+            .unwrap();
+        Bus { rom, ram, ppu, apu, reg_if, reg_ie, testfile }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -82,6 +93,8 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
+            0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
+            0xFF02 => (), // Serial transfer control
             0xFF0F => self.reg_if.data = val,
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
