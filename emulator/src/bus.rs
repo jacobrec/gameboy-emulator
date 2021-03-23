@@ -106,11 +106,23 @@ impl Bus {
         }
     }
 
+    fn dma_transfer(&mut self) {
+        match self.ppu.dma.next() {
+            Some((from, to)) => {
+                let val = self.read(from);
+                self.write(to, val);
+            },
+            None => ()
+        }
+
+    }
+
     pub fn cpu_tick(&mut self) {
         // CPU runs at 1MHz
         // PPU runs at 2MHz
         self.ppu.tick();
         self.ppu.tick();
+        self.dma_transfer();
         // TODO: call apu tick
     }
 

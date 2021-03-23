@@ -68,6 +68,46 @@ pub enum Mode {
     VRAM,
 }
 
+const DMA_TRANSFER_SIZE: usize = 160;
+#[derive(Clone, Debug)]
+pub struct DMAManager {
+    start_location: u8,
+    progress: Option<usize>,
+}
+
+// TODO: This will be tricky, we have to block off CPU
+// access to memory while the transfer happens, as well as do the
+// transfer with proper timing.
+// Writing here replaces the whole OAM block with new data
+// at a rate of 1 byte per cycle.
+// For example, if you were to go LD $FF46, $10, the DMA would spend the next
+// 160 cycles copying memory from 1000-109F to FE00-FE9F
+// For example, if you were to go LD $FF46, $49, the DMA would spend the next
+// 160 cycles copying the 160 bytes from 4900-499F to FE00-FE9F
+impl DMAManager {
+    fn new() -> Self {
+        Self {
+            start_location: 0,
+            progress: None,
+        }
+    }
+
+    pub fn next(&mut self) -> Option<(u16, u16)> {
+        self.progress = self.progress.map(|x| x + 1).and_then(|x| if x > DMA_TRANSFER_SIZE { None } else { Some(x) });
+        self.progress.map(|x| {
+            let x = x - 1;
+            let from: u16 = ((self.start_location as usize) << 8 + x) as u16;
+            let to: u16 = (0xFE00 + x) as u16;
+            (from, to)
+        })
+    }
+
+    fn start_transfer(&mut self, val: u8) {
+        self.start_location = val;
+        self.progress = Some(0);
+    }
+}
+
 pub struct PPU {
     screen: Screen,
     vram: [u8; 0x2000],
@@ -81,15 +121,12 @@ pub struct PPU {
     lx: u8,
     is_window: bool,
     recievables: Option<Recievables>,
+    pub dma: DMAManager,
 }
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
 const EFFECTIVE_SCAN_COUNT: u8 = 153;
 
-// const color00: u32 = 0xFFFFB5FF;
-// const color01: u32 = 0x7BC67BFF;
-// const color10: u32 = 0x6B8C42FF;
-// const color11: u32 = 0x5A3921FF;
 const color00: u8 = 0b00;
 const color01: u8 = 0b01;
 const color10: u8 = 0b10;
@@ -177,6 +214,7 @@ impl PPU {
             is_window: false,
             lx: 0,
             recievables: None,
+            dma: DMAManager::new(),
         }
     }
 
@@ -458,16 +496,7 @@ impl PPU {
         if l > 0xB {
             panic!("CGB functionallity is not supported")
         } else if l == DMA {
-            // TODO: Start DMA transfer
-            // This will be tricky, as we'll have to block of CPU
-            // access to memory while the transfer happens, as well as do the
-            // transfer with proper timing.
-            // Writing here replaces the whole OAM block with new data
-            // at a rate of 1 byte per cycle.
-            // For example, if you were to go LD $FF46, $10, the DMA would spend the next
-            // 160 cycles copying memory from 1000-109F to FE00-FE9F
-            // For example, if you were to go LD $FF46, $49, the DMA would spend the next
-            // 160 cycles copying the 160 bytes from 4900-499F to FE00-FE9F
+            self.dma.start_transfer(val);
         } else if l == LY {
             panic!("0xFF44 is read only")
         }
