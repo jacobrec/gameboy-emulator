@@ -97,6 +97,7 @@ impl Bus {
         self.ppu.tick();
         self.ppu.tick();
         // TODO: call apu tick
+        self.apu.tick();
     }
 
     pub fn stack_push(&mut self, sp: usize, data: u8) {
