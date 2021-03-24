@@ -541,10 +541,10 @@ impl CPU {
             0x08..=0x0F => Instruction::Rrc(reg),
             0x10..=0x17 => Instruction::Rl(reg),
             0x18..=0x1F => Instruction::Rr(reg),
-            0x20..=0x27 => Instruction::Sla(reg),       // TODO: IMPLEMENT
-            0x28..=0x2F => Instruction::Sra(reg),       // TODO: IMPLEMENT
-            0x30..=0x37 => Instruction::Swap(reg),      // TODO: IMPLEMENT
-            0x38..=0x3F => Instruction::Srl(reg),       // TODO: IMPLEMENT
+            0x20..=0x27 => Instruction::Sla(reg),
+            0x28..=0x2F => Instruction::Sra(reg),
+            0x30..=0x37 => Instruction::Swap(reg),
+            0x38..=0x3F => Instruction::Srl(reg),
             0x40..=0x47 => Instruction::Bit(0, reg),
             0x48..=0x4F => Instruction::Bit(1, reg),
             0x50..=0x57 => Instruction::Bit(2, reg),
@@ -1083,6 +1083,7 @@ impl CPU {
             },
             Instruction::Inc16(r16) => {
                 // No flags change here
+                self.clock();
                 self.set_register16(r16, self.get_register16(r16).wrapping_add(1))
             },
             Instruction::Dec16(r16) => {

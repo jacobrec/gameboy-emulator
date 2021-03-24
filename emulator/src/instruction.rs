@@ -166,8 +166,8 @@ impl Display for Register16Loc {
 impl Display for Offset {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Self::HLInc => write!(f, "HL-"),
-            Self::HLDec => write!(f, "HL+"),
+            Self::HLInc => write!(f, "HL+"),
+            Self::HLDec => write!(f, "HL-"),
             Self::BC => write!(f, "BC"),
             Self::DE => write!(f, "DE"),
         }
