@@ -76,6 +76,7 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize],
             0x8000..=0x9FFF => self.ppu.read(loc),
             0xFE00..=0xFE9F => self.ppu.readOAM(loc),
+            0xFEA0..=0xFEFF => 0x00, // Unused
             0xFF04..=0xFF07 => self.timer.read(loc),
             0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
@@ -96,6 +97,7 @@ impl Bus {
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
             0x8000..=0x9FFF => self.ppu.write(loc, val),
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
+            0xFEA0..=0xFEFF => (), // Unused
             0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
             0xFF02 => (), // Serial transfer control
             0xFF04..=0xFF07 => self.timer.write(loc, val),

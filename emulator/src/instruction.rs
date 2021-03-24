@@ -257,16 +257,16 @@ impl Display for Instruction {
             }
             Self::Jmp(j, f)    => {
                 match j {
-                    Jump::Absolute(_) => {
+                    Jump::Absolute(l) => {
                         match f {
-                            Some(flag) => ("JP", format!("{}", flag)),
-                            None => ("JP", String::new())
+                            Some(flag) => ("JP", format!("{},${:04X}", flag, l)),
+                            None => ("JP", format!(" ${:04X}", l))
                         }
                     },
-                    Jump::Relative(_) => {
+                    Jump::Relative(l) => {
                         match f {
-                            Some(flag) => ("JR", format!(" {}", flag)),
-                            None => ("JR", String::new())
+                            Some(flag) => ("JR", format!(" {},{:+}", flag, l)),
+                            None => ("JR", format!(" {:+}", l))
                         }
                     }
                 }

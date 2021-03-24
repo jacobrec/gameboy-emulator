@@ -26,6 +26,7 @@ fn open_file(filename: &str) -> Vec<u8> {
 #[derive(Clone, Copy)]
 enum Display {
     CPU,
+    CPUAlt,
     AsciiHalf,
 }
 struct Args {
@@ -35,6 +36,7 @@ struct Args {
 fn cleanup_screen(d: Display) {
     match d {
         Display::CPU => (),
+        Display::CPUAlt => (),
         Display::AsciiHalf => println!("{}[0m{}[?1049l", ESC, ESC),
     }
 }
@@ -56,6 +58,10 @@ fn get_args () -> Args {
 
     if args.iter().any(|x| x == "--step") {
         stepmode = true;
+    }
+
+    if args.iter().any(|x| x == "--alt") {
+        display = Display::CPUAlt;
     }
     Args {display, stepmode}
 }
@@ -93,6 +99,7 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
     let mut start = Instant::now();
     loop {
         match args.display {
+            Display::CPUAlt => gameboy.print_alt(),
             Display::CPU => gameboy.print_cpu_state(),
             Display::AsciiHalf => {
                 let duration = start.elapsed();
@@ -108,7 +115,7 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
 
 fn main() {
     let romdata = open_file("cpu_instrs.gb");
-    // let romdata = open_file("testrom/jtest.gb");
+    //let romdata = open_file("testrom/jtest.gb");
     // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
@@ -121,6 +128,7 @@ fn main() {
     match args.display {
         Display::CPU => (),
         Display::AsciiHalf => db.debug_print = false,
+        Display::CPUAlt => db.debug_print = false,
     }
 
     db.debug_step = args.stepmode;

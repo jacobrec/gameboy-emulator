@@ -46,6 +46,10 @@ impl Gameboy {
         self.cpu.print_state();
     }
 
+    pub fn print_alt(&mut self) {
+        self.cpu.print_alt_state();
+    }
+
     pub fn set_debug_options(&mut self, b: crate::cpu::DebugOptions) {
         self.cpu.set_debug_options(b)
     }

@@ -98,7 +98,8 @@ impl CPU {
         cpu.write(0xFF4A, 0x00); // WY
         cpu.write(0xFF4B, 0x00); // WX
         cpu.write(0xFFFF, 0x00); // IE
-         cpu
+        cpu.cycles = 0;
+        cpu
     }
 
     fn a(&self) -> u8 {self.registers[6]}
@@ -273,6 +274,30 @@ impl CPU {
                  self.cycles, self.pc, self.sp, self.f(), self.a(),
                  self.b(), self.c(), self.d(), self.e(), self.h(), self.l()
         )
+    }
+
+    pub fn print_alt_state(&mut self) {
+        let pf = format!("{}{}{}{}",
+                         if self.get_flag(Flag::Zero) { "Z" } else { "-" },
+                         if self.get_flag(Flag::AddSub) { "N" } else { "-" },
+                         if self.get_flag(Flag::HalfCarry) { "H" } else { "-" },
+                         if self.get_flag(Flag::Carry) { "C" } else { "-" });
+        print!("A:{:02X} F:{} BC:{:04X} DE:{:04x} HL:{:04x} SP:{:04x} PC:{:04x} (cy: {:07}) | ",
+               self.a(), pf, self.bc(), self.de(), self.hl(), self.sp, self.pc(), self.cycles);
+        let c = self.cycles;
+        let p = self.pc;
+        let instruction = self.next_op();
+        let diff = self.pc - p;
+        self.pc = p;
+        self.cycles = c;
+        let mut op0 = format!("  ");
+        let mut op1 = format!("  ");
+        let mut op2 = format!("  ");
+        if diff >= 1 { op0 = format!("{:02X}", self.bus.read(self.pc)) }
+        if diff >= 2 { op1 = format!("{:02X}", self.bus.read(self.pc + 1)) }
+        if diff >= 3 { op2 = format!("{:02X}", self.bus.read(self.pc + 2)) }
+
+        println!("{} {} {}  {}", op0, op1, op2, instruction);
     }
 
     fn clock(&mut self) {
