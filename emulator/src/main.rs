@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Read;
 use std::env;
 use std::time::{Duration, Instant};
+use std::thread;
 
 mod utils;
 mod cartridge;
@@ -97,25 +98,33 @@ fn ascii_half_print(screen: &ppu::Screen) {
 
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
     let mut start = Instant::now();
+    let mut frametime = Instant::now();
     loop {
         match args.display {
             Display::CPUAlt => gameboy.print_alt(),
             Display::CPU => gameboy.print_cpu_state(),
             Display::AsciiHalf => {
-                let duration = start.elapsed();
+                let duration = frametime.elapsed();
                 if duration.as_secs_f64() > (1.0 / 17.0) {
-                    start = Instant::now();
+                    frametime = Instant::now();
                     ascii_half_print(&gameboy.get_screen())
                 }
             }
         }
         gameboy.tick();
+        let mut duration = start.elapsed();
+        let desiredtime = Duration::from_nanos(1000);
+        let elapsed = desiredtime.checked_sub(duration);
+        match elapsed {
+            None => start = start.checked_add(desiredtime).unwrap(),
+            Some(x) => { start = Instant::now(); thread::sleep(x)},
+        }
     }
 }
 
 fn main() {
-    let romdata = open_file("cpu_instrs.gb");
-    //let romdata = open_file("testrom/jtest.gb");
+    // let romdata = open_file("cpu_instrs.gb");
+    let romdata = open_file("testrom/jtest.gb");
     // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))

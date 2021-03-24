@@ -316,20 +316,23 @@ impl PPU {
         }
     }
 
+    fn sendif(&mut self, i: Interrupt) {
+        match &self.recievables {
+            Some(r) => r.send(SendInterrupt(i)),
+            None => ()
+        }
+    }
     pub fn tick(&mut self) {
         self.tick += 1;
         self.registers[LCD_STATUS_REGISTER] &= 0b11111011 |
-            if self.registers[LY] == self.registers[LYC] { 1 }
+            if self.registers[LY] == self.registers[LYC] { self.sendif(Interrupt::LCDStat); 1 }
             else { 0 } << 2;
         match self.get_mode() {
             Mode::HBlank => {
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] >= 144 {
-                        match &self.recievables {
-                            Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
-                            None => ()
-                        }
+                        self.sendif(Interrupt::VBlank);
                         self.set_mode(Mode::VBlank);
                     } else {
                         self.set_mode(Mode::OAM);

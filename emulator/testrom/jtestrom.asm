@@ -5,6 +5,7 @@ Init:
 
     SECTION "Main", ROM0[$150]
 Start:
+    di
     ld a, $e4
     ld [$FF47], a
 
@@ -26,19 +27,33 @@ LoadTile:
     jp NZ, LoadTile
 
 
-    ld bc, $400
+    ld BC, $400
     ld HL, $9800
     xor a
 ClearTileMap:
     ld [HL+], a
-    dec bc
+    dec BC
     cp b
     jp NZ, ClearTileMap
     cp c
     jp NZ, ClearTileMap
 
+ScrollLoop:
+    ld B, 150
+    ld C, 5                    ; frames per line
 Loop:
-    jp Loop
+
+    ld A, [$FF44]
+    cp B
+    jp NZ, Loop
+    dec B
+    dec C
+    jp NZ, Loop
+Scroll:
+    ld A, [$FF42]
+    dec A
+    ld [$FF42], A
+    jp ScrollLoop
 
 Tile:
     DB $0f,$00,$2f,$24,$2f,$24,$0f,$00

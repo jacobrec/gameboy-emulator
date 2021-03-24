@@ -259,7 +259,7 @@ impl Display for Instruction {
                 match j {
                     Jump::Absolute(l) => {
                         match f {
-                            Some(flag) => ("JP", format!("{},${:04X}", flag, l)),
+                            Some(flag) => ("JP", format!(" {},${:04X}", flag, l)),
                             None => ("JP", format!(" ${:04X}", l))
                         }
                     },

@@ -1088,6 +1088,7 @@ impl CPU {
             },
             Instruction::Dec16(r16) => {
                 // No flags change here
+                self.clock();
                 self.set_register16(r16, self.get_register16(r16).wrapping_sub(1))
             },
             Instruction::EI => {
