@@ -916,7 +916,9 @@ impl CPU {
             },
             Instruction::Reti => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RETI
                 // Return from subroutine and enable interupts 
-                unimplemented!();
+                let loc = self.stack_pop();
+                self.set_pc(loc);
+                self.ime = true;
             },
             Instruction::Ret(cc) => { // https://rgbds.gbdev.io/docs/v0.4.2/gbz80.7#RET_cc
                 if let Some(flag) = cc { 
