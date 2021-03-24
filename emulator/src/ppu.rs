@@ -68,11 +68,11 @@ pub enum Mode {
     VRAM,
 }
 
-const DMA_TRANSFER_SIZE: usize = 160;
+const DMA_TRANSFER_SIZE: u8 = 160;
 #[derive(Clone, Debug)]
 pub struct DMAManager {
     start_location: u8,
-    progress: Option<usize>,
+    progress: Option<u8>,
 }
 
 // TODO: This will be tricky, we have to block off CPU
@@ -96,8 +96,9 @@ impl DMAManager {
         self.progress = self.progress.map(|x| x + 1).and_then(|x| if x > DMA_TRANSFER_SIZE { None } else { Some(x) });
         self.progress.map(|x| {
             let x = x - 1;
-            let from: u16 = ((self.start_location as usize) << 8 + x) as u16;
-            let to: u16 = (0xFE00 + x) as u16;
+            println!("LOC: {:02X} {:02X}", self.start_location, x);
+            let from: u16 = ((self.start_location as u16) << 8) + x as u16;
+            let to: u16 = 0xFE00 + x as u16;
             (from, to)
         })
     }
