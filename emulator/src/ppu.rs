@@ -286,7 +286,6 @@ impl PPU {
         self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
     }
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
-        //println!("Tile loc: {:04X} on line {}. Effective y is {}", loc + 0x8000, line, self.registers[LY] + self.registers[SCY]);
         let vloc = loc + line * 2;
         let bg_tile_low = self.vram[vloc];
         let bg_tile_high = self.vram[vloc + 1];
@@ -299,6 +298,11 @@ impl PPU {
         for i in 0..v.len() {
             v[i].value = gen(i)
         }
+        // println!("Tile loc: {:04X} on line {}. Effective y is {}. Decoded to {:?}",
+        //  loc + 0x8000, line,
+        //  (self.registers[LY] as usize + self.registers[SCY] as usize) & 0xFF,
+        //  v
+        // );
         v
 
     }

@@ -16,14 +16,18 @@ Start:
     ld HL, $8000
     ld DE, Tile
 
+    ld B, 150
+WaitTilVBlank:
+    ld A, [$FF44]
+    sub 150
+    jp NZ, WaitTilVBlank
+
 LoadTile:
     ld a, [DE]
     ld [HL], a
     inc DE
     inc HL
     dec b
-    ld a, 0
-    cp b
     jp NZ, LoadTile
 
 
