@@ -1,16 +1,16 @@
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
 use std::time::{Duration, Instant};
 
-mod utils;
-mod cpu;
-mod bus;
-mod ppu;
 mod apu;
-mod instruction;
-mod gameboy;
+mod bus;
+mod cpu;
 mod cpu_recievable;
+mod gameboy;
+mod instruction;
+mod ppu;
+mod utils;
 
 static ESC: &str = "\u{001b}";
 
@@ -41,7 +41,7 @@ impl Drop for Args {
     }
 }
 
-fn get_args () -> Args {
+fn get_args() -> Args {
     let args: Vec<String> = env::args().collect();
     let mut display = Display::CPU;
     if args.iter().any(|x| x == "--ascii") {
@@ -49,7 +49,7 @@ fn get_args () -> Args {
         println!("Display: Ascii");
         print!("{}[?1049h", ESC);
     }
-    Args {display}
+    Args { display }
 }
 
 fn ascii_half_print(screen: &ppu::Screen) {
@@ -60,7 +60,6 @@ fn ascii_half_print(screen: &ppu::Screen) {
             2 => 90,
             _ => 30,
         }
-
     }
     fn print_pixel_pair(topcolor: u8, bottomcolor: u8) {
         let top_half = "▀";
@@ -69,7 +68,7 @@ fn ascii_half_print(screen: &ppu::Screen) {
         print!("{}[{};{}m{}", ESC, fg, bg + 10, top_half)
     }
     print!("{}[1;1f", ESC);
-    for row in 0..(ppu::SCREEN_HEIGHT/2) {
+    for row in 0..(ppu::SCREEN_HEIGHT / 2) {
         for col in 0..(ppu::SCREEN_WIDTH) {
             let ctop = (row * 2) * ppu::SCREEN_WIDTH + col;
             let cbot = (row * 2 + 1) * ppu::SCREEN_WIDTH + col;
@@ -99,9 +98,9 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
 }
 
 fn main() {
-    let romdata = open_file("cpu_instrs.gb");
+    // let romdata = open_file("cpu_instrs.gb");
     // let romdata = open_file("testrom/jtest.gb");
-    // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
+    let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(gameboy::ROM::from_data(romdata))
         .build();
@@ -111,13 +110,14 @@ fn main() {
 
     match args.display {
         Display::CPU => (),
-        Display::AsciiHalf => gameboy.set_debug_print(false)
+        Display::AsciiHalf => gameboy.set_debug_print(false),
     }
 
     ctrlc::set_handler(move || {
         cleanup_screen(d);
         println!("Bye!");
         std::process::exit(0x01);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
     main_loop(gameboy, args);
 }
