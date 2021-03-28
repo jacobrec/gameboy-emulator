@@ -26,6 +26,7 @@ fn open_file(filename: &str) -> Vec<u8> {
 }
 #[derive(Clone, Copy)]
 enum Display {
+    None,
     CPU,
     CPUAlt,
     AsciiHalf,
@@ -36,6 +37,7 @@ struct Args {
 }
 fn cleanup_screen(d: Display) {
     match d {
+        Display::None => (),
         Display::CPU => (),
         Display::CPUAlt => (),
         Display::AsciiHalf => println!("{}[0m{}[?1049l", ESC, ESC),
@@ -49,7 +51,7 @@ impl Drop for Args {
 
 fn get_args () -> Args {
     let args: Vec<String> = env::args().collect();
-    let mut display = Display::CPU;
+    let mut display = Display::None;
     let mut stepmode = false;
     if args.iter().any(|x| x == "--ascii") {
         display = Display::AsciiHalf;
@@ -63,6 +65,9 @@ fn get_args () -> Args {
 
     if args.iter().any(|x| x == "--alt") {
         display = Display::CPUAlt;
+    }
+    if args.iter().any(|x| x == "--cpu") {
+        display = Display::CPU;
     }
     Args {display, stepmode}
 }
@@ -101,6 +106,7 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
     let mut frametime = Instant::now();
     loop {
         match args.display {
+            Display::None => (),
             Display::CPUAlt => gameboy.print_alt(),
             Display::CPU => gameboy.print_cpu_state(),
             Display::AsciiHalf => {
@@ -135,7 +141,8 @@ fn main() {
     let mut db = cpu::DebugOptions::default();
 
     match args.display {
-        Display::CPU => (),
+        Display::None => db.debug_print = false,
+        Display::CPU => db.debug_print = true,
         Display::AsciiHalf => db.debug_print = false,
         Display::CPUAlt => db.debug_print = false,
     }

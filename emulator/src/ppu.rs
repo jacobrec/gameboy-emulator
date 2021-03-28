@@ -312,6 +312,7 @@ impl PPU {
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
+            //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
             Some(self.decode_tile(loc, (y & 0b111) as usize))
@@ -454,6 +455,7 @@ impl PPU {
     // Both read and write expect loc to be in the address range 0x8000..=0x9FFF
     pub fn write(&mut self, loc: u16, val: u8) {
         let l = loc as usize - 0x8000;
+        // print!("PPU Write: [{:04X}] = {:02X}. During mode {:?}\n", loc, val, self.get_mode());
         match self.get_mode() {
             Mode::VRAM => (),
             _ => self.vram[l] = val,

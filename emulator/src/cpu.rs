@@ -626,6 +626,9 @@ impl CPU {
 
 
         match op {
+            Instruction::Halt => {
+                self.print_state()
+            },
             Instruction::Nop => (),
             Instruction::Load(dest, src) => {
                 let is16BitMode = isLoc16Bit(dest) || isLoc16Bit(src);

@@ -15,13 +15,7 @@ Start:
     ld b, 16
     ld HL, $8000
     ld DE, Tile
-
-    ld B, 150
-WaitTilVBlank:
-    ld A, [$FF44]
-    sub 150
-    jp NZ, WaitTilVBlank
-
+    call WaitTilVBlank
 LoadTile:
     ld a, [DE]
     ld [HL], a
@@ -30,20 +24,34 @@ LoadTile:
     dec b
     jp NZ, LoadTile
 
+    ld b, 16
+    ld HL, $8010
+    ld DE, Sprite1Tile
+    call WaitTilVBlank
+LoadSprite:
+    ld a, [DE]
+    ld [HL], a
+    inc DE
+    inc HL
+    dec b
+    jp NZ, LoadSprite
 
-    ld BC, $400
+
+    ld BC, 1024
     ld HL, $9800
-    xor a
 ClearTileMap:
+    call WaitTilVBlank
+    ld a, 0
     ld [HL+], a
     dec BC
+    xor A
     cp b
     jp NZ, ClearTileMap
     cp c
     jp NZ, ClearTileMap
 
 ScrollLoop:
-    ld B, 150
+    ld B, 150                   ; scroll on line 150
     ld C, 5                    ; frames per line
 Loop:
 
@@ -59,6 +67,22 @@ Scroll:
     ld [$FF42], A
     jp ScrollLoop
 
+
+WaitTilVBlank:
+WaitTilVBlankInner:
+    ld A, [$FF44]
+    sub 145
+    jp C, WaitTilVBlankInner
+    ld A, [$FF44]
+    sub 149
+    jp NC, WaitTilVBlankInner
+WaitTilVBlankDone:
+    ret
+
 Tile:
     DB $0f,$00,$2f,$24,$2f,$24,$0f,$00
     DB $f0,$0f,$f2,$4f,$fc,$3f,$f0,$0f
+
+Sprite1Tile:
+    DB $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+    DB $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
