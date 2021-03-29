@@ -1,422 +1,65 @@
-#[derive(Clone)]
-pub struct Envelope {
-    initial_volume: u8,
-    direction: u8,
-    length: u8,
-}
+mod channel1;
+mod channel2;
+mod channel3;
+mod channel4;
+mod envelope;
+mod pattern;
+mod sweep;
 
-impl Envelope {
-    pub fn new() -> Self {
-        Envelope {
-            initial_volume: 0,
-            direction: 0,
-            length: 0,
-        }
-    }
+use channel1::Channel1;
+use channel2::Channel2;
+use channel3::Channel3;
+use channel4::Channel4;
 
-    pub fn read(&self) -> u8 {
-        let direction: u8 = self.direction << 3;
-        let volume: u8 = self.initial_volume << 4;
-        volume | direction | self.length
-    }
+const SAMPLE_SIZE: usize = 4096;
 
-    pub fn write(&mut self, value: u8) {
-        self.initial_volume = (value >> 4) & 0x0F;
-        self.direction = (value >> 3) & 1;
-        self.length = value & 0x07;
-    }
-}
-
-#[derive(Clone)]
-pub struct Sweep {
-    time: u8,
-    direction: u8,
-    shift: u8,
-}
-
-impl Sweep {
-    pub fn new() -> Self {
-        Sweep {
-            time: 0,
-            direction: 0,
-            shift: 0,
-        }
-    }
-
-    pub fn read(&self) -> u8 {
-        let direction: u8 = self.direction << 3;
-        let time: u8 = self.time << 4;
-        0x80 | direction | time | self.shift
-    }
-
-    pub fn write(&mut self, value: u8) {
-        self.time = (value >> 4) & 0x07;
-        self.direction = (value >> 3) & 1;
-        self.shift = value & 0x07;
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum Pattern {
-    HalfQuarter = 0,
-    Quarter = 1,
-    Half = 2,
-    ThreeQuarters = 3,
-}
-
-fn u8_to_pattern(value: u8) -> Option<Pattern> {
-    match value {
-        0 => Some(Pattern::HalfQuarter),
-        1 => Some(Pattern::Quarter),
-        2 => Some(Pattern::Half),
-        3 => Some(Pattern::ThreeQuarters),
-        _ => None,
-    }
-}
-
-fn pattern_to_u8(pattern: Pattern) -> u8 {
-    match pattern {
-        Pattern::HalfQuarter => 0,
-        Pattern::Quarter => 1,
-        Pattern::Half => 2,
-        Pattern::ThreeQuarters => 3,
-    }
-}
-
-#[derive(Clone)]
-pub struct Channel1 {
-    sweep: Sweep,
-    wave_pattern: Pattern,
-    length_counter: u8,
-    envelope: Envelope,
-    frequency: u16,
-    counter_selection: bool,
-    status: bool,
-}
-
-impl Channel1 {
-    pub fn new() -> Channel1 {
-        Channel1 {
-            sweep: Sweep::new(),
-            wave_pattern: Pattern::HalfQuarter,
-            envelope: Envelope::new(),
-            length_counter: 0,
-            frequency: 0,
-            counter_selection: false,
-            status: false,
-        }
-    }
-
-    pub fn read(&self, loc: u16) -> u8 {
-        match loc {
-            0xFF10 => self.sweep.read(),
-            0xFF11 => {
-                let pattern_bits = pattern_to_u8(self.wave_pattern);
-                pattern_bits << 6 | self.length_counter & 0x1F
-            }
-            0xFF12 => self.envelope.read(),
-            0xFF13 => (self.frequency & 0x00FF) as u8,
-            0xFF14 => {
-                let status_bit = if self.status { 0x80 } else { 0 };
-                let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-                let frequency_high_bits = (self.frequency & 0x07) as u8;
-
-                status_bit | counter_selection_bit | frequency_high_bits
-            }
-            _ => panic!("Channel 1 read register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn write(&mut self, loc: u16, val: u8) {
-        match loc {
-            0xFF10 => {
-                self.sweep.write(val);
-            }
-            0xFF11 => {
-                let pattern_bits = val >> 6;
-                self.wave_pattern = u8_to_pattern(pattern_bits).unwrap();
-                self.length_counter = val & 0x3F;
-            }
-            0xFF12 => {
-                self.envelope.write(val);
-            }
-            0xFF13 => {
-                self.frequency = self.frequency & 0x0700 | val as u16;
-            }
-            0xFF14 => {
-                self.status = if (val & 0x80) == 0x80 { true } else { false };
-                self.counter_selection = if (val & 0x40) == 0x40 { true } else { false };
-                self.frequency = self.frequency & 0x00FF | ((val & 0x07) as u16) << 8;
-            }
-            _ => panic!("Channel 1 write register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn tick(&mut self) {
-        if self.counter_selection && self.length_counter > 0 {
-            self.length_counter -= 1;
-
-            if self.length_counter == 0 {
-                self.status = false;
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Channel2 {
-    wave_pattern: Pattern,
-    length_counter: u8,
-    envelope: Envelope,
-    frequency: u16,
-    counter_selection: bool,
-    status: bool,
-}
-
-impl Channel2 {
-    pub fn new() -> Self {
-        Channel2 {
-            wave_pattern: Pattern::HalfQuarter,
-            envelope: Envelope::new(),
-            length_counter: 0,
-            frequency: 0,
-            counter_selection: false,
-            status: false,
-        }
-    }
-
-    pub fn read(&self, loc: u16) -> u8 {
-        match loc {
-            0xFF16 => {
-                let pattern_bits = pattern_to_u8(self.wave_pattern);
-                pattern_bits << 6 | self.length_counter & 0x1F
-            }
-            0xFF17 => self.envelope.read(),
-            0xFF18 => (self.frequency & 0x00FF) as u8,
-            0xFF19 => {
-                let status_bit = if self.status { 0x80 } else { 0 };
-                let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-                let frequency_high_bits = (self.frequency & 0x07) as u8;
-
-                status_bit | counter_selection_bit | frequency_high_bits
-            }
-            _ => panic!("Channel 2 read register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn write(&mut self, loc: u16, val: u8) {
-        match loc {
-            0xFF16 => {
-                let pattern_bits = val >> 6;
-                self.wave_pattern = u8_to_pattern(pattern_bits).unwrap();
-                self.length_counter = val & 0x3F;
-            }
-            0xFF17 => {
-                self.envelope.write(val);
-            }
-            0xFF18 => {
-                self.frequency = self.frequency & 0x0700 | val as u16;
-            }
-            0xFF19 => {
-                self.status = if (val & 0x80) == 0x80 { true } else { false };
-                self.counter_selection = if (val & 0x40) == 0x40 { true } else { false };
-                self.frequency = self.frequency & 0x00FF | ((val & 0x07) as u16) << 8;
-            }
-            _ => panic!("Channel 2 write register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn tick(&mut self) {
-        if self.counter_selection && self.length_counter > 0 {
-            self.length_counter -= 1;
-
-            if self.length_counter == 0 {
-                self.status = false;
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Channel3 {
-    enabled: bool,
-    length_counter: u8,
-    volume: u8,
-    frequency: u16,
-    counter_selection: bool,
-    status: bool,
-    wave_ram: [u8; 16],
-}
-
-impl Channel3 {
-    pub fn new() -> Self {
-        Channel3 {
-            enabled: false,
-            length_counter: 0,
-            volume: 0,
-            frequency: 0,
-            counter_selection: false,
-            status: false,
-            wave_ram: [0; 16],
-        }
-    }
-
-    pub fn read(&self, loc: u16) -> u8 {
-        match loc {
-            0xFF1A => {
-                if self.enabled {
-                    0x80
-                } else {
-                    0
-                }
-            }
-            0xFF1B => self.length_counter,
-            0xFF1C => self.volume << 5,
-            0xFF1D => (self.frequency & 0x00FF) as u8,
-            0xFF1E => {
-                let status_bit = if self.status { 0x80 } else { 0 };
-                let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-                let frequency_high_bits = (self.frequency & 0x07) as u8;
-
-                status_bit | counter_selection_bit | frequency_high_bits
-            }
-            0xFF30..=0xFF3F => self.wave_ram[(loc as usize - 0xFF30) - 1],
-            _ => panic!("Channel 3 read register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn write(&mut self, loc: u16, val: u8) {
-        match loc {
-            0xFF1A => {
-                self.enabled = if (val & 0x80) == 0x80 { true } else { false };
-            }
-            0xFF1B => {
-                self.length_counter = val;
-            }
-            0xFF1C => {
-                self.volume = (val >> 5) & 0x03;
-            }
-            0xFF1D => {
-                self.frequency = self.frequency & 0x0700 | val as u16;
-            }
-            0xFF1E => {
-                self.status = if val >> 7 == 1 { true } else { false };
-                self.counter_selection = if val >> 6 == 1 { true } else { false };
-                self.frequency = self.frequency & 0x00FF | ((val & 0x07) as u16) << 8;
-            }
-            0xFF30..=0xFF3F => {
-                self.wave_ram[(loc as usize - 0xFF30) - 1] = val;
-            }
-            _ => panic!("Channel 3 write register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn tick(&mut self) {
-        if self.counter_selection && self.length_counter > 0 {
-            self.length_counter -= 1;
-
-            if self.length_counter == 0 {
-                self.status = false;
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Channel4 {
-    length_counter: u8,
-    envelope: Envelope,
-    polynomial_counter: u8,
-    counter_selection: bool,
-    status: bool,
-}
-
-impl Channel4 {
-    pub fn new() -> Self {
-        Channel4 {
-            length_counter: 0,
-            envelope: Envelope::new(),
-            polynomial_counter: 0,
-            counter_selection: false,
-            status: false,
-        }
-    }
-
-    pub fn read(&self, loc: u16) -> u8 {
-        match loc {
-            0xFF20 => self.length_counter,
-            0xFF21 => self.envelope.read(),
-            0xFF22 => self.polynomial_counter,
-            0xFF23 => {
-                let status_bit = if self.status { 0x80 } else { 0 };
-                let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-
-                status_bit | counter_selection_bit
-            }
-            _ => panic!("Channel 4 read register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn write(&mut self, loc: u16, val: u8) {
-        match loc {
-            0xFF20 => {
-                self.length_counter = val & 0x3F;
-            }
-            0xFF21 => {
-                self.envelope.write(val);
-            }
-            0xFF22 => {
-                self.polynomial_counter = val;
-            }
-            0xFF23 => {
-                self.status = if val >> 7 == 1 { true } else { false };
-                self.counter_selection = if val >> 6 == 1 { true } else { false };
-            }
-            _ => panic!("Channel 4 write register out of range: {:04X}", loc),
-        }
-    }
-
-    pub fn tick(&mut self) {
-        if self.counter_selection && self.length_counter > 0 {
-            self.length_counter -= 1;
-
-            if self.length_counter == 0 {
-                self.status = false;
-            }
-        }
-    }
+pub enum ChannelBit {
+    Channel4Left = 1 << 7,
+    Channel3Left = 1 << 6,
+    Channel2Left = 1 << 5,
+    Channel1Left = 1 << 4,
+    Channel4Right = 1 << 3,
+    Channel3Right = 1 << 2,
+    Channel2Right = 1 << 1,
+    Channel1Right = 1 << 0,
 }
 
 pub struct APU {
-    terminal1_vin: bool,
-    terminal1_volume: u8,
-    terminal2_vin: bool,
-    terminal2_volume: u8,
-    channel_selection: u8,
+    audio_buffer: [f32; SAMPLE_SIZE],
+    audio_buffer_position: usize,
     channel1: Channel1,
     channel2: Channel2,
     channel3: Channel3,
     channel4: Channel4,
-    tick: usize,
-    sound_control_registers: [u8; 3],
+    channel_selection: u8,
+    down_sample_count: u8,
     enabled: bool,
+    frame_sequencer: u8,
+    frame_sequencer_count: u16,
+    terminal1_vin: bool,
+    terminal1_volume: u8,
+    terminal2_vin: bool,
+    terminal2_volume: u8,
 }
 
 impl APU {
     pub fn new() -> Self {
         APU {
-            terminal1_vin: false,
-            terminal1_volume: 7,
-            terminal2_vin: true,
-            terminal2_volume: 7,
-            channel_selection: 0,
+            audio_buffer: [0.0; SAMPLE_SIZE],
+            audio_buffer_position: 0,
             channel1: Channel1::new(),
             channel2: Channel2::new(),
             channel3: Channel3::new(),
             channel4: Channel4::new(),
-            tick: 0,
-            sound_control_registers: [0; 3],
+            channel_selection: 0,
+            down_sample_count: 87,
             enabled: false,
+            frame_sequencer: 0,
+            frame_sequencer_count: 8192,
+            terminal1_vin: false,
+            terminal1_volume: 7,
+            terminal2_vin: true,
+            terminal2_volume: 7,
         }
     }
 
@@ -438,9 +81,9 @@ impl APU {
             0xFF26 => {
                 let sound_on = if self.enabled { 0x80 } else { 0 };
                 let channel1_on = if self.channel1.status { 0x1 } else { 0 };
-                let channel2_on = if self.channel1.status { 0x2 } else { 0 };
-                let channel3_on = if self.channel1.status { 0x4 } else { 0 };
-                let channel4_on = if self.channel1.status { 0x8 } else { 0 };
+                let channel2_on = if self.channel2.status { 0x2 } else { 0 };
+                let channel3_on = if self.channel3.status { 0x4 } else { 0 };
+                let channel4_on = if self.channel4.status { 0x8 } else { 0 };
 
                 sound_on | channel4_on | channel3_on | channel2_on | channel1_on
             }
@@ -482,10 +125,109 @@ impl APU {
         }
     }
 
+    // https://www.reddit.com/r/EmuDev/comments/5gkwi5/gb_apu_sound_emulation/
     pub fn tick(&mut self) {
+        let mut audio_buffer_full = false;
+        self.frame_sequencer_count -= 1;
+        if self.frame_sequencer_count == 0 {
+            self.frame_sequencer_count = 8192;
+            match self.frame_sequencer {
+                0 | 4 => {
+                    // Length counter is cloked on  each other step
+                    self.channel1.length_step();
+                    self.channel2.length_step();
+                    self.channel3.length_step();
+                    self.channel4.length_step();
+                }
+                2 | 6 => {
+                    // Length counter is cloked on each other step
+                    // Sweep generator clocked on every 2nd and 6th step
+                    self.channel1.sweep_step();
+                    self.channel1.length_step();
+                    self.channel2.length_step();
+                    self.channel3.length_step();
+                    self.channel4.length_step();
+                }
+                7 => {
+                    // Envelope clocked on every 7th step
+                    self.channel1.envelope_step();
+                    self.channel2.envelope_step();
+                    self.channel4.envelope_step();
+                }
+                _ => (),
+            };
+
+            // Increment frame_sequencer and mod to reset once it counts past 8
+            self.frame_sequencer = (self.frame_sequencer + 1) % 8;
+        }
+
+        // Step all channels
         self.channel1.tick();
         self.channel2.tick();
         self.channel3.tick();
         self.channel4.tick();
+
+        // Mix channels
+        self.down_sample_count -= 1;
+        if self.down_sample_count <= 0 {
+            self.down_sample_count = 87;
+
+            let mut bufferin_S02: f32 = 0.0;
+            let mut bufferin_S01: f32;
+
+            // NOTE: not sure if this is the correct way to get volume.
+            let mut volume = (128 * self.terminal1_volume as i32) / 7;
+            // Mix audio samples here.
+            if self.channel_selection & 0x10 == ChannelBit::Channel1Left as u8 {
+                // Mix left audio terminal with channel 1
+                bufferin_S02 = self.channel1.output_volume as f32 / 100.0;
+                // sdl2_sys::SDL_MixAudioFormat(
+                //     bufferin_S02 as &mut u8,
+                //     &mut bufferin_S01,
+                //     format as u16,
+                //     4,
+                //     volume,
+                // );
+                // Mix
+            }
+            if self.channel_selection & 0x20 == ChannelBit::Channel2Left as u8 {
+                // Mix left audio terminal with channel 2
+                bufferin_S02 = self.channel2.output_volume as f32 / 100.0;
+                // Mix
+            }
+            if self.channel_selection & 0x40 == ChannelBit::Channel3Left as u8 {
+                // Mix left audio terminal with channel 3
+                bufferin_S02 = self.channel3.output_volume as f32 / 100.0;
+                // Mix
+            }
+            if self.channel_selection & 0x80 == ChannelBit::Channel4Left as u8 {
+                // Mix left audio terminal with channel 4
+                bufferin_S02 = self.channel4.output_volume as f32 / 100.0;
+                // Mix
+            }
+
+            if self.channel_selection & 0x01 == ChannelBit::Channel1Right as u8 {
+                // Mix left audio terminal with channel 1
+                bufferin_S01 = self.channel1.output_volume as f32 / 100.0;
+                // Mix
+            }
+            if self.channel_selection & 0x02 == ChannelBit::Channel2Right as u8 {
+                // Mix left audio terminal with channel 2
+                bufferin_S01 = self.channel2.output_volume as f32 / 100.0;
+                // Mix
+            }
+            if self.channel_selection & 0x04 == ChannelBit::Channel3Right as u8 {
+                // Mix left audio terminal with channel 3
+                bufferin_S01 = self.channel3.output_volume as f32 / 100.0;
+                // Mix
+            }
+            if self.channel_selection & 0x08 == ChannelBit::Channel4Right as u8 {
+                // Mix left audio terminal with channel 4
+                bufferin_S01 = self.channel4.output_volume as f32 / 100.0;
+                // Mix
+            }
+
+            // Mix for right audio terminal S01
+        }
     }
 }
