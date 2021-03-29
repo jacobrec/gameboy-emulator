@@ -126,6 +126,7 @@ impl APU {
     }
 
     // https://www.reddit.com/r/EmuDev/comments/5gkwi5/gb_apu_sound_emulation/
+    // Solution is adapted from: https://github.com/GhostSonic21/GhostBoy/blob/master/GhostBoy/APU.cpp
     pub fn tick(&mut self) {
         let mut audio_buffer_full = false;
         self.frame_sequencer_count -= 1;
