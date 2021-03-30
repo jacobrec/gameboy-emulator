@@ -340,7 +340,6 @@ impl PPU {
     }
 
     fn fetch(&mut self) -> Option<[PixelData; 8]> {
-        use std::convert::TryInto;
         self.fetch_state += Wrapping(1);
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
@@ -390,7 +389,7 @@ impl PPU {
 
             },
             Mode::OAM => {
-                if self.tick == 0 {
+                if self.tick == 1 {
                     self.active_sprites = [None; 10];
                 } else if self.tick == OAM_WIDTH {
                     // OAM lookup, this is normally done over 20 dots, but we'll just do it at the end
@@ -436,12 +435,12 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
+                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
                     let color = self.lookup_color(p);
                     //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
-                    self.overlay_sprites();
                     if self.lx >= self.registers[SCX] {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
