@@ -12,7 +12,7 @@ Start:
     ld	a,$93
 	ld	[$FF40],a ; enable lcd
 
-    ld a, 12
+    ld a, 32
 LoadTiles:
     ld HL, $8000
     ld DE, TileData
