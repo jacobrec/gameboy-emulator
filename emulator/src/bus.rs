@@ -1,6 +1,6 @@
-use crate::gameboy::ROM;
 use crate::cpu_recievable::Recievables;
-
+use crate::gameboy::ROM;
+use rodio::{buffer::SamplesBuffer, source::Source, Decoder, OutputStream, OutputStreamHandle};
 /*
 Memory Map
 ==========
@@ -39,11 +39,12 @@ pub struct Bus {
     apu: crate::apu::APU,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
+    stream_handle: OutputStreamHandle,
 }
 
 impl Bus {
     pub fn get_screen(&self) -> crate::ppu::Screen {
-        return self.ppu.get_screen()
+        return self.ppu.get_screen();
     }
 
     pub fn new(rom: ROM) -> Self {
@@ -52,7 +53,16 @@ impl Bus {
         let apu = crate::apu::APU::new();
         let reg_if = InterruptRegister { data: 0 };
         let reg_ie = InterruptRegister { data: 0 };
-        Bus { rom, ram, ppu, apu, reg_if, reg_ie }
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        Bus {
+            rom,
+            ram,
+            ppu,
+            apu,
+            reg_if,
+            reg_ie,
+            stream_handle,
+        }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -65,11 +75,14 @@ impl Bus {
             0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
-            0xFF40..=0xFF4F => { self.ppu.read_reg(loc) },
-            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", ""); 0},
+            0xFF40..=0xFF4F => self.ppu.read_reg(loc),
+            0xFF00..=0xFF7F => {
+                print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", "");
+                0
+            }
             0xFF80..=0xFFFE => self.ram[loc as usize], // HRAM
             0xFFFF => self.reg_ie.data,
-            _ => panic!("Unimplemented read range: {:04X}", loc)
+            _ => panic!("Unimplemented read range: {:04X}", loc),
         }
     }
 
@@ -83,11 +96,13 @@ impl Bus {
             0xFF0F => self.reg_if.data = val,
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
-            0xFF40..=0xFF4F => { self.ppu.write_reg(loc, val) },
-            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
+            0xFF40..=0xFF4F => self.ppu.write_reg(loc, val),
+            0xFF00..=0xFF7F => {
+                print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")
+            }
             0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
             0xFFFF => self.reg_ie.data = val,
-            _ => panic!("Unimplemented write range: {:04X}", loc)
+            _ => panic!("Unimplemented write range: {:04X}", loc),
         }
     }
 
@@ -98,6 +113,13 @@ impl Bus {
         self.ppu.tick();
         // TODO: call apu tick
         self.apu.tick();
+
+        let buffer = SamplesBuffer::new(1, 44100, self.apu.audio_buffer);
+        // let src = Source::from_iter(iter);
+        let result = self.stream_handle.play_raw(buffer);
+        // if result.err().unwrap_or_default() {
+        //     println!("error playing audio.");
+        // }
     }
 
     pub fn stack_push(&mut self, sp: usize, data: u8) {
@@ -111,8 +133,6 @@ impl Bus {
     pub fn set_recievables(&mut self, recievables: Recievables) {
         self.ppu.set_recievables(recievables.clone())
     }
-
-
 }
 
 pub struct InterruptRegister {

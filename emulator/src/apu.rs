@@ -25,13 +25,13 @@ pub enum ChannelBit {
 }
 
 pub struct APU {
-    audio_buffer: [f32; SAMPLE_SIZE],
+    pub audio_buffer: [f32; SAMPLE_SIZE],
     audio_buffer_position: usize,
     channel1: Channel1,
     channel2: Channel2,
     channel3: Channel3,
     channel4: Channel4,
-    channel_selection: u8,
+    channel_output_selection: u8,
     down_sample_count: u8,
     enabled: bool,
     frame_sequencer: u8,
@@ -45,17 +45,17 @@ pub struct APU {
 impl APU {
     pub fn new() -> Self {
         APU {
-            audio_buffer: [0.0; SAMPLE_SIZE],
-            audio_buffer_position: 0,
+            audio_buffer: [0.0; SAMPLE_SIZE], // Buffer that holds our audio samples
+            audio_buffer_position: 0,         // Value for indexing our audio buffer
             channel1: Channel1::new(),
             channel2: Channel2::new(),
             channel3: Channel3::new(),
             channel4: Channel4::new(),
-            channel_selection: 0,
+            channel_output_selection: 0, // NR 51
             down_sample_count: 87,
-            enabled: false,
-            frame_sequencer: 0,
-            frame_sequencer_count: 8192,
+            enabled: false,              // Bit 7 of NR52
+            frame_sequencer: 0,          //
+            frame_sequencer_count: 8192, //
             terminal1_vin: false,
             terminal1_volume: 7,
             terminal2_vin: true,
@@ -77,7 +77,7 @@ impl APU {
                 let t2_vin = if self.terminal2_vin { 0x8 } else { 0 };
                 t1_vin | t1_volume | t2_vin | self.terminal2_volume
             }
-            0xFF25 => self.channel_selection,
+            0xFF25 => self.channel_output_selection,
             0xFF26 => {
                 let sound_on = if self.enabled { 0x80 } else { 0 };
                 let channel1_on = if self.channel1.status { 0x1 } else { 0 };
@@ -115,7 +115,7 @@ impl APU {
                     self.terminal2_volume = val & 0x7;
                 }
                 0xFF25 => {
-                    self.channel_selection = val;
+                    self.channel_output_selection = val;
                 }
                 0xFF26 => {
                     self.enabled = val & 0x80 == 0x80;
@@ -125,35 +125,42 @@ impl APU {
         }
     }
 
+    /*
+    Frame sequencer timing:
+    Step Length   Envelope   Sweep
+    ------------------------------------
+    0    Clock       -         -
+    1    -           -         -
+    2    Clock       -         Clock
+    3    -           -         -
+    4    Clock       -         -
+    5    -           -         -
+    6    Clock       -         Clock
+    7    -           Clock     -
+    ------------------------------------
+    Rate 256 Hz      64 Hz     128 Hz
+    */
     // https://www.reddit.com/r/EmuDev/comments/5gkwi5/gb_apu_sound_emulation/
     // Solution is adapted from: https://github.com/GhostSonic21/GhostBoy/blob/master/GhostBoy/APU.cpp
     pub fn tick(&mut self) {
-        let mut audio_buffer_full = false;
+        // let mut audio_buffer_full = false;
         self.frame_sequencer_count -= 1;
         if self.frame_sequencer_count == 0 {
             self.frame_sequencer_count = 8192;
             match self.frame_sequencer {
                 0 | 4 => {
-                    // Length counter is cloked on  each other step
-                    self.channel1.length_step();
-                    self.channel2.length_step();
-                    self.channel3.length_step();
-                    self.channel4.length_step();
+                    // Length counter is cloked on each other step
+                    self.clock_length();
                 }
                 2 | 6 => {
                     // Length counter is cloked on each other step
+                    self.clock_length();
                     // Sweep generator clocked on every 2nd and 6th step
                     self.channel1.sweep_step();
-                    self.channel1.length_step();
-                    self.channel2.length_step();
-                    self.channel3.length_step();
-                    self.channel4.length_step();
                 }
                 7 => {
                     // Envelope clocked on every 7th step
-                    self.channel1.envelope_step();
-                    self.channel2.envelope_step();
-                    self.channel4.envelope_step();
+                    self.clock_envelope();
                 }
                 _ => (),
             };
@@ -162,73 +169,116 @@ impl APU {
             self.frame_sequencer = (self.frame_sequencer + 1) % 8;
         }
 
-        // Step all channels
-        self.channel1.tick();
-        self.channel2.tick();
-        self.channel3.tick();
-        self.channel4.tick();
+        // Clock frequency of all channels
+        self.clock_frequency();
 
-        // Mix channels
         self.down_sample_count -= 1;
         if self.down_sample_count <= 0 {
             self.down_sample_count = 87;
 
-            let mut bufferin_S02: f32 = 0.0;
-            let mut bufferin_S01: f32;
+            let mut bufferin_s02: f32 = 0.0;
+            let mut bufferin_s01: f32;
 
             // NOTE: not sure if this is the correct way to get volume.
-            let mut volume = (128 * self.terminal1_volume as i32) / 7;
-            // Mix audio samples here.
-            if self.channel_selection & 0x10 == ChannelBit::Channel1Left as u8 {
+            let volume = (128 * self.terminal1_volume as i32) / 7;
+
+            // Mix audio if bit is set in sound selection register NR51
+            if self.channel_output_selection & 0x10 == ChannelBit::Channel1Left as u8 {
                 // Mix left audio terminal with channel 1
-                bufferin_S02 = self.channel1.output_volume as f32 / 100.0;
-                // sdl2_sys::SDL_MixAudioFormat(
-                //     bufferin_S02 as &mut u8,
-                //     &mut bufferin_S01,
-                //     format as u16,
-                //     4,
-                //     volume,
-                // );
-                // Mix
+                bufferin_s01 = self.channel1.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
             }
-            if self.channel_selection & 0x20 == ChannelBit::Channel2Left as u8 {
+            if self.channel_output_selection & 0x20 == ChannelBit::Channel2Left as u8 {
                 // Mix left audio terminal with channel 2
-                bufferin_S02 = self.channel2.output_volume as f32 / 100.0;
-                // Mix
+                bufferin_s01 = self.channel2.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
             }
-            if self.channel_selection & 0x40 == ChannelBit::Channel3Left as u8 {
+            if self.channel_output_selection & 0x40 == ChannelBit::Channel3Left as u8 {
                 // Mix left audio terminal with channel 3
-                bufferin_S02 = self.channel3.output_volume as f32 / 100.0;
-                // Mix
+                bufferin_s01 = self.channel3.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
             }
-            if self.channel_selection & 0x80 == ChannelBit::Channel4Left as u8 {
+            if self.channel_output_selection & 0x80 == ChannelBit::Channel4Left as u8 {
                 // Mix left audio terminal with channel 4
-                bufferin_S02 = self.channel4.output_volume as f32 / 100.0;
-                // Mix
+                bufferin_s01 = self.channel4.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+            }
+            // Fill buffer with mixed sample
+            self.audio_buffer[self.audio_buffer_position] = bufferin_s02;
+
+            if self.channel_output_selection & 0x01 == ChannelBit::Channel1Right as u8 {
+                // Mix left audio terminal with channel 1
+                bufferin_s01 = self.channel1.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+            }
+            if self.channel_output_selection & 0x02 == ChannelBit::Channel2Right as u8 {
+                // Mix left audio terminal with channel 2
+                bufferin_s01 = self.channel2.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+            }
+            if self.channel_output_selection & 0x04 == ChannelBit::Channel3Right as u8 {
+                // Mix left audio terminal with channel 3
+                bufferin_s01 = self.channel3.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+            }
+            if self.channel_output_selection & 0x08 == ChannelBit::Channel4Right as u8 {
+                // Mix left audio terminal with channel 4
+                bufferin_s01 = self.channel4.output_volume as f32 / 100.0;
+                self.mix(&mut bufferin_s02, bufferin_s01, volume);
             }
 
-            if self.channel_selection & 0x01 == ChannelBit::Channel1Right as u8 {
-                // Mix left audio terminal with channel 1
-                bufferin_S01 = self.channel1.output_volume as f32 / 100.0;
-                // Mix
-            }
-            if self.channel_selection & 0x02 == ChannelBit::Channel2Right as u8 {
-                // Mix left audio terminal with channel 2
-                bufferin_S01 = self.channel2.output_volume as f32 / 100.0;
-                // Mix
-            }
-            if self.channel_selection & 0x04 == ChannelBit::Channel3Right as u8 {
-                // Mix left audio terminal with channel 3
-                bufferin_S01 = self.channel3.output_volume as f32 / 100.0;
-                // Mix
-            }
-            if self.channel_selection & 0x08 == ChannelBit::Channel4Right as u8 {
-                // Mix left audio terminal with channel 4
-                bufferin_S01 = self.channel4.output_volume as f32 / 100.0;
-                // Mix
-            }
-
-            // Mix for right audio terminal S01
+            // Fill buffer with mixed sample
+            self.audio_buffer[self.audio_buffer_position + 1] = bufferin_s02;
+            self.audio_buffer_position += 2;
         }
+
+        // Reset buffer position if we reach max
+        if self.audio_buffer_position >= SAMPLE_SIZE {
+            self.audio_buffer_position = 0;
+        }
+    }
+
+    fn clock_length(&mut self) {
+        self.channel1.length_step();
+        self.channel2.length_step();
+        self.channel3.length_step();
+        self.channel4.length_step();
+    }
+
+    fn clock_envelope(&mut self) {
+        self.channel1.envelope_step();
+        self.channel2.envelope_step();
+        self.channel4.envelope_step();
+    }
+
+    fn clock_frequency(&mut self) {
+        self.channel1.tick();
+        self.channel2.tick();
+        self.channel3.tick();
+        self.channel4.tick();
+    }
+
+    // https://github.com/emscripten-ports/SDL2/blob/master/src/audio/SDL_mixer.c
+    // Adapted into rust from the source above. This function takes two audio buffers
+    // and mixes them, performing addition, volume adjustment, and overflow clipping.
+    fn mix(&self, dst: &mut f32, src: f32, volume: i32) {
+        let fmax_volume = 1.0f32 / 128f32;
+        let fvolume = volume as f32;
+        let max_audioval = std::f32::MAX as f64;
+        let min_audioval = std::f32::MIN as f64;
+
+        // volume adjustment
+        let src1 = src * fvolume * fmax_volume;
+        let src2 = *dst;
+
+        // addition
+        let mut dst_sample = src1 as f64 + src2 as f64;
+
+        if dst_sample > max_audioval {
+            dst_sample = max_audioval;
+        } else if dst_sample < min_audioval {
+            dst_sample = min_audioval;
+        }
+        *dst = dst_sample as f32;
     }
 }
