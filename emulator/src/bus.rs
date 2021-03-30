@@ -72,9 +72,11 @@ impl Bus {
         match loc {
             0x0000..=0x3FFF => self.rom.read(loc),
             0x4000..=0x7FFF => self.rom.read(loc), // upper rom banks
+            0x8000..=0x9FFF => self.ppu.read(loc),
             0xC000..=0xCFFF => self.ram[loc as usize],
             0xD000..=0xDFFF => self.ram[loc as usize],
-            0x8000..=0x9FFF => self.ppu.read(loc),
+            0xE000..=0xFDFF => self.read(loc - 0xE000 + 0xC000),
+            0xA000..=0xBFFF => self.rom.read(loc), // external RAM
             0xFE00..=0xFE9F => self.ppu.readOAM(loc),
             0xFEA0..=0xFEFF => 0x00, // Unused
             0xFF04..=0xFF07 => self.timer.read(loc),
@@ -93,9 +95,11 @@ impl Bus {
         match loc {
             0x0000..=0x3FFF => self.rom.write(loc, val),
             0x4000..=0x7FFF => self.rom.write(loc, val), // upper rom banks
+            0x8000..=0x9FFF => self.ppu.write(loc, val),
             0xC000..=0xCFFF => self.ram[loc as usize] = val,
             0xD000..=0xDFFF => self.ram[loc as usize] = val,
-            0x8000..=0x9FFF => self.ppu.write(loc, val),
+            0xE000..=0xFDFF => self.write(loc - 0xE000 + 0xC000, val),
+            0xA000..=0xBFFF => self.rom.write(loc, val), // external RAM
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
             0xFEA0..=0xFEFF => (), // Unused
             0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
