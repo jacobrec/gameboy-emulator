@@ -9,46 +9,64 @@ Start:
     ld a, $e4
     ld [$FF47], a
 
-    ld	a,$91
+    ld	a,$93
 	ld	[$FF40],a ; enable lcd
 
-    ld b, 16
+    ld a, 12
+LoadTiles:
     ld HL, $8000
-    ld DE, Tile
-    call WaitTilVBlank
+    ld DE, TileData
+LoadTilesInner:
+    ld [$ff80], a
+    call LoadTile
+    ld a, [$ff80]
+    inc HL
+    inc DE
+    dec a
+    jr NZ, LoadTilesInner
+    jp ClearTileMap
+
 LoadTile:
-    ld a, [DE]
-    ld [HL], a
-    inc DE
-    inc HL
-    dec b
-    jp NZ, LoadTile
-
-    ld b, 16
-    ld HL, $8010
-    ld DE, Sprite1Tile
     call WaitTilVBlank
-LoadSprite:
+    ld b, 16
+LoadTileInner:
     ld a, [DE]
     ld [HL], a
     inc DE
     inc HL
     dec b
-    jp NZ, LoadSprite
+    jr NZ, LoadTileInner
+    ret
 
 
+
+ClearTileMap:
     ld BC, 1024
     ld HL, $9800
-ClearTileMap:
+ClearTileMapInner:
     call WaitTilVBlank
-    ld a, 0
+    ld a, 10
     ld [HL+], a
     dec BC
     xor A
     cp b
-    jp NZ, ClearTileMap
+    jp NZ, ClearTileMapInner
     cp c
-    jp NZ, ClearTileMap
+    jp NZ, ClearTileMapInner
+
+SetFloorTiles:
+    ld BC, 512
+    ld HL, $9A00
+SetFloorTilesInner:
+    call WaitTilVBlank
+    ld a, 12
+    ld [HL+], a
+    dec BC
+    xor A
+    cp b
+    jp NZ, SetFloorTilesInner
+    cp c
+    jp NZ, SetFloorTilesInner
 
 LoadSprite1Data:
     ld HL, $FE00
@@ -56,7 +74,7 @@ LoadSprite1Data:
     ld [HL+], a
     ld a, $8                    ; sprite x
     ld [HL+], a
-    ld a, $1
+    ld a, 11
     ld [HL+], a
     ld a, $0
     ld [HL+], a
@@ -72,7 +90,7 @@ LoadSprite1Data:
 
 ScrollLoop:
     ld B, 150                   ; scroll on line 150
-    ld C, 5                    ; frames per line
+    ld C, 2                     ; frames per line
 Loop:
 
     ld A, [$FF44]
@@ -82,14 +100,14 @@ Loop:
     dec C
     jp NZ, Loop
 Scroll:
-    ld A, [$FF42]               ; Scroll
-    dec A
+    ld A, [$FE00]
+    ld B, 136
+    cp b
+    jr NC, SkipDec
+    inc A
+    ld [$FE00], A
+SkipDec:
 
-    ld A, [$FE01]
-    inc a
-    ld [$FE01], A
-
-    ld [$FF42], A
     jp ScrollLoop
 
 
@@ -104,10 +122,7 @@ WaitTilVBlankInner:
 WaitTilVBlankDone:
     ret
 
-Tile:
-    DB $0f,$00,$2f,$24,$2f,$24,$0f,$00
-    DB $f0,$0f,$f2,$4f,$fc,$3f,$f0,$0f
 
-Sprite1Tile:
-    DB $7f,$7f,$ff,$ff,$ff,$ff,$ff,$ff
-    DB $ff,$ff,$ff,$ff,$fd,$fd,$ff,$ff
+    SECTION "TileData", ROM0[$2000]
+TileData:
+    incbin "jnumbers"
