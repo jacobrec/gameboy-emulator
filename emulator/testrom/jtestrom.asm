@@ -50,6 +50,26 @@ ClearTileMap:
     cp c
     jp NZ, ClearTileMap
 
+LoadSprite1Data:
+    ld HL, $FE00
+    ld a, $10                    ; sprite y
+    ld [HL+], a
+    ld a, $8                    ; sprite x
+    ld [HL+], a
+    ld a, $1
+    ld [HL+], a
+    ld a, $0
+    ld [HL+], a
+    ;; Sprite 2
+    ld a, $20                    ; sprite y
+    ld [HL+], a
+    ld a, $8                    ; sprite x
+    ld [HL+], a
+    ld a, $1
+    ld [HL+], a
+    ld a, $0
+    ld [HL+], a
+
 ScrollLoop:
     ld B, 150                   ; scroll on line 150
     ld C, 5                    ; frames per line
@@ -62,8 +82,13 @@ Loop:
     dec C
     jp NZ, Loop
 Scroll:
-    ld A, [$FF42]
+    ld A, [$FF42]               ; Scroll
     dec A
+
+    ld A, [$FE01]
+    inc a
+    ld [$FE01], A
+
     ld [$FF42], A
     jp ScrollLoop
 
@@ -84,5 +109,5 @@ Tile:
     DB $f0,$0f,$f2,$4f,$fc,$3f,$f0,$0f
 
 Sprite1Tile:
-    DB $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-    DB $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+    DB $7f,$7f,$ff,$ff,$ff,$ff,$ff,$ff
+    DB $ff,$ff,$ff,$ff,$fd,$fd,$ff,$ff

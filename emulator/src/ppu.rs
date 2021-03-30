@@ -151,10 +151,9 @@ impl Sprite {
         }
     }
     fn from_memory(mem: &[u8; 0x2000], loc: usize) -> Self {
-        let b3 = mem[loc+3];
         Sprite {
-            pos_x: mem[loc],
-            pos_y: mem[loc+1],
+            pos_y: mem[loc+0],
+            pos_x: mem[loc+1],
             tile:  mem[loc+2],
             flags: mem[loc+3],
         }
@@ -269,8 +268,7 @@ impl PPU {
         let y = ((self.registers[LY] as u16 + self.registers[SCY] as u16) & 0xFF) as u8;
         y
     }
-    fn background_tilemap_loc(&self) -> usize {
-        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+    fn window_or_background_tilemap_loc(&self, tilemap_loc: u16) -> usize {
         let y = self.get_effective_y();
         let x = self.lx;
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
@@ -282,9 +280,43 @@ impl PPU {
         }
 
     }
-    fn window_tilemap_loc(&self) -> u16 {
-        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
+    fn background_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+        self.window_or_background_tilemap_loc(tilemap_loc)
     }
+    fn window_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000);
+        self.window_or_background_tilemap_loc(tilemap_loc)
+    }
+    fn sprite_tile_loc(&self, idx: u8) -> usize {
+        idx as usize * 16
+    }
+
+
+    fn overlay_sprites(&mut self) {
+        let y = self.registers[LY];
+        let x = self.lx;
+        for s in self.active_sprites.iter() {
+            if let Some(s) = s {
+                let s = self.oam_ram[*s];
+                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
+                    let ey = 16 + y as isize - s.pos_y as isize;
+                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
+
+
+                    for i in 0..8 {
+                        if sp[i].value != 0 {
+                            if let Some(e) = self.pixel_fifo.get_mut(i) {
+                                *e = sp[i];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
         let vloc = loc + line * 2;
         let bg_tile_low = self.vram[vloc];
@@ -308,6 +340,7 @@ impl PPU {
     }
 
     fn fetch(&mut self) -> Option<[PixelData; 8]> {
+        use std::convert::TryInto;
         self.fetch_state += Wrapping(1);
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
@@ -408,6 +441,7 @@ impl PPU {
                     let x = self.pixels_pushed;
                     let color = self.lookup_color(p);
                     //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
+                    self.overlay_sprites();
                     if self.lx >= self.registers[SCX] {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
@@ -474,8 +508,8 @@ impl PPU {
             Mode::VRAM => (),
             Mode::OAM => (),
             _ => match loc & 0b11 {
-                0 => self.oam_ram[l].pos_x = val,
-                1 => self.oam_ram[l].pos_y = val,
+                0 => self.oam_ram[l].pos_y = val,
+                1 => self.oam_ram[l].pos_x = val,
                 2 => self.oam_ram[l].tile = val,
                 3 => self.oam_ram[l].flags = val,
                 _ => unreachable!("exhaustive match pattern")
@@ -488,8 +522,8 @@ impl PPU {
             Mode::VRAM => 0xFF,
             Mode::OAM => 0xFF,
             _ => match loc & 0b11 {
-                    0 => self.oam_ram[l].pos_x,
-                    1 => self.oam_ram[l].pos_y,
+                    0 => self.oam_ram[l].pos_y,
+                    1 => self.oam_ram[l].pos_x,
                     2 => self.oam_ram[l].tile,
                     3 => self.oam_ram[l].flags,
                     _ => unreachable!("exhaustive match pattern")
