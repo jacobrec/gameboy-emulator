@@ -99,7 +99,8 @@ Loop:
     dec B
     dec C
     jp NZ, Loop
-Scroll:
+
+Scroll:                         ; move sprite 0 down, until it aligns where platform is
     ld A, [$FE00]
     ld B, 136
     cp b
