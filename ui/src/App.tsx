@@ -24,9 +24,20 @@ import SaveIcon from '@material-ui/icons/Save';
 import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
 
+import DownButton from './iconComponents/DownButton';
+import UpButton from './iconComponents/UpButton';
+import LeftButton from './iconComponents/LeftButton';
+import RightButton from './iconComponents/RightButton';
+
+import SelectButtonAngled from './iconComponents/SelectButtonAngled';
+import StartButtonAngled from './iconComponents/StartButtonAngled';
+
+import AButton from './iconComponents/AButton';
+import BButton from './iconComponents/BButton';
+
 const drawerWidth = 240;
 
-const useStyles2 = makeStyles((theme: Theme) =>
+const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
       display: 'flex',
@@ -39,8 +50,7 @@ const useStyles2 = makeStyles((theme: Theme) =>
     },
     appBar: {
       [theme.breakpoints.up('sm')]: {
-        width: `calc(100% - ${drawerWidth}px)`,
-        marginLeft: drawerWidth,
+        zIndex: theme.zIndex.drawer + 1,
       },
     },
     menuButton: {
@@ -80,7 +90,38 @@ function FileSubmission(props: any) {
 function GamePad() {
   return (
     <div className="gamepad">
-      GamePad
+      <Grid 
+        container
+        direction="row"
+        justify="space-evenly"
+        alignItems="stretch"
+      >
+        <Grid item>
+          <Grid item>
+            <UpButton className="direction-pad"/>
+          </Grid>
+          <Grid item>
+            <LeftButton className="direction-pad"/>
+          </Grid>
+          <Grid item >
+            <RightButton className="direction-pad"/>
+          </Grid>
+          <Grid item>
+            <DownButton className="direction-pad"/>
+          </Grid>
+        </Grid>
+
+        <Grid item>
+          <SelectButtonAngled className="direction-pad"/>
+          <StartButtonAngled className="direction-pad"/>
+        </Grid>
+
+        <Grid item>
+            <AButton className="direction-pad"/>
+            <BButton className="direction-pad"/>
+        </Grid>
+       
+      </Grid>
     </div>
   );
 }
@@ -94,7 +135,7 @@ function Screen() {
 }
 
 function ResponsiveDrawer(props: any) {
-  const classes = useStyles2();
+  const classes = useStyles();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const handleDrawerToggle = () => {
@@ -177,7 +218,6 @@ function ResponsiveDrawer(props: any) {
         </Hidden>
       </nav>
       <main className={classes.content}>
-        <div className={classes.toolbar} />
       </main>
     </div>
   );
@@ -192,7 +232,7 @@ function App() {
   const [modalIsOpen, setModalIsOpen] = useState(true);
 
   const onSubmit = (data: any) => {
-    console.log(data.rom[0]);
+    // console.log(data.rom[0]);
     setModalIsOpen(false);
     setRom(data.rom[0]);
   };
