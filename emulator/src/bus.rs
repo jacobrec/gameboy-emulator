@@ -42,6 +42,7 @@ pub struct Bus {
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
     timer: crate::timer::Timer,
+    bios: Option<Vec<u8>>,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
     testfile: File, // TODO: remove. This is for testing only. Specifcally to hold the outputted serial data when running blargg's testroms
@@ -52,6 +53,13 @@ impl Bus {
         return self.ppu.get_screen()
     }
 
+    pub fn with_bios(rom: Cartridge, bios: Vec<u8>) -> Self {
+        let mut bus = Self::new(rom);
+        bus.bios = Some(bios);
+        bus
+
+    }
+
     pub fn new(rom: Cartridge) -> Self {
         let ram = [0u8; 0xFFFF];
         let ppu = crate::ppu::PPU::new();
@@ -59,17 +67,19 @@ impl Bus {
         let timer = crate::timer::Timer::new();
         let reg_if = InterruptRegister { data: 0 };
         let reg_ie = InterruptRegister { data: 0 };
+        let bios = None;
 
         let mut testfile: File = OpenOptions::new()
             .write(true)
             .create(true)
             .open("serial")
             .unwrap();
-        Bus { rom, ram, ppu, apu, timer, reg_if, reg_ie, testfile }
+        Bus { rom, ram, ppu, apu, timer, reg_if, reg_ie, bios, testfile }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
         match loc {
+            0x0000..=0xFF if self.bios.is_some() => self.bios.as_ref().unwrap()[loc as usize],
             0x0000..=0x3FFF => self.rom.read(loc),
             0x4000..=0x7FFF => self.rom.read(loc), // upper rom banks
             0x8000..=0x9FFF => self.ppu.read(loc),
@@ -101,6 +111,7 @@ impl Bus {
             0xE000..=0xFDFF => self.write(loc - 0xE000 + 0xC000, val),
             0xA000..=0xBFFF => self.rom.write(loc, val), // external RAM
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
+            0xFF50 => self.bios = None,
             0xFEA0..=0xFEFF => (), // Unused
             0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
             0xFF02 => (), // Serial transfer control

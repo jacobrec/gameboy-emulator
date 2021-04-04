@@ -58,6 +58,10 @@ impl CPU {
         }
     }
 
+    pub fn with_bios(bus: crate::bus::Bus) -> Self {
+        let cpu = Self::new(bus);
+        cpu
+    }
     pub fn post_bootrom(bus: crate::bus::Bus) -> Self {
         // https://gbdev.io/pandocs/#power-up-sequence
         let mut cpu = Self::new(bus);
@@ -95,6 +99,7 @@ impl CPU {
         cpu.write(0xFF47, 0xFC); // BGP
         cpu.write(0xFF48, 0xFF); // OBP0
         cpu.write(0xFF49, 0xFF); // OBP1
+        cpu.write(0xFF50, 0x01); // OBP1
         cpu.write(0xFF4A, 0x00); // WY
         cpu.write(0xFF4B, 0x00); // WX
         cpu.write(0xFFFF, 0x00); // IE
