@@ -51,7 +51,7 @@ impl Gameboy {
     pub fn tick(&mut self) {
         self.cpu.tick()
     }
-    pub fn get_screen(&self) -> crate::ppu::Screen {
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.cpu.get_screen()
     }
 
@@ -65,5 +65,13 @@ impl Gameboy {
 
     pub fn set_debug_options(&mut self, b: crate::cpu::DebugOptions) {
         self.cpu.set_debug_options(b)
+    }
+
+    pub fn save(&self) -> crate::cpu::SaveState {
+        crate::cpu::SaveState::create(&self.cpu)
+    }
+
+    pub fn load(&mut self, save: &crate::cpu::SaveState) {
+        self.cpu = save.load()
     }
 }

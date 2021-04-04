@@ -1,7 +1,6 @@
 use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
-use crate::cpu_recievable::{Recievables, CpuRecievable::*, Interrupt};
-use std::collections::VecDeque;
-use std::rc::Rc;
+use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
+use serde::{Serialize, Deserialize};
 
 enum Rotate {
     Right,
@@ -12,7 +11,7 @@ enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
 
-#[derive(Debug,Clone,Copy)]
+#[derive(Debug,Clone,Copy,Serialize, Deserialize)]
 pub struct DebugOptions {
     pub debug_print: bool,
     pub debug_step: bool,
@@ -38,8 +37,56 @@ pub struct CPU {
     ime: bool,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SaveState {
+    registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
+    sp: u16,
+    pc: u16,
+    bus: crate::bus::Bus,
+    cycles: usize,
+    debug_options: DebugOptions,
+    recievables: Vec<CpuRecievable>,
+    ime: bool,
+}
+
+impl SaveState {
+    pub fn create(cpu: &CPU) -> Self {
+        let recievables = cpu.recievables.serialized_data();
+        SaveState {
+            registers: cpu.registers.clone(),
+            sp: cpu.sp,
+            pc: cpu.pc,
+            bus: cpu.bus.clone(),
+            cycles: cpu.cycles,
+            debug_options: cpu.debug_options,
+            recievables,
+            ime: cpu.ime,
+        }
+    }
+
+    pub fn load(&self) -> CPU {
+        let recievables = Recievables::new();
+        let mut bus = self.bus.clone();
+        bus.set_recievables(recievables.clone());
+        for x in self.recievables.iter() {
+            recievables.send(x.clone())
+        }
+        CPU {
+            sp: self.sp,
+            pc: self.pc,
+            registers: self.registers.clone(),
+            cycles: self.cycles,
+            bus,
+            debug_options: self.debug_options,
+            recievables,
+            ime: self.ime,
+        }
+
+    }
+}
+
 impl CPU {
-    pub fn get_screen(&self) -> crate::ppu::Screen {
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.bus.get_screen()
     }
 
@@ -161,6 +208,10 @@ impl CPU {
         } else {
             self.set_f(self.f() & !(1 << bit)) // clear bit
         }
+    }
+
+    pub fn get_save_state() -> Vec<u8> {
+        Vec::new()
     }
 
 

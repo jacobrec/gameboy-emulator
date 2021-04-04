@@ -1,12 +1,28 @@
+use serde::{Serialize, Deserialize};
 use crate::cpu_recievable::{Recievables, CpuRecievable::*, Interrupt};
 
+#[derive(Serialize, Deserialize)]
 pub struct Timer {
     div: u8, // register FF04 (increments at 16384Hz [I.E. CPU Clock / 256])
     tima: u8, // register FF05 (timer register)
     tma: u8, // register FF06 (timer modulo)
     tac: u8, // register FF07 (timer controller)
+    #[serde(skip, default="crate::cpu_recievable::none_recivables")]
     recievables: Option<Recievables>,
     ticker: usize,
+}
+
+impl Clone for Timer {
+    fn clone(&self) -> Self {
+        Self {
+            div: self.div,
+            tima: self.tima,
+            tma: self.tma,
+            tac: self.tac,
+            ticker: self.ticker,
+            recievables: None,
+        }
+    }
 }
 
 impl Timer {

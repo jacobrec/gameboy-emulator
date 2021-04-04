@@ -7,3 +7,4 @@ wasm-pack.log
 bootrom.bin
 *.gb
 serial
+savestate

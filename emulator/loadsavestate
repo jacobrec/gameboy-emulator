@@ -1,0 +1,2 @@
+#!/bin/bash
+kill -s SIGUSR2 $(ps -aux | grep "target/debug/cli-runner --ascii" | grep -v grep | grep -Po "^\w+\s+\d+" | grep -Po "\d+")

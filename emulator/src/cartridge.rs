@@ -1,5 +1,6 @@
+use serde::{Serialize, Deserialize};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Cartridge {
     pub data: Vec<u8>,
     mapper: Mapper,
@@ -11,7 +12,7 @@ pub struct Cartridge {
 const RAM_BANK_SIZE: usize = 8192;
 const ROM_BANK_SIZE: usize = 16384;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 enum Mapper { // https://gbdev.io/pandocs/#_0147-cartridge-type
     ROM,
 

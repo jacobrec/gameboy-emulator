@@ -17,7 +17,6 @@ LoadTiles:
     ld HL, $8000
     ld DE, TileData
 LoadTilesInner:
-    call WaitTilVBlank
     ld [$ff80], a
     call LoadTile
     ld a, [$ff80]
@@ -28,9 +27,9 @@ LoadTilesInner:
     jp ClearTileMap
 
 LoadTile:
-    call WaitTilVBlank
     ld b, 16
 LoadTileInner:
+    call WaitTilVBlank
     ld a, [DE]
     ld [HL], a
     inc DE
@@ -62,7 +61,7 @@ SetFloorTilesInner:
     call WaitTilVBlank
     nop
     nop
-    ld a, $C
+    ld a, 12
     ld [HL+], a
     dec BC
     xor A

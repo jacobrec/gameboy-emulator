@@ -1,3 +1,4 @@
+use serde::{Serialize, Deserialize};
 use crate::cartridge::Cartridge;
 use crate::cpu_recievable::Recievables;
 
@@ -36,20 +37,38 @@ $FF68     $FF69     CGB     BCP/OCP
 $FF70               CGB     WRAM Bank Select
 */
 
+#[derive(Serialize, Deserialize)]
 pub struct Bus {
     rom: Cartridge,
-    ram: [u8; 0xFFFF], // Most of this will get shadowed as the code is filled in
+    ram: Vec<u8>, // Most of this will get shadowed as the code is filled in
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
     timer: crate::timer::Timer,
     bios: Option<Vec<u8>>,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
-    testfile: File, // TODO: remove. This is for testing only. Specifcally to hold the outputted serial data when running blargg's testroms
+    #[serde(skip)]
+    testfile: Option<File>, // TODO: remove. This is for testing only. Specifcally to hold the outputted serial data when running blargg's testroms
+}
+
+impl Clone for Bus {
+    fn clone(&self) -> Self {
+        Bus {
+            rom: self.rom.clone(),
+            ram: self.ram.clone(),
+            ppu: self.ppu.clone(),
+            apu: self.apu.clone(),
+            timer: self.timer.clone(),
+            reg_if: self.reg_if.clone(),
+            reg_ie: self.reg_ie.clone(),
+            bios: self.bios.clone(),
+            testfile: None,
+        }
+    }
 }
 
 impl Bus {
-    pub fn get_screen(&self) -> crate::ppu::Screen {
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.ppu.get_screen()
     }
 
@@ -61,7 +80,7 @@ impl Bus {
     }
 
     pub fn new(rom: Cartridge) -> Self {
-        let ram = [0u8; 0xFFFF];
+        let ram = [0u8; 0xFFFF].to_vec();
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
         let timer = crate::timer::Timer::new();
@@ -69,11 +88,11 @@ impl Bus {
         let reg_ie = InterruptRegister { data: 0 };
         let bios = None;
 
-        let mut testfile: File = OpenOptions::new()
+        let mut testfile: Option<File> = OpenOptions::new()
             .write(true)
             .create(true)
             .open("serial")
-            .unwrap();
+            .ok();
         Bus { rom, ram, ppu, apu, timer, reg_if, reg_ie, bios, testfile }
     }
 
@@ -113,7 +132,7 @@ impl Bus {
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
             0xFF50 => self.bios = None,
             0xFEA0..=0xFEFF => (), // Unused
-            0xFF01 => { self.testfile.write(&[val]); }, // Serial transfer data
+            0xFF01 if self.testfile.is_some() => { self.testfile.as_mut().unwrap().write(&[val]); }, // Serial transfer data
             0xFF02 => (), // Serial transfer control
             0xFF04..=0xFF07 => self.timer.write(loc, val),
             0xFF0F => self.reg_if.data = val,
@@ -163,6 +182,7 @@ impl Bus {
 
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct InterruptRegister {
     pub data: u8,
 }
