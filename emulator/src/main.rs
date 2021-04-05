@@ -175,6 +175,8 @@ fn main() {
     let mut db = cpu::DebugOptions::default();
     let saver: Saver = Arc::new(Mutex::new(VecDeque::new()));
 
+    gameboy.button_down(gameboy::BUT_RIGHT);
+
     match args.display {
         Display::None => db.debug_print = false,
         Display::CPU => db.debug_print = true,

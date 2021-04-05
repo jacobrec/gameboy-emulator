@@ -214,6 +214,10 @@ impl CPU {
         Vec::new()
     }
 
+    pub fn update_joypad_register(&mut self, buttonmap: u8) {
+        self.bus.joypad.update_joypad(buttonmap);
+    }
+
 
     fn get_register(&mut self, r: RegisterLoc) -> u8{
         match r {

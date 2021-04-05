@@ -1,6 +1,14 @@
 use crate::cpu::CPU;
 use crate::cartridge::Cartridge;
 
+pub const BUT_A: u8       = 0b1;
+pub const BUT_B: u8       = 0b10;
+pub const BUT_LEFT: u8    = 0b100;
+pub const BUT_RIGHT: u8   = 0b1000;
+pub const BUT_UP: u8      = 0b10000;
+pub const BUT_DOWN: u8    = 0b100000;
+pub const BUT_START: u8   = 0b1000000;
+pub const BUT_SELECT: u8  = 0b10000000;
 
 pub struct GameboyBuilder {
     rom: Option<Cartridge>,
@@ -9,6 +17,7 @@ pub struct GameboyBuilder {
 
 pub struct Gameboy {
     cpu: CPU,
+    buttons_pressed: u8,
 }
 
 impl GameboyBuilder {
@@ -30,12 +39,13 @@ impl GameboyBuilder {
         if let Some(rom) = self.rom.clone() {
             if let Some(bios) = &self.bios {
                 return Gameboy {
-                    cpu: CPU::with_bios(crate::bus::Bus::with_bios(rom, bios.clone()))
-
+                    cpu: CPU::with_bios(crate::bus::Bus::with_bios(rom, bios.clone())),
+                    buttons_pressed: 0,
                 }
             } else {
                 return Gameboy {
-                    cpu: CPU::post_bootrom(crate::bus::Bus::new(rom))
+                    cpu: CPU::post_bootrom(crate::bus::Bus::new(rom)),
+                    buttons_pressed: 0,
                 }
             }
         }
@@ -73,5 +83,15 @@ impl Gameboy {
 
     pub fn load(&mut self, save: &crate::cpu::SaveState) {
         self.cpu = save.load()
+    }
+
+    pub fn button_down(&mut self, button: u8) {
+        self.buttons_pressed |= button;
+        self.cpu.update_joypad_register(self.buttons_pressed)
+    }
+
+    pub fn button_up(&mut self, button: u8) {
+        self.buttons_pressed &= !button;
+        self.cpu.update_joypad_register(self.buttons_pressed)
     }
 }

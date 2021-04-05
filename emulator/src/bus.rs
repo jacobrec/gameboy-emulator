@@ -44,6 +44,7 @@ pub struct Bus {
     ppu: crate::ppu::PPU,
     apu: crate::apu::APU,
     timer: crate::timer::Timer,
+    pub joypad: Joypad,
     bios: Option<Vec<u8>>,
     pub reg_ie: InterruptRegister, // 0xFFFF
     pub reg_if: InterruptRegister, // 0xFF0F
@@ -62,6 +63,7 @@ impl Clone for Bus {
             reg_if: self.reg_if.clone(),
             reg_ie: self.reg_ie.clone(),
             bios: self.bios.clone(),
+            joypad: self.joypad.clone(),
             testfile: None,
         }
     }
@@ -87,13 +89,14 @@ impl Bus {
         let reg_if = InterruptRegister { data: 0 };
         let reg_ie = InterruptRegister { data: 0 };
         let bios = None;
+        let joypad = Joypad {pins:0b1111, last:0};
 
         let mut testfile: Option<File> = OpenOptions::new()
             .write(true)
             .create(true)
             .open("serial")
             .ok();
-        Bus { rom, ram, ppu, apu, timer, reg_if, reg_ie, bios, testfile }
+        Bus { rom, ram, ppu, apu, timer, joypad, reg_if, reg_ie, bios, testfile }
     }
 
     pub fn read(&self, loc: u16) -> u8 {
@@ -108,6 +111,7 @@ impl Bus {
             0xA000..=0xBFFF => self.rom.read(loc), // external RAM
             0xFE00..=0xFE9F => self.ppu.readOAM(loc),
             0xFEA0..=0xFEFF => 0x00, // Unused
+            0xFF00..=0xFF00 => self.joypad.pins,
             0xFF04..=0xFF07 => self.timer.read(loc),
             0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
@@ -130,6 +134,7 @@ impl Bus {
             0xE000..=0xFDFF => self.write(loc - 0xE000 + 0xC000, val),
             0xA000..=0xBFFF => self.rom.write(loc, val), // external RAM
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
+            0xFF00..=0xFF00 => self.joypad.write(val),
             0xFF50 => self.bios = None,
             0xFEA0..=0xFEFF => (), // Unused
             0xFF01 if self.testfile.is_some() => { self.testfile.as_mut().unwrap().write(&[val]); }, // Serial transfer data
@@ -204,5 +209,46 @@ impl InterruptRegister {
     }
     pub fn get_serial(&mut self) -> bool {
         (self.data & 0b10000) > 0
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub struct Joypad {
+    pins: u8,
+    last: u8,
+}
+impl Joypad {
+    pub fn set_action(&mut self, high: bool) {
+        self.pins = self.pins & 0b011111 | (if high { 1 } else { 0 } << 5)
+    }
+    pub fn set_direction(&mut self, high: bool) {
+        self.pins = self.pins & 0b101111 | (if high { 1 } else { 0 } << 4)
+    }
+    pub fn set_down_start(&mut self, low: bool) {
+        self.pins = self.pins & 0b110111 | (if low { 0 } else { 1 } << 3)
+    }
+    pub fn set_up_select(&mut self, low: bool) {
+        self.pins = self.pins & 0b111011 | (if low { 0 } else { 1 } << 2)
+    }
+    pub fn set_left_b(&mut self, low: bool) {
+        self.pins = self.pins & 0b111101 | (if low { 0 } else { 1 } << 1)
+    }
+    pub fn set_right_a(&mut self, low: bool) {
+        self.pins = self.pins & 0b111110 | (if low { 0 } else { 1 } << 0)
+    }
+    pub fn write(&mut self, val: u8) { // lower 4 bits are read only
+        self.pins = (self.pins & 0b00001111) | (val & 0b00110000);
+        self.update_joypad(self.last);
+    }
+
+    pub fn update_joypad(&mut self, buttonmap: u8) {
+        self.last = buttonmap;
+        use crate::gameboy;
+        let dir = self.pins & 0b010000 > 0;
+        let act = self.pins & 0b100000 > 0;
+        self.set_down_start(dir && (buttonmap & gameboy::BUT_DOWN > 0) || act && (buttonmap & gameboy::BUT_START > 0));
+        self.set_up_select(dir && (buttonmap & gameboy::BUT_UP > 0) || act && (buttonmap & gameboy::BUT_SELECT > 0));
+        self.set_left_b(dir && (buttonmap & gameboy::BUT_LEFT > 0) || act && (buttonmap & gameboy::BUT_B > 0));
+        self.set_right_a(dir && (buttonmap & gameboy::BUT_RIGHT > 0) || act && (buttonmap & gameboy::BUT_A > 0));
     }
 }
