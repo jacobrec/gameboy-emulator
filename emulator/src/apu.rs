@@ -163,7 +163,6 @@ impl APU {
                 }
                 7 => {
                     // Envelope clocked on every 7th step
-                    println!("Enevelope clock!!");
                     self.clock_envelope();
                 }
                 _ => (),

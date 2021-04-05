@@ -150,6 +150,8 @@ fn main() {
     let romdata = open_file("testrom/dtest2.gb");
     // let romdata = open_file("roms/01-registers.gb");
     // let romdata = open_file("tetris.gb"); // gameboy state now starts after bootrom has complete
+    // let romdata = open_file("testrom/jtest.gb");
+    // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
         .build();
