@@ -149,42 +149,37 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
                 let mut f = BufWriter::new(File::create(savestatefile).unwrap());
                 let state = gameboy.save();
                 bincode::serialize_into(&mut f, &state);
-            },
+            }
             Some(SignalOp::LoadState) => {
                 let state = open_file(savestatefile);
                 match bincode::deserialize(&state) {
-                    Ok(deser) =>  {
+                    Ok(deser) => {
                         let save: cpu::SaveState = deser;
                         gameboy.load(&save);
                     }
-                    _ => println!("Failed to load savestate")
+                    _ => println!("Failed to load savestate"),
                 }
-            },
+            }
             None => (),
         }
     }
 }
 
 use bincode::serialize_into;
-use std::io::BufWriter;
 use std::collections::VecDeque;
-use std::sync::{Mutex,Arc};
-
+use std::io::BufWriter;
+use std::sync::{Arc, Mutex};
 
 enum SignalOp {
     SaveState,
-    LoadState
+    LoadState,
 }
 type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
 
 fn main() {
     // let romdata = open_file("cpu_instrs.gb");
-    // let romdata = open_file("testrom/dtest2.gb");
-    // let romdata = open_file("roms/01-registers.gb");
-    // let romdata = open_file("tetris.gb"); // gameboy state now starts after bootrom has complete
-    // let romdata = open_file("testrom/jtest.gb");
-    // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
-    // let romdata = open_file("testrom/jtest.gb");
+    let romdata = open_file("testrom/jtest.gb");
+    // let romdata = open_file("testrom/dtest.gb");
     let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
@@ -211,7 +206,8 @@ fn main() {
         cleanup_screen(d);
         println!("Bye!");
         std::process::exit(0x01);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2};
     let signals = Signals::new(&vec![SIGUSR1, SIGUSR2]).unwrap();
@@ -223,7 +219,6 @@ fn main() {
                 SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
                 _ => println!("Received signal {:?}", sig),
             }
-
         }
     });
 

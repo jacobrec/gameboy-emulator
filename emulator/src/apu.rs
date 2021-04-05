@@ -10,6 +10,10 @@ use channel1::Channel1;
 use channel2::Channel2;
 use channel3::Channel3;
 use channel4::Channel4;
+use serde::{Deserialize, Serialize};
+use serde_big_array::big_array;
+
+big_array! { BigArray; }
 
 const SAMPLE_SIZE: usize = 4096;
 
@@ -24,9 +28,9 @@ pub enum ChannelBit {
     Channel1Right = 1 << 0,
 }
 
-use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct APU {
+    #[serde(with = "BigArray")]
     pub audio_buffer: [f32; SAMPLE_SIZE],
     audio_buffer_position: usize,
     audio_buffer_full: bool,

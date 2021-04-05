@@ -1,5 +1,6 @@
 use super::envelope::Envelope;
 use super::pattern::*;
+use serde::{Deserialize, Serialize};
 
 const WAVE_PATTERN: [[i32; 8]; 4] = [
 	[-1, -1, -1, -1, 1, -1, -1, -1],
@@ -8,7 +9,7 @@ const WAVE_PATTERN: [[i32; 8]; 4] = [
 	[1, 1, 1, 1, -1, -1, 1, 1],
 ];
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Channel2 {
 	counter_selection: bool,
 	dac_enabled: bool,

@@ -1,4 +1,6 @@
-#[derive(Clone, Copy)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub enum Pattern {
   HalfQuarter = 0,
   Quarter = 1,

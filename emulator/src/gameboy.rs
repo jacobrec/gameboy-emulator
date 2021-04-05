@@ -52,7 +52,7 @@ impl Gameboy {
     pub fn tick(&mut self) {
         self.cpu.tick()
     }
-    pub fn get_screen(&self) -> crate::ppu::Screen {
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.cpu.get_screen();
     }
 

@@ -1,6 +1,7 @@
 use super::envelope::Envelope;
 use super::pattern::*;
 use super::sweep::Sweep;
+use serde::{Deserialize, Serialize};
 
 // const WAVE_PATTERN: [[i32; 8]; 4] = [
 // 	[-1, -1, -1, -1, 1, -1, -1, -1],
@@ -21,7 +22,7 @@ The variable names with _load are the variables we use to store the initial valu
 All updates to the values to perform any computation is done in the variables without
 the _load in the variable name.
 */
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Channel1 {
 	counter_selection: bool,
 	dac_enabled: bool,

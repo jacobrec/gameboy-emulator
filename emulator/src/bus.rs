@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
 use crate::cartridge::Cartridge;
 use crate::cpu_recievable::Recievables;
 use rodio::{buffer::SamplesBuffer, source::Source, Decoder, OutputStream, OutputStreamHandle};
+use serde::{Deserialize, Serialize};
 
 use std::fs::File;
 use std::fs::OpenOptions;
@@ -69,8 +69,8 @@ impl Clone for Bus {
 }
 
 impl Bus {
-    pub fn get_screen(&self) -> crate::ppu::Screen {
-        return self.ppu.get_screen();
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
+        self.ppu.get_screen()
     }
 
     pub fn get_audio_buffer(&self) -> [f32; 4096] {
@@ -81,15 +81,12 @@ impl Bus {
     }
     pub fn set_audio_buffer_status(&mut self, status: bool) {
         self.apu.set_audio_buffer_status(status);
-    pub fn get_screen(&self) -> &crate::ppu::Screen {
-        return self.ppu.get_screen()
     }
 
     pub fn with_bios(rom: Cartridge, bios: Vec<u8>) -> Self {
         let mut bus = Self::new(rom);
         bus.bios = Some(bios);
         bus
-
     }
 
     pub fn new(rom: Cartridge) -> Self {
@@ -105,7 +102,7 @@ impl Bus {
             .write(true)
             .create(true)
             .open("serial")
-            .unwrap();
+            .ok();
         Bus {
             rom,
             ram,
@@ -114,6 +111,7 @@ impl Bus {
             timer,
             reg_if,
             reg_ie,
+            bios,
             testfile,
         }
     }
@@ -157,8 +155,8 @@ impl Bus {
             0xFE00..=0xFE9F => self.ppu.writeOAM(loc, val),
             0xFF50 => self.bios = None,
             0xFEA0..=0xFEFF => (), // Unused
-            0xFF01 => {
-                self.testfile.write(&[val]);
+            0xFF01 if self.testfile.is_some() => {
+                self.testfile.as_mut().unwrap().write(&[val]);
             } // Serial transfer data
             0xFF02 => (),          // Serial transfer control
             0xFF04..=0xFF07 => self.timer.write(loc, val),

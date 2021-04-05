@@ -1,8 +1,10 @@
+use crate::cpu_recievable::{CpuRecievable, CpuRecievable::*, Interrupt, Recievables};
+use crate::instruction::{
+    Instruction, JmpFlag, Jump, Location, Offset, Register16Loc, RegisterLoc,
+};
+use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::rc::Rc;
-use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
-use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
-use serde::{Serialize, Deserialize};
 
 enum Rotate {
     Right,
@@ -16,7 +18,7 @@ enum Flag {
     Carry,
 }
 
-#[derive(Debug,Clone,Copy,Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DebugOptions {
     pub debug_print: bool,
     pub debug_step: bool,
@@ -85,12 +87,11 @@ impl SaveState {
             recievables,
             ime: self.ime,
         }
-
     }
 }
 
 impl CPU {
-    pub fn get_screen(&self) -> crate::ppu::Screen {
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.bus.get_screen();
     }
 
@@ -104,8 +105,6 @@ impl CPU {
 
     pub fn set_audio_buffer_status(&mut self, status: bool) {
         self.bus.set_audio_buffer_status(status);
-    pub fn get_screen(&self) -> &crate::ppu::Screen {
-        return self.bus.get_screen()
     }
 
     pub fn new(mut bus: crate::bus::Bus) -> Self {
@@ -286,8 +285,7 @@ impl CPU {
         Vec::new()
     }
 
-
-    fn get_register(&mut self, r: RegisterLoc) -> u8{
+    fn get_register(&mut self, r: RegisterLoc) -> u8 {
         match r {
             RegisterLoc::A => self.a(),
             RegisterLoc::B => self.b(),

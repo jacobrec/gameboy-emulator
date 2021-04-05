@@ -1,7 +1,9 @@
 use super::envelope::Envelope;
+use serde::{Deserialize, Serialize};
+
 const DIVISORS: [i32; 8] = [8, 16, 32, 48, 64, 80, 96, 112];
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Channel4 {
   counter_selection: bool,
   counter_step: u8,
