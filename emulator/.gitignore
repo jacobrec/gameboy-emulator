@@ -7,7 +7,6 @@ wasm-pack.log
 bootrom.bin
 *.gb
 serial
-<<<<<<< HEAD
 .vscode/
-=======
->>>>>>> master
+savestate
+

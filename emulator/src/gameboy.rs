@@ -3,6 +3,7 @@ use crate::cpu::CPU;
 
 pub struct GameboyBuilder {
     rom: Option<Cartridge>,
+    bios: Option<Vec<u8>>,
 }
 
 pub struct Gameboy {
@@ -11,7 +12,10 @@ pub struct Gameboy {
 
 impl GameboyBuilder {
     pub fn new() -> Self {
-        return Self { rom: None };
+        return Self {
+            rom: None,
+            bios: None,
+        };
     }
 
     pub fn load_rom(mut self, rom: Cartridge) -> Self {
@@ -19,11 +23,22 @@ impl GameboyBuilder {
         self
     }
 
+    pub fn load_bios(mut self, b: Vec<u8>) -> Self {
+        self.bios = Some(b);
+        self
+    }
+
     pub fn build(&self) -> Gameboy {
         if let Some(rom) = self.rom.clone() {
-            return Gameboy {
-                cpu: CPU::post_bootrom(crate::bus::Bus::new(rom)),
-            };
+            if let Some(bios) = &self.bios {
+                return Gameboy {
+                    cpu: CPU::with_bios(crate::bus::Bus::with_bios(rom, bios.clone())),
+                };
+            } else {
+                return Gameboy {
+                    cpu: CPU::post_bootrom(crate::bus::Bus::new(rom)),
+                };
+            }
         }
         panic!("Builder not fully initialized")
     }
@@ -60,5 +75,13 @@ impl Gameboy {
 
     pub fn set_debug_options(&mut self, b: crate::cpu::DebugOptions) {
         self.cpu.set_debug_options(b)
+    }
+
+    pub fn save(&self) -> crate::cpu::SaveState {
+        crate::cpu::SaveState::create(&self.cpu)
+    }
+
+    pub fn load(&mut self, save: &crate::cpu::SaveState) {
+        self.cpu = save.load()
     }
 }

@@ -27,9 +27,9 @@ LoadTilesInner:
     jp ClearTileMap
 
 LoadTile:
-    call WaitTilVBlank
     ld b, 16
 LoadTileInner:
+    call WaitTilVBlank
     ld a, [DE]
     ld [HL], a
     inc DE
@@ -59,6 +59,8 @@ SetFloorTiles:
     ld HL, $9A00
 SetFloorTilesInner:
     call WaitTilVBlank
+    nop
+    nop
     ld a, 12
     ld [HL+], a
     dec BC
@@ -78,15 +80,6 @@ LoadSprite1Data:
     ld [HL+], a
     ld a, $0
     ld [HL+], a
-    ;; Sprite 2
-    ld a, $20                    ; sprite y
-    ld [HL+], a
-    ld a, $8                    ; sprite x
-    ld [HL+], a
-    ld a, $1
-    ld [HL+], a
-    ld a, $0
-    ld [HL+], a
 
 ScrollLoop:
     ld B, 150                   ; scroll on line 150
@@ -101,8 +94,8 @@ Loop:
     jp NZ, Loop
 
 Scroll:                         ; move sprite 0 down, until it aligns where platform is
-    ld A, [$FE00]
-    ld B, 136
+    ld A, [$FE00]               ; sprite 0 y loc
+    ld B, 136                   ; floor height to fake collision
     cp b
     jr NC, SkipDec
     inc A
@@ -115,10 +108,10 @@ SkipDec:
 WaitTilVBlank:
 WaitTilVBlankInner:
     ld A, [$FF44]
-    sub 145
+    sub 144
     jp C, WaitTilVBlankInner
     ld A, [$FF44]
-    sub 149
+    sub 148
     jp NC, WaitTilVBlankInner
 WaitTilVBlankDone:
     ret

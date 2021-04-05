@@ -24,6 +24,8 @@ pub enum ChannelBit {
     Channel1Right = 1 << 0,
 }
 
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize, Clone)]
 pub struct APU {
     pub audio_buffer: [f32; SAMPLE_SIZE],
     audio_buffer_position: usize,

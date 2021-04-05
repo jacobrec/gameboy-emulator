@@ -1,9 +1,8 @@
-use crate::cpu_recievable::{CpuRecievable::*, Interrupt, Recievables};
-use crate::instruction::{
-    Instruction, JmpFlag, Jump, Location, Offset, Register16Loc, RegisterLoc,
-};
 use std::collections::VecDeque;
 use std::rc::Rc;
+use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
+use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
+use serde::{Serialize, Deserialize};
 
 enum Rotate {
     Right,
@@ -17,7 +16,7 @@ enum Flag {
     Carry,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug,Clone,Copy,Serialize, Deserialize)]
 pub struct DebugOptions {
     pub debug_print: bool,
     pub debug_step: bool,
@@ -42,6 +41,54 @@ pub struct CPU {
     ime: bool,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct SaveState {
+    registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
+    sp: u16,
+    pc: u16,
+    bus: crate::bus::Bus,
+    cycles: usize,
+    debug_options: DebugOptions,
+    recievables: Vec<CpuRecievable>,
+    ime: bool,
+}
+
+impl SaveState {
+    pub fn create(cpu: &CPU) -> Self {
+        let recievables = cpu.recievables.serialized_data();
+        SaveState {
+            registers: cpu.registers.clone(),
+            sp: cpu.sp,
+            pc: cpu.pc,
+            bus: cpu.bus.clone(),
+            cycles: cpu.cycles,
+            debug_options: cpu.debug_options,
+            recievables,
+            ime: cpu.ime,
+        }
+    }
+
+    pub fn load(&self) -> CPU {
+        let recievables = Recievables::new();
+        let mut bus = self.bus.clone();
+        bus.set_recievables(recievables.clone());
+        for x in self.recievables.iter() {
+            recievables.send(x.clone())
+        }
+        CPU {
+            sp: self.sp,
+            pc: self.pc,
+            registers: self.registers.clone(),
+            cycles: self.cycles,
+            bus,
+            debug_options: self.debug_options,
+            recievables,
+            ime: self.ime,
+        }
+
+    }
+}
+
 impl CPU {
     pub fn get_screen(&self) -> crate::ppu::Screen {
         return self.bus.get_screen();
@@ -57,6 +104,8 @@ impl CPU {
 
     pub fn set_audio_buffer_status(&mut self, status: bool) {
         self.bus.set_audio_buffer_status(status);
+    pub fn get_screen(&self) -> &crate::ppu::Screen {
+        return self.bus.get_screen()
     }
 
     pub fn new(mut bus: crate::bus::Bus) -> Self {
@@ -74,6 +123,10 @@ impl CPU {
         }
     }
 
+    pub fn with_bios(bus: crate::bus::Bus) -> Self {
+        let cpu = Self::new(bus);
+        cpu
+    }
     pub fn post_bootrom(bus: crate::bus::Bus) -> Self {
         // https://gbdev.io/pandocs/#power-up-sequence
         let mut cpu = Self::new(bus);
@@ -111,6 +164,7 @@ impl CPU {
         cpu.write(0xFF47, 0xFC); // BGP
         cpu.write(0xFF48, 0xFF); // OBP0
         cpu.write(0xFF49, 0xFF); // OBP1
+        cpu.write(0xFF50, 0x01); // OBP1
         cpu.write(0xFF4A, 0x00); // WY
         cpu.write(0xFF4B, 0x00); // WX
         cpu.write(0xFFFF, 0x00); // IE
@@ -228,7 +282,12 @@ impl CPU {
         }
     }
 
-    fn get_register(&mut self, r: RegisterLoc) -> u8 {
+    pub fn get_save_state() -> Vec<u8> {
+        Vec::new()
+    }
+
+
+    fn get_register(&mut self, r: RegisterLoc) -> u8{
         match r {
             RegisterLoc::A => self.a(),
             RegisterLoc::B => self.b(),

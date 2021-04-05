@@ -1,11 +1,13 @@
 use std::collections::VecDeque;
 use std::num::Wrapping;
+use serde::{Serialize, Deserialize};
 use crate::cpu_recievable::{Recievables, CpuRecievable::*, Interrupt};
 
 // TODO: add LCD_STAT interrupts
 pub const SCREEN_WIDTH: usize = 160;
 pub const SCREEN_HEIGHT: usize = 144;
-pub type Screen = [u8; SCREEN_WIDTH * SCREEN_HEIGHT]; // u8 array. This holds colors 0-3
+
+pub type Screen = Vec<u8>; // u8 array. This holds colors 0-3
 pub type Canvas = [u32; SCREEN_WIDTH * SCREEN_HEIGHT]; // rgba u32 array. This will get passed and loaded into canvas
 
 // https://gbdev.io/pandocs/#ff40-lcd-control-register
@@ -69,7 +71,7 @@ pub enum Mode {
 }
 
 const DMA_TRANSFER_SIZE: u8 = 160;
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DMAManager {
     start_location: u8,
     progress: Option<u8>,
@@ -109,21 +111,44 @@ impl DMAManager {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct PPU {
     screen: Screen,
-    vram: [u8; 0x2000],
-    registers: [u8; 0x10],
+    vram: Vec<u8>, // size of 0x2000
+    registers: Vec<u8>,// size of 16
     tick: usize,
-    oam_ram: [Sprite; 40],
+    oam_ram: Vec<Sprite>, // size of 40
     active_sprites: [Option<usize>; 10],
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
     fetch_state: Wrapping<u8>,
     lx: u8,
     is_window: bool,
+    #[serde(skip, default="crate::cpu_recievable::none_recivables")]
     recievables: Option<Recievables>,
     pub dma: DMAManager,
 }
+
+impl Clone for PPU {
+    fn clone(&self) -> Self {
+        Self {
+            screen: self.screen.clone(),
+            vram: self.vram.clone(), // size of 0x2000
+            registers: self.registers.clone(),// size of 16
+            tick: self.tick,
+            oam_ram: self.oam_ram.clone(),
+            active_sprites: self.active_sprites.clone(),
+            pixel_fifo: self.pixel_fifo.clone(),
+            pixels_pushed: self.pixels_pushed.clone(),
+            fetch_state: self.fetch_state.clone(),
+            lx: self.lx,
+            is_window: self.is_window,
+            recievables: None,
+            dma: self.dma.clone(),
+        }
+    }
+}
+
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
 const EFFECTIVE_SCAN_COUNT: u8 = 153;
@@ -134,6 +159,7 @@ const color10: u8 = 0b10;
 const color11: u8 = 0b11;
 
 #[derive(Copy, Clone, Debug)]
+#[derive(Serialize, Deserialize)]
 struct Sprite {
     pos_x: u8,
     pos_y: u8,
@@ -178,10 +204,12 @@ impl Sprite {
 }
 
 #[derive(Clone,Copy,Debug, PartialEq)]
+#[derive(Serialize, Deserialize)]
 enum PixelSrc {
     BG, S1, S2
 }
 #[derive(Clone,Copy,Debug, PartialEq)]
+#[derive(Serialize, Deserialize)]
 struct PixelData {
     value: u8, // Really this is a 2 bit number
     src: PixelSrc,
@@ -202,10 +230,10 @@ impl std::fmt::Display for PixelData {
 impl PPU {
     pub fn new() -> Self {
         PPU {
-            screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT],
-            vram: [0u8; 0x2000],
-            registers: [0u8; 0x10],
-            oam_ram: [Sprite::new(); 40],
+            screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT].to_vec(),
+            vram: [0u8; 0x2000].to_vec(),
+            registers: [0u8; 0x10].to_vec(),
+            oam_ram: [Sprite::new(); 40].to_vec(),
             tick: 0,
             active_sprites: [None; 10],
             pixel_fifo: VecDeque::new(),
@@ -236,8 +264,8 @@ impl PPU {
 
     }
 
-    pub fn get_screen(&self) -> Screen {
-        self.screen
+    pub fn get_screen(&self) -> &Screen {
+        &self.screen
     }
 
     fn lookup_color(&self, p: PixelData) -> u8 {

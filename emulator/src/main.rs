@@ -102,7 +102,7 @@ fn ascii_half_print(screen: &ppu::Screen) {
     println!("Frame")
 }
 
-fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
+fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
     let mut start = Instant::now();
     let mut frametime = Instant::now();
     let (_stream, stream_handle) = OutputStream::try_default().unwrap();
@@ -142,23 +142,59 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
                 thread::sleep(x)
             }
         }
+
+        let savestatefile = "savestate";
+        match saver.lock().unwrap().pop_front() {
+            Some(SignalOp::SaveState) => {
+                let mut f = BufWriter::new(File::create(savestatefile).unwrap());
+                let state = gameboy.save();
+                bincode::serialize_into(&mut f, &state);
+            },
+            Some(SignalOp::LoadState) => {
+                let state = open_file(savestatefile);
+                match bincode::deserialize(&state) {
+                    Ok(deser) =>  {
+                        let save: cpu::SaveState = deser;
+                        gameboy.load(&save);
+                    }
+                    _ => println!("Failed to load savestate")
+                }
+            },
+            None => (),
+        }
     }
 }
 
+use bincode::serialize_into;
+use std::io::BufWriter;
+use std::collections::VecDeque;
+use std::sync::{Mutex,Arc};
+
+
+enum SignalOp {
+    SaveState,
+    LoadState
+}
+type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
+
 fn main() {
     // let romdata = open_file("cpu_instrs.gb");
-    let romdata = open_file("testrom/dtest2.gb");
+    // let romdata = open_file("testrom/dtest2.gb");
     // let romdata = open_file("roms/01-registers.gb");
     // let romdata = open_file("tetris.gb"); // gameboy state now starts after bootrom has complete
     // let romdata = open_file("testrom/jtest.gb");
     // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
+    // let romdata = open_file("testrom/jtest.gb");
+    let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
+        .load_bios(bios)
         .build();
 
     let args = get_args();
     let d = args.display;
     let mut db = cpu::DebugOptions::default();
+    let saver: Saver = Arc::new(Mutex::new(VecDeque::new()));
 
     match args.display {
         Display::None => db.debug_print = false,
@@ -171,10 +207,25 @@ fn main() {
     gameboy.set_debug_options(db);
 
     ctrlc::set_handler(move || {
+        println!("Cleaning up");
         cleanup_screen(d);
         println!("Bye!");
         std::process::exit(0x01);
-    })
-    .expect("Error setting Ctrl-C handler");
-    main_loop(gameboy, args);
+    }).expect("Error setting Ctrl-C handler");
+
+    use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2};
+    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2]).unwrap();
+    let saver2 = saver.clone();
+    thread::spawn(move || {
+        for sig in signals.forever() {
+            match sig {
+                SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
+                SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
+                _ => println!("Received signal {:?}", sig),
+            }
+
+        }
+    });
+
+    main_loop(gameboy, args, saver);
 }
