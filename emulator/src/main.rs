@@ -105,7 +105,7 @@ fn ascii_half_print(screen: &ppu::Screen) {
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
     let mut start = Instant::now();
     let mut frametime = Instant::now();
-    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
     // let (tx, mut rx) = queue::queue(false);
 
     // let audio_buffer = gameboy.get_audio_buffer();
@@ -128,9 +128,9 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
         }
         gameboy.tick();
 
-        let audio_buffer = gameboy.get_audio_buffer();
-        let sample_buffer = SamplesBuffer::new(2, 44100, audio_buffer);
-        stream_handle.play_raw(sample_buffer);
+        // let audio_buffer = gameboy.get_audio_buffer();
+        // let sample_buffer = SamplesBuffer::new(2, 44100, audio_buffer);
+        // stream_handle.play_raw(sample_buffer);
 
         let mut duration = start.elapsed();
         let desiredtime = Duration::from_nanos(1000);
