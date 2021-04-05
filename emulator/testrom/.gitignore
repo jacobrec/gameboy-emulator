@@ -1,2 +1,7 @@
 jtestrom.o
 jtest.gb
+.vscode
+/.vscode
+dtestrom.o
+dtest.gb
+testrom

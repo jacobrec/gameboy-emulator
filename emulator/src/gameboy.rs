@@ -1,12 +1,8 @@
+use crate::cartridge::Cartridge;
 use crate::cpu::CPU;
 
-#[derive(Clone)]
-pub struct ROM {
-    data: Vec<u8>
-}
-
 pub struct GameboyBuilder {
-    rom: Option<ROM>,
+    rom: Option<Cartridge>,
 }
 
 pub struct Gameboy {
@@ -15,31 +11,25 @@ pub struct Gameboy {
 
 impl GameboyBuilder {
     pub fn new() -> Self {
-        return Self{rom: None}
+        return Self { rom: None };
     }
 
-    pub fn load_rom(mut self, rom: ROM) -> Self {
+    pub fn load_rom(mut self, rom: Cartridge) -> Self {
         self.rom = Some(rom);
         self
     }
 
     pub fn build(&self) -> Gameboy {
         if let Some(rom) = self.rom.clone() {
-          return Gameboy {
-              cpu: CPU::post_bootrom(crate::bus::Bus::new(rom))
-          }
+            return Gameboy {
+                cpu: CPU::post_bootrom(crate::bus::Bus::new(rom)),
+            };
         }
         panic!("Builder not fully initialized")
     }
 }
 
 impl Gameboy {
-    pub fn empty() -> Self {
-        Self {
-            cpu: CPU::new(crate::bus::Bus::new(ROM{ data:Vec::new() })),
-        }
-    }
-
     pub fn set_state(&mut self, new_state: Gameboy) {
         self.cpu = new_state.cpu;
     }
@@ -48,38 +38,27 @@ impl Gameboy {
         self.cpu.tick()
     }
     pub fn get_screen(&self) -> crate::ppu::Screen {
-        return self.cpu.get_screen()
+        return self.cpu.get_screen();
     }
 
+    pub fn get_audio_buffer(&self) -> [f32; 4096] {
+        self.cpu.get_audio_buffer()
+    }
+    pub fn get_audio_buffer_status(&self) -> bool {
+        self.cpu.get_audio_buffer_status()
+    }
+    pub fn set_audio_buffer_status(&mut self, status: bool) {
+        self.cpu.set_audio_buffer_status(status);
+    }
     pub fn print_cpu_state(&self) {
         self.cpu.print_state();
     }
 
-    pub fn set_debug_print(&mut self, b: bool) {
-        self.cpu.set_debug_print(b)
-    }
-}
-
-impl ROM {
-    pub fn is_bootrom(&self) -> bool {
-        true
+    pub fn print_alt(&mut self) {
+        self.cpu.print_alt_state();
     }
 
-    pub fn from_data(data: Vec<u8>) -> Self {
-        ROM {data}
-    }
-    pub fn read(&self, loc: u16) -> u8 {
-       if loc < 0x00FF && self.is_bootrom() {
-           self.data[loc as usize]
-       } else if loc < 0x4000 { // Bank 0
-           self.data[loc as usize]
-       } else { // Bank 1-N (Swappable)
-           0 // TODO Swap banks
-       }
-    }
-    pub fn write(&mut self, loc: u16, val: u8) {
-        // Some cartriges provide writable memory for saving
-        // TODO: Find out which areas are write protected
-        self.data[loc as usize] = val
+    pub fn set_debug_options(&mut self, b: crate::cpu::DebugOptions) {
+        self.cpu.set_debug_options(b)
     }
 }

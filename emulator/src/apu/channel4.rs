@@ -113,7 +113,7 @@ impl Channel4 {
     self.frequency_count = DIVISORS[self.dividing_ratio as usize] << self.shift_clock_frequency;
     self.envelope_running = true;
     self.envelope.length = self.envelope.length_load as i32;
-    self.volume = self.envelope.volume;
+    self.volume = self.envelope.initial_volume;
     self.lfsr = 0x7FFF;
   }
 

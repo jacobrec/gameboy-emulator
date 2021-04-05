@@ -73,7 +73,7 @@ impl Channel2 {
 			0xFF17 => {
 				self.envelope.write(val);
 				self.dac_enabled = val & 0xF8 != 0;
-				self.volume = self.envelope.volume;
+				self.volume = self.envelope.initial_volume;
 			}
 			0xFF18 => {
 				self.frequency_load = self.frequency_load & 0x0700 | val as u16;
@@ -104,8 +104,7 @@ impl Channel2 {
 			self.output_volume = 0;
 		}
 
-		if WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize]
-			== -1
+		if WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] == -1
 		{
 			self.output_volume = 0;
 		}
@@ -154,6 +153,6 @@ impl Channel2 {
 		self.frequency_count = (2048 - self.frequency_load as i32) * 4;
 		self.envelope_running = true;
 		self.envelope.length = self.envelope.length_load as i32;
-		self.volume = self.envelope.volume;
+		self.volume = self.envelope.initial_volume;
 	}
 }

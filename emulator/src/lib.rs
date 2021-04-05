@@ -1,11 +1,13 @@
 mod utils;
 mod cpu;
 mod apu;
+mod timer;
 mod bus;
 mod ppu;
 mod instruction;
 mod gameboy;
 mod cpu_recievable;
+mod cartridge;
 
 use wasm_bindgen::prelude::*;
 
@@ -19,7 +21,7 @@ static mut X: u16 = 0;
 pub fn init(romdata: Vec<u8>) {
     utils::set_panic_hook();
     let mut gameboy = gameboy::GameboyBuilder::new()
-        .load_rom(gameboy::ROM::from_data(romdata))
+        .load_rom(cartridge::Cartridge::from_data(romdata))
         .build();
     gameboy.tick();
     // unsafe {

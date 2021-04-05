@@ -27,13 +27,14 @@ pub enum ChannelBit {
 pub struct APU {
     pub audio_buffer: [f32; SAMPLE_SIZE],
     audio_buffer_position: usize,
+    audio_buffer_full: bool,
     channel1: Channel1,
     channel2: Channel2,
     channel3: Channel3,
     channel4: Channel4,
     channel_output_selection: u8,
     down_sample_count: u8,
-    enabled: bool,
+    apu_enabled: bool,
     frame_sequencer: u8,
     frame_sequencer_count: u16,
     terminal1_vin: bool,
@@ -47,13 +48,14 @@ impl APU {
         APU {
             audio_buffer: [0.0; SAMPLE_SIZE], // Buffer that holds our audio samples
             audio_buffer_position: 0,         // Value for indexing our audio buffer
+            audio_buffer_full: false,
             channel1: Channel1::new(),
             channel2: Channel2::new(),
             channel3: Channel3::new(),
             channel4: Channel4::new(),
             channel_output_selection: 0, // NR 51
             down_sample_count: 87,
-            enabled: false,              // Bit 7 of NR52
+            apu_enabled: false,          // Bit 7 of NR52
             frame_sequencer: 0,          //
             frame_sequencer_count: 8192, //
             terminal1_vin: false,
@@ -79,7 +81,7 @@ impl APU {
             }
             0xFF25 => self.channel_output_selection,
             0xFF26 => {
-                let sound_on = if self.enabled { 0x80 } else { 0 };
+                let sound_on = if self.apu_enabled { 0x80 } else { 0 };
                 let channel1_on = if self.channel1.status { 0x1 } else { 0 };
                 let channel2_on = if self.channel2.status { 0x2 } else { 0 };
                 let channel3_on = if self.channel3.status { 0x4 } else { 0 };
@@ -92,36 +94,38 @@ impl APU {
     }
 
     pub fn write(&mut self, loc: u16, val: u8) {
-        if self.enabled {
-            match loc {
-                0xFF10..=0xFF14 => self.channel1.write(loc, val),
-                0xFF16..=0xFF19 => self.channel2.write(loc, val),
-                0xFF1A..=0xFF1E => self.channel3.write(loc, val),
-                0xFF30..=0xFF3F => self.channel3.write(loc, val),
-                0xFF20..=0xFF23 => self.channel4.write(loc, val),
-                0xFF24 => {
-                    if val & 0x80 == 0x80 {
-                        self.terminal1_vin = true;
-                    } else {
-                        self.terminal1_vin = false;
-                    }
-                    self.terminal1_volume = (val >> 4) & 0x7;
+        if !self.apu_enabled && loc != 0xFF26 && loc < 0xFF30 {
+            return;
+        }
 
-                    if val & 0x8 == 0x8 {
-                        self.terminal2_vin = true;
-                    } else {
-                        self.terminal2_vin = false;
-                    }
-                    self.terminal2_volume = val & 0x7;
+        match loc {
+            0xFF10..=0xFF14 => self.channel1.write(loc, val),
+            0xFF16..=0xFF19 => self.channel2.write(loc, val),
+            0xFF1A..=0xFF1E => self.channel3.write(loc, val),
+            0xFF30..=0xFF3F => self.channel3.write(loc, val),
+            0xFF20..=0xFF23 => self.channel4.write(loc, val),
+            0xFF24 => {
+                if val & 0x80 == 0x80 {
+                    self.terminal1_vin = true;
+                } else {
+                    self.terminal1_vin = false;
                 }
-                0xFF25 => {
-                    self.channel_output_selection = val;
+                self.terminal1_volume = (val >> 4) & 0x7;
+
+                if val & 0x8 == 0x8 {
+                    self.terminal2_vin = true;
+                } else {
+                    self.terminal2_vin = false;
                 }
-                0xFF26 => {
-                    self.enabled = val & 0x80 == 0x80;
-                }
-                _ => panic!("APU write register out of range: {:04X}", loc),
+                self.terminal2_volume = val & 0x7;
             }
+            0xFF25 => {
+                self.channel_output_selection = val;
+            }
+            0xFF26 => {
+                self.apu_enabled = val & 0x80 == 0x80;
+            }
+            _ => panic!("APU write register out of range: {:04X}", loc),
         }
     }
 
@@ -143,7 +147,6 @@ impl APU {
     // https://www.reddit.com/r/EmuDev/comments/5gkwi5/gb_apu_sound_emulation/
     // Solution is adapted from: https://github.com/GhostSonic21/GhostBoy/blob/master/GhostBoy/APU.cpp
     pub fn tick(&mut self) {
-        // let mut audio_buffer_full = false;
         self.frame_sequencer_count -= 1;
         if self.frame_sequencer_count == 0 {
             self.frame_sequencer_count = 8192;
@@ -160,6 +163,7 @@ impl APU {
                 }
                 7 => {
                     // Envelope clocked on every 7th step
+                    println!("Enevelope clock!!");
                     self.clock_envelope();
                 }
                 _ => (),
@@ -175,8 +179,7 @@ impl APU {
         self.down_sample_count -= 1;
         if self.down_sample_count <= 0 {
             self.down_sample_count = 87;
-
-            let mut bufferin_s02: f32 = 0.0;
+            let mut bufferin_s02: f32 = 0.5;
             let mut bufferin_s01: f32;
 
             // NOTE: not sure if this is the correct way to get volume.
@@ -234,6 +237,7 @@ impl APU {
 
         // Reset buffer position if we reach max
         if self.audio_buffer_position >= SAMPLE_SIZE {
+            self.audio_buffer_full = true;
             self.audio_buffer_position = 0;
         }
     }
@@ -280,5 +284,17 @@ impl APU {
             dst_sample = min_audioval;
         }
         *dst = dst_sample as f32;
+    }
+
+    pub fn get_audio_buffer(&self) -> [f32; SAMPLE_SIZE] {
+        self.audio_buffer
+    }
+
+    pub fn get_audio_buffer_status(&self) -> bool {
+        self.audio_buffer_full
+    }
+
+    pub fn set_audio_buffer_status(&mut self, status: bool) {
+        self.audio_buffer_full = status;
     }
 }

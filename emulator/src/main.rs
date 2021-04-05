@@ -1,15 +1,20 @@
+use rodio::queue;
+use rodio::{buffer::SamplesBuffer, OutputStream, OutputStreamHandle};
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::thread;
 use std::time::{Duration, Instant};
 
 mod apu;
 mod bus;
+mod cartridge;
 mod cpu;
 mod cpu_recievable;
 mod gameboy;
 mod instruction;
 mod ppu;
+mod timer;
 mod utils;
 
 static ESC: &str = "\u{001b}";
@@ -23,15 +28,20 @@ fn open_file(filename: &str) -> Vec<u8> {
 }
 #[derive(Clone, Copy)]
 enum Display {
+    None,
     CPU,
+    CPUAlt,
     AsciiHalf,
 }
 struct Args {
     display: Display,
+    stepmode: bool,
 }
 fn cleanup_screen(d: Display) {
     match d {
+        Display::None => (),
         Display::CPU => (),
+        Display::CPUAlt => (),
         Display::AsciiHalf => println!("{}[0m{}[?1049l", ESC, ESC),
     }
 }
@@ -43,13 +53,25 @@ impl Drop for Args {
 
 fn get_args() -> Args {
     let args: Vec<String> = env::args().collect();
-    let mut display = Display::CPU;
+    let mut display = Display::None;
+    let mut stepmode = false;
     if args.iter().any(|x| x == "--ascii") {
         display = Display::AsciiHalf;
         println!("Display: Ascii");
         print!("{}[?1049h", ESC);
     }
-    Args { display }
+
+    if args.iter().any(|x| x == "--step") {
+        stepmode = true;
+    }
+
+    if args.iter().any(|x| x == "--alt") {
+        display = Display::CPUAlt;
+    }
+    if args.iter().any(|x| x == "--cpu") {
+        display = Display::CPU;
+    }
+    Args { display, stepmode }
 }
 
 fn ascii_half_print(screen: &ppu::Screen) {
@@ -82,37 +104,69 @@ fn ascii_half_print(screen: &ppu::Screen) {
 
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args) {
     let mut start = Instant::now();
+    let mut frametime = Instant::now();
+    let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    // let (tx, mut rx) = queue::queue(false);
+
+    // let audio_buffer = gameboy.get_audio_buffer();
+    // let data: Vec<f32> = (0..4096).map(|n| -0.5 + (n % 2) as f32).collect();
+    // let sample_buffer = SamplesBuffer::new(2, 44100, data);
+    // let result = stream_handle.play_raw(sample_buffer);
+
     loop {
         match args.display {
+            Display::None => (),
+            Display::CPUAlt => gameboy.print_alt(),
             Display::CPU => gameboy.print_cpu_state(),
             Display::AsciiHalf => {
-                let duration = start.elapsed();
+                let duration = frametime.elapsed();
                 if duration.as_secs_f64() > (1.0 / 17.0) {
-                    start = Instant::now();
+                    frametime = Instant::now();
                     ascii_half_print(&gameboy.get_screen())
                 }
             }
         }
         gameboy.tick();
+
+        let audio_buffer = gameboy.get_audio_buffer();
+        let sample_buffer = SamplesBuffer::new(2, 44100, audio_buffer);
+        stream_handle.play_raw(sample_buffer);
+
+        let mut duration = start.elapsed();
+        let desiredtime = Duration::from_nanos(1000);
+        let elapsed = desiredtime.checked_sub(duration);
+        match elapsed {
+            None => start = start.checked_add(desiredtime).unwrap(),
+            Some(x) => {
+                start = Instant::now();
+                thread::sleep(x)
+            }
+        }
     }
 }
 
 fn main() {
     // let romdata = open_file("cpu_instrs.gb");
-    // let romdata = open_file("testrom/jtest.gb");
-    let romdata = open_file("tetris.gb");
-    // let romdata = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
+    let romdata = open_file("testrom/dtest2.gb");
+    // let romdata = open_file("roms/01-registers.gb");
+    // let romdata = open_file("tetris.gb"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
-        .load_rom(gameboy::ROM::from_data(romdata))
+        .load_rom(cartridge::Cartridge::from_data(romdata))
         .build();
 
     let args = get_args();
     let d = args.display;
+    let mut db = cpu::DebugOptions::default();
 
     match args.display {
-        Display::CPU => (),
-        Display::AsciiHalf => gameboy.set_debug_print(false),
+        Display::None => db.debug_print = false,
+        Display::CPU => db.debug_print = true,
+        Display::AsciiHalf => db.debug_print = false,
+        Display::CPUAlt => db.debug_print = false,
     }
+
+    db.debug_step = args.stepmode;
+    gameboy.set_debug_options(db);
 
     ctrlc::set_handler(move || {
         cleanup_screen(d);

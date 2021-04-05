@@ -68,6 +68,47 @@ pub enum Mode {
     VRAM,
 }
 
+const DMA_TRANSFER_SIZE: u8 = 160;
+#[derive(Clone, Debug)]
+pub struct DMAManager {
+    start_location: u8,
+    progress: Option<u8>,
+}
+
+// TODO: This will be tricky, we have to block off CPU
+// access to memory while the transfer happens, as well as do the
+// transfer with proper timing.
+// Writing here replaces the whole OAM block with new data
+// at a rate of 1 byte per cycle.
+// For example, if you were to go LD $FF46, $10, the DMA would spend the next
+// 160 cycles copying memory from 1000-109F to FE00-FE9F
+// For example, if you were to go LD $FF46, $49, the DMA would spend the next
+// 160 cycles copying the 160 bytes from 4900-499F to FE00-FE9F
+impl DMAManager {
+    fn new() -> Self {
+        Self {
+            start_location: 0,
+            progress: None,
+        }
+    }
+
+    pub fn next(&mut self) -> Option<(u16, u16)> {
+        self.progress = self.progress.map(|x| x + 1).and_then(|x| if x > DMA_TRANSFER_SIZE { None } else { Some(x) });
+        self.progress.map(|x| {
+            let x = x - 1;
+            println!("LOC: {:02X} {:02X}", self.start_location, x);
+            let from: u16 = ((self.start_location as u16) << 8) + x as u16;
+            let to: u16 = 0xFE00 + x as u16;
+            (from, to)
+        })
+    }
+
+    fn start_transfer(&mut self, val: u8) {
+        self.start_location = val;
+        self.progress = Some(0);
+    }
+}
+
 pub struct PPU {
     screen: Screen,
     vram: [u8; 0x2000],
@@ -81,15 +122,12 @@ pub struct PPU {
     lx: u8,
     is_window: bool,
     recievables: Option<Recievables>,
+    pub dma: DMAManager,
 }
 const TICK_WIDTH: usize = 456;
 const OAM_WIDTH: usize = 80;
 const EFFECTIVE_SCAN_COUNT: u8 = 153;
 
-// const color00: u32 = 0xFFFFB5FF;
-// const color01: u32 = 0x7BC67BFF;
-// const color10: u32 = 0x6B8C42FF;
-// const color11: u32 = 0x5A3921FF;
 const color00: u8 = 0b00;
 const color01: u8 = 0b01;
 const color10: u8 = 0b10;
@@ -113,10 +151,9 @@ impl Sprite {
         }
     }
     fn from_memory(mem: &[u8; 0x2000], loc: usize) -> Self {
-        let b3 = mem[loc+3];
         Sprite {
-            pos_x: mem[loc],
-            pos_y: mem[loc+1],
+            pos_y: mem[loc+0],
+            pos_x: mem[loc+1],
             tile:  mem[loc+2],
             flags: mem[loc+3],
         }
@@ -177,6 +214,7 @@ impl PPU {
             is_window: false,
             lx: 0,
             recievables: None,
+            dma: DMAManager::new(),
         }
     }
 
@@ -230,8 +268,7 @@ impl PPU {
         let y = ((self.registers[LY] as u16 + self.registers[SCY] as u16) & 0xFF) as u8;
         y
     }
-    fn background_tilemap_loc(&self) -> usize {
-        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+    fn window_or_background_tilemap_loc(&self, tilemap_loc: u16) -> usize {
         let y = self.get_effective_y();
         let x = self.lx;
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
@@ -243,11 +280,44 @@ impl PPU {
         }
 
     }
-    fn window_tilemap_loc(&self) -> u16 {
-        self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000)
+    fn background_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b00001000);
+        self.window_or_background_tilemap_loc(tilemap_loc)
     }
+    fn window_tilemap_loc(&self) -> usize {
+        let tilemap_loc = self.tilemap_loc(self.registers[LCD_CONTROL_REGISTER] & 0b01000000);
+        self.window_or_background_tilemap_loc(tilemap_loc)
+    }
+    fn sprite_tile_loc(&self, idx: u8) -> usize {
+        idx as usize * 16
+    }
+
+
+    fn overlay_sprites(&mut self) {
+        let y = self.registers[LY];
+        let x = self.lx;
+        for s in self.active_sprites.iter() {
+            if let Some(s) = s {
+                let s = self.oam_ram[*s];
+                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
+                    let ey = 16 + y as isize - s.pos_y as isize;
+                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
+
+
+                    for i in 0..8 {
+                        if sp[i].value != 0 {
+                            if let Some(e) = self.pixel_fifo.get_mut(i) {
+                                *e = sp[i];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
-        //println!("Tile loc: {:04X} on line {}. Effective y is {}", loc + 0x8000, line, self.registers[LY] + self.registers[SCY]);
         let vloc = loc + line * 2;
         let bg_tile_low = self.vram[vloc];
         let bg_tile_high = self.vram[vloc + 1];
@@ -260,6 +330,11 @@ impl PPU {
         for i in 0..v.len() {
             v[i].value = gen(i)
         }
+        // println!("Tile loc: {:04X} on line {}. Effective y is {}. Decoded to {:?}",
+        //  loc + 0x8000, line,
+        //  (self.registers[LY] as usize + self.registers[SCY] as usize) & 0xFF,
+        //  v
+        // );
         v
 
     }
@@ -269,6 +344,7 @@ impl PPU {
         if let 0 = (self.fetch_state & Wrapping(0b111)).0 { // only update on last part of cycle
             // TODO: Window/Obj lookup
             let bg = self.background_tilemap_loc();
+            //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
             Some(self.decode_tile(loc, (y & 0b111) as usize))
@@ -277,17 +353,23 @@ impl PPU {
         }
     }
 
+    fn sendif(&mut self, i: Interrupt) {
+        match &self.recievables {
+            Some(r) => r.send(SendInterrupt(i)),
+            None => ()
+        }
+    }
     pub fn tick(&mut self) {
         self.tick += 1;
         self.registers[LCD_STATUS_REGISTER] &= 0b11111011 |
-            if self.registers[LY] == self.registers[LYC] { 1 }
+            if self.registers[LY] == self.registers[LYC] { self.sendif(Interrupt::LCDStat); 1 }
             else { 0 } << 2;
         match self.get_mode() {
             Mode::HBlank => {
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] >= 144 {
-                        // Send vblank interrupt
+                        self.sendif(Interrupt::VBlank);
                         self.set_mode(Mode::VBlank);
                     } else {
                         self.set_mode(Mode::OAM);
@@ -296,12 +378,6 @@ impl PPU {
                 }
             },
             Mode::VBlank => {
-                if self.tick == 1 {
-                    match &self.recievables {
-                        Some(r) => r.send(SendInterrupt(Interrupt::VBlank)),
-                        None => ()
-                    }
-                }
                 if self.tick > TICK_WIDTH {
                     self.registers[LY] += 1;
                     if self.registers[LY] > EFFECTIVE_SCAN_COUNT {
@@ -313,7 +389,7 @@ impl PPU {
 
             },
             Mode::OAM => {
-                if self.tick == 0 {
+                if self.tick == 1 {
                     self.active_sprites = [None; 10];
                 } else if self.tick == OAM_WIDTH {
                     // OAM lookup, this is normally done over 20 dots, but we'll just do it at the end
@@ -359,6 +435,7 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
+                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
@@ -411,6 +488,7 @@ impl PPU {
     // Both read and write expect loc to be in the address range 0x8000..=0x9FFF
     pub fn write(&mut self, loc: u16, val: u8) {
         let l = loc as usize - 0x8000;
+        // print!("PPU Write: [{:04X}] = {:02X}. During mode {:?}\n", loc, val, self.get_mode());
         match self.get_mode() {
             Mode::VRAM => (),
             _ => self.vram[l] = val,
@@ -429,8 +507,8 @@ impl PPU {
             Mode::VRAM => (),
             Mode::OAM => (),
             _ => match loc & 0b11 {
-                0 => self.oam_ram[l].pos_x = val,
-                1 => self.oam_ram[l].pos_y = val,
+                0 => self.oam_ram[l].pos_y = val,
+                1 => self.oam_ram[l].pos_x = val,
                 2 => self.oam_ram[l].tile = val,
                 3 => self.oam_ram[l].flags = val,
                 _ => unreachable!("exhaustive match pattern")
@@ -443,8 +521,8 @@ impl PPU {
             Mode::VRAM => 0xFF,
             Mode::OAM => 0xFF,
             _ => match loc & 0b11 {
-                    0 => self.oam_ram[l].pos_x,
-                    1 => self.oam_ram[l].pos_y,
+                    0 => self.oam_ram[l].pos_y,
+                    1 => self.oam_ram[l].pos_x,
                     2 => self.oam_ram[l].tile,
                     3 => self.oam_ram[l].flags,
                     _ => unreachable!("exhaustive match pattern")
@@ -458,16 +536,7 @@ impl PPU {
         if l > 0xB {
             panic!("CGB functionallity is not supported")
         } else if l == DMA {
-            // TODO: Start DMA transfer
-            // This will be tricky, as we'll have to block of CPU
-            // access to memory while the transfer happens, as well as do the
-            // transfer with proper timing.
-            // Writing here replaces the whole OAM block with new data
-            // at a rate of 1 byte per cycle.
-            // For example, if you were to go LD $FF46, $10, the DMA would spend the next
-            // 160 cycles copying memory from 1000-109F to FE00-FE9F
-            // For example, if you were to go LD $FF46, $49, the DMA would spend the next
-            // 160 cycles copying the 160 bytes from 4900-499F to FE00-FE9F
+            self.dma.start_transfer(val);
         } else if l == LY {
             panic!("0xFF44 is read only")
         }
