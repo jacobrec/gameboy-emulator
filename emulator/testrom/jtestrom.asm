@@ -17,14 +17,12 @@ Start:
 
     ld a, 32
 LoadTiles:
-    ld HL, $8000
-    ld DE, TileData
+    ld HL, $8010
+    ld DE, TileData+$10
 LoadTilesInner:
-    ld [$ff80], a
+    ld [$ff80], a               ; Backup a
     call LoadTile
     ld a, [$ff80]
-    inc HL
-    inc DE
     dec a
     jr NZ, LoadTilesInner
     jp ClearTileMap
@@ -56,6 +54,11 @@ ClearTileMapInner:
     jp NZ, ClearTileMapInner
     cp c
     jp NZ, ClearTileMapInner
+
+    call WaitTilVBlank
+    ld HL, $8000
+    ld DE, TileData
+    call LoadTile
 
 SetFloorTiles:
     ld BC, 512
