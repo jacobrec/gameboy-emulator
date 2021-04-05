@@ -97,16 +97,16 @@ function GamePad() {
         alignItems="stretch"
       >
         <Grid item>
-          <Grid item>
+          <Grid item className="up-button">
             <UpButton className="direction-pad"/>
           </Grid>
-          <Grid item>
+          <Grid item className="left-button">
             <LeftButton className="direction-pad"/>
           </Grid>
-          <Grid item >
+          <Grid item className="right-button">
             <RightButton className="direction-pad"/>
           </Grid>
-          <Grid item>
+          <Grid item className="down-button">
             <DownButton className="direction-pad"/>
           </Grid>
         </Grid>
@@ -126,10 +126,26 @@ function GamePad() {
   );
 }
 
-function Screen() {
+function Screen(props: any) {
+
+  const swtch = (keyString: any) => {
+    switch(keyString) {
+      case props.buttons.up: return "UP";
+      case props.buttons.left: return "LEFT";
+      case props.buttons.right: return "RIGHT";
+      case props.buttons.down: return "DOWN";
+      case props.buttons.a: return "A";
+      case props.buttons.b: return "B";
+      case props.buttons.start: return "START";
+      case props.buttons.select: return "SELECT";
+
+      default: return " "
+    }
+  };
+
   return (
     <div className="screen">
-      Screen
+      <h1>Key Pressed: {swtch(props.keyPressed)}</h1>
     </div>
   );
 }
@@ -228,14 +244,37 @@ function App() {
   const [emulator, setEmulator] = useState(new Emulator());
   const [intervals, setIntervals] = useState(false);
   const [rom, setRom] = useState({name: "No File Selected"});
-
   const [modalIsOpen, setModalIsOpen] = useState(true);
+  const [keyPress, setKeyPress] = useState('up');
+  const [controls, setControls] = useState({
+    up:'w', 
+    left:'a', 
+    down:'s',
+    right:'d',
+    a:'j', 
+    b:'k',
+    start:' ', 
+    select:'b',
+  });
 
   const onSubmit = (data: any) => {
-    // console.log(data.rom[0]);
     setModalIsOpen(false);
     setRom(data.rom[0]);
   };
+
+  const handleKeyDown = (event: any) => {
+    // console.log(event);
+    setKeyPress(event.key);
+  }
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [])
+
 
 
 
@@ -263,7 +302,7 @@ function App() {
         alignItems="center"
       >
         <Grid item>
-          <Screen/>
+          <Screen keyPressed={keyPress} buttons={controls}/>
         </Grid>
         <Divider/>
         <Grid item>

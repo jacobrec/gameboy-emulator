@@ -16,6 +16,8 @@
 
 .screen {
   background-color: black;
+  color: white;
+  font-size: x-large;
   padding-left: 240px;
   padding-top: 240px;
   padding-bottom: 240px;
@@ -23,7 +25,6 @@
 }
 
 .gamepad {
-  /* background-color: black; */
   padding-left: 240px;
   text-align: center;
 }
@@ -31,6 +32,12 @@
 .direction-pad {
   height: 50px;
   width: 50px;
+}
+
+LeftButton {
+  position: absolute;
+  left: 5%;
+  top: 25%;
 }
 
 
