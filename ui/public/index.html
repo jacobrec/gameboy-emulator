@@ -53,6 +53,9 @@
       } else {
         console.log('Service Worker is not supported by browser.');
       }
+
+      window.button_down = (a: Button) => console.log("Handler not registered but button down:", a)
+      window.button_up = (a: Button) => console.log("Handler not registered but button up:", a)
     </script>
   </body>
 </html>

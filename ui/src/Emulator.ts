@@ -1,5 +1,6 @@
 interface Wasm {
-    press_button: Function,
+    button_down: Function,
+    button_up: Function,
     update: Function,
     init: Function,
 }
@@ -27,11 +28,20 @@ export default class Emulator {
     }
 
     load_rom(data: Uint8Array) {
-        this.wasm?.init(data);
+        let w: any = window;
+        if (!w.has_loaded) {
+            this.wasm?.init(data);
+            w.has_loaded = true;
+        }
+        w.button_down = (e: Button) => this.button_down(e)
+        w.button_up = (e: Button) => this.button_up(e)
     }
 
-    press_button(b: Button): number {
-        return this.wasm?.press_button(b);
+    button_down(b: Button): number {
+        return this.wasm?.button_down(b);
+    }
+    button_up(b: Button): number {
+        return this.wasm?.button_up(b);
     }
 
     update() {

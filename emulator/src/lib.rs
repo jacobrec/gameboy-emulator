@@ -40,16 +40,17 @@ pub fn update(x: usize) -> Vec<u32> {
 }
 
 #[wasm_bindgen]
-pub fn press_button(b: isize) {
-    match b {
-        0 => (), // Start
-        1 => (), // Select
-        2 => (), // DUp
-        3 => (), // DDown
-        4 => (), // DLeft
-        5 => (), // DRight
-        6 => (), // A
-        7 => (), // B
-        _ => panic!("Unknown button pressed")
+pub fn button_down(b: isize) {
+    let bt = 1 << b; // ensure Emulator.ts and gameboy.rs have buttons in the same order
+    unsafe {
+        GAMEBOY.as_mut().unwrap().button_down(bt)
+    }
+}
+
+#[wasm_bindgen]
+pub fn button_up(b: isize) {
+    let bt = 1 << b; // ensure Emulator.ts and gameboy.rs have buttons in the same order
+    unsafe {
+        GAMEBOY.as_mut().unwrap().button_up(bt)
     }
 }

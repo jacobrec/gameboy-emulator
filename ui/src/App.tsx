@@ -241,6 +241,7 @@ function ResponsiveDrawer(props: any) {
 }
 
 function App() {
+  let w: any = window;
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
@@ -261,25 +262,45 @@ function App() {
     setRom(data.rom[0]);
   };
 
+
+
+  const decodeButton = (keyString: string) => {
+    switch(keyString) {
+      case controls.up: return Button.DUp;
+      case controls.left: return Button.DLeft;
+      case controls.right: return Button.DRight;
+      case controls.down: return Button.DDown;
+      case controls.a: return Button.A;
+      case controls.b: return Button.B;
+      case controls.start: return Button.Start;
+      case controls.select: return Button.Select;
+    }
+  };
+
+
   const handleKeyDown = (event: any) => {
     // console.log(event);
     setKeyPress(event.key);
+    w.button_down(decodeButton(event.key))
   }
-
+  const handleKeyUp = (event: any) => {
+    // console.log(event);
+    setKeyPress(event.key);
+    w.button_up(decodeButton(event.key))
+  }
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     }
   }, [])
 
 
 
 
-  const callback = (downer: Function, upper: Function) => {
-    downer(Button.DUp)
-  }
 
   return (
     <div className="App">
@@ -295,13 +316,13 @@ function App() {
         <Grid item>
           {
              (rom.constructor === File) ?
-              <EmulatorScreen id={"gb-emulator"} callbackRegister={callback} rom={rom} />
+              <EmulatorScreen id={"gb-emulator"} rom={rom} />
               : <p>Waiting for ROM</p>
           }
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad/>
+          <GamePad />
         </Grid>
       </Grid>
     </div>
