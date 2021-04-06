@@ -2349,8 +2349,8 @@ mod test {
         assert_eq!(test_cpu.get_register(RegisterLoc::L), 0x39);
 
         // Reset HL
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         // 1 CYCLE
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
 
