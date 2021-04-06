@@ -9,19 +9,20 @@ Start:
     ld a, $e4
     ld [$FF47], a
 
+    ld A, $10                   ; Set joypad to direction only
+    ld [$FF00], a
+
     ld	a,$93
 	ld	[$FF40],a ; enable lcd
 
     ld a, 32
 LoadTiles:
-    ld HL, $8000
-    ld DE, TileData
+    ld HL, $8010
+    ld DE, TileData+$10
 LoadTilesInner:
-    ld [$ff80], a
+    ld [$ff80], a               ; Backup a
     call LoadTile
     ld a, [$ff80]
-    inc HL
-    inc DE
     dec a
     jr NZ, LoadTilesInner
     jp ClearTileMap
@@ -54,6 +55,11 @@ ClearTileMapInner:
     cp c
     jp NZ, ClearTileMapInner
 
+    call WaitTilVBlank
+    ld HL, $8000
+    ld DE, TileData
+    call LoadTile
+
 SetFloorTiles:
     ld BC, 512
     ld HL, $9A00
@@ -74,7 +80,7 @@ LoadSprite1Data:
     ld HL, $FE00
     ld a, $10                    ; sprite y
     ld [HL+], a
-    ld a, $8                    ; sprite x
+    ld a, $10                    ; sprite x
     ld [HL+], a
     ld a, 11
     ld [HL+], a
@@ -100,9 +106,30 @@ Scroll:                         ; move sprite 0 down, until it aligns where plat
     jr NC, SkipDec
     inc A
     ld [$FE00], A
-SkipDec:
-
     jp ScrollLoop
+SkipDec:
+    call JoypadMovement
+    jp ScrollLoop
+
+JoypadMovement:
+    ld A, [$FF00]
+    bit 0, A
+    jr Z, MoveRight
+    ld A, [$FF00]
+    bit 1, A
+    jr Z, MoveLeft
+MoveRight:
+    ld A, [$FE01]               ; sprite 0 x loc
+    inc A
+    ld [$FE01], A
+    jr DoneMove
+MoveLeft:
+    ld A, [$FE01]               ; sprite 0 x loc
+    dec A
+    ld [$FE01], A
+DoneMove:
+    ret
+
 
 
 WaitTilVBlank:

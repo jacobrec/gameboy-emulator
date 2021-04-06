@@ -106,6 +106,9 @@ impl CPU {
     pub fn set_audio_buffer_status(&mut self, status: bool) {
         self.bus.set_audio_buffer_status(status);
     }
+    pub fn get_canvas(&self) -> crate::ppu::Canvas {
+        return self.bus.get_canvas();
+    }
 
     pub fn new(mut bus: crate::bus::Bus) -> Self {
         let recievables = Recievables::new();
@@ -283,6 +286,10 @@ impl CPU {
 
     pub fn get_save_state() -> Vec<u8> {
         Vec::new()
+    }
+
+    pub fn update_joypad_register(&mut self, buttonmap: u8) {
+        self.bus.joypad.update_joypad(buttonmap);
     }
 
     fn get_register(&mut self, r: RegisterLoc) -> u8 {

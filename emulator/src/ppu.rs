@@ -247,10 +247,11 @@ impl PPU {
     }
 
     pub fn get_canvas(&self) -> Canvas {
-        const color00: u32 = 0xFFFFB5FF;
-        const color01: u32 = 0x7BC67BFF;
-        const color10: u32 = 0x6B8C42FF;
-        const color11: u32 = 0x5A3921FF;
+        // Hex colors need to be in ABGR order for direct loading
+        const color00: u32 = 0xFF0FBC9C;
+        const color01: u32 = 0xFF0FAC8B;
+        const color10: u32 = 0xFF306230;
+        const color11: u32 = 0xFF0F380F;
         let mut canvas = [0u32; SCREEN_WIDTH * SCREEN_HEIGHT];
         for i in 0..(SCREEN_WIDTH * SCREEN_HEIGHT) {
             canvas[i] = match self.screen[i] {

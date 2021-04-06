@@ -1,10 +1,10 @@
 interface Wasm {
     press_button: Function,
-    get_screen: Function,
     update: Function,
+    init: Function,
 }
 
-enum Button {
+export enum Button {
     Start = 0,
     Select,
     DUp,
@@ -20,22 +20,25 @@ export default class Emulator {
 
     constructor() {
         (async () => {
-          const wasm = await import("rust/gameboy_emulator_bg.wasm");
+          await import("rust/gameboy_emulator_bg.wasm");
+          const wasm = await import("rust/gameboy_emulator");
           this.wasm = wasm;
         })()
+    }
+
+    load_rom(data: Uint8Array) {
+        this.wasm?.init(data);
     }
 
     press_button(b: Button): number {
         return this.wasm?.press_button(b);
     }
 
-    get_screen(): number {
-        return this.wasm?.get_screen();
-    }
-
-    update(): number {
+    update() {
         // TODO: something with CPU timing
-        return this.wasm?.update(3);
+        let cycles_per_frame = 70256;
+        let cycles_per_second = 4194304;
+        return this.wasm?.update(70256 / 2);
     }
 
 }
