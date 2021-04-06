@@ -45,11 +45,8 @@ impl Channel3 {
 			0xFF1C => self.volume << 5,
 			0xFF1D => (self.frequency_load & 0x00FF) as u8,
 			0xFF1E => {
-				let status_bit = if self.status { 0x80 } else { 0 };
-				let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-				let frequency_high_bits = (self.frequency_load & 0x07) as u8;
-
-				status_bit | counter_selection_bit | frequency_high_bits
+				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
+				counter_selection_bit
 			}
 			0xFF30..=0xFF3F => self.wave_ram[loc as usize - 0xFF30],
 			_ => panic!("Channel 3 read register out of range: {:04X}", loc),
@@ -71,8 +68,8 @@ impl Channel3 {
 				self.frequency_load = self.frequency_load & 0x0700 | val as u16;
 			}
 			0xFF1E => {
-				self.status = if val >> 7 == 1 { true } else { false };
-				self.counter_selection = if val >> 6 == 1 { true } else { false };
+				self.status = if (val & 0x80) == 0x80 { true } else { false };
+				self.counter_selection = if (val & 0x40) == 0x40 { true } else { false };
 				self.frequency_load = self.frequency_load & 0x00FF | ((val & 0x07) as u16) << 8;
 
 				if self.status {
@@ -133,3 +130,63 @@ impl Channel3 {
 		}
 	}
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn create_test_channel3() -> Channel3 {
+        Channel3::new()
+    }
+
+    #[test]
+    fn test_NR30_read_write () {
+        let mut ch3 = create_test_channel3();
+				ch3.write(0xFF1A, 0xFF);
+
+				assert_eq!(ch3.dac_enabled, true);
+
+				assert_eq!(ch3.read(0xFF1A), 0x80);
+    }
+
+		#[test]
+    fn test_NR31_read_write () {
+        let mut ch3 = create_test_channel3();
+				ch3.write(0xFF1B, 0xFF);
+
+				assert_eq!(ch3.length_counter, 0xFF);
+
+				assert_eq!(ch3.read(0xFF1B), 0xFF);
+    }
+
+		#[test]
+    fn test_NR32_read_write () {
+        let mut ch3 = create_test_channel3();
+				ch3.write(0xFF1C, 0xFF);
+
+				assert_eq!(ch3.volume, 3);
+				assert_eq!(ch3.read(0xFF1C), 0x60);
+    }
+
+		#[test]
+    fn test_NR33_read_write () {
+        let mut ch3 = create_test_channel3();
+				ch3.write(0xFF1D, 0xFF);
+
+				assert_eq!(ch3.frequency_load, 255);
+				assert_eq!(ch3.read(0xFF1D), 0xFF);
+    }
+
+		
+		#[test]
+    fn test_NR34_read_write () {
+        let mut ch3 = create_test_channel3();
+				ch3.write(0xFF1E, 0xFF);
+
+				assert_eq!(ch3.status, true);
+				assert_eq!(ch3.counter_selection, true);
+				assert_eq!(ch3.frequency_load, 1792);
+				assert_eq!(ch3.read(0xFF1E), 0x40);
+    }
+	}

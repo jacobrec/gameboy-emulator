@@ -34,7 +34,7 @@ impl Channel4 {
       envelope: Envelope::new(), // NR 42 Enevlope
       envelope_running: false,   // Condition to check whether envelope is on or off
       frequency_count: 0,        // Actual frequency value that is updated
-      frequency_load: 0,         // NR 43 and NR 44 bit 2-0
+      frequency_load: 0,         // NR 43 bit 2-0
       length_counter: 0,         // NR 41 5-0
       lfsr: 0,                   // linear feedback shift register
       output_volume: 0,          // Volume uesd for mixing
@@ -51,10 +51,8 @@ impl Channel4 {
       0xFF21 => self.envelope.read(),
       0xFF22 => self.shift_clock_frequency << 4 | self.counter_step << 3 | self.dividing_ratio,
       0xFF23 => {
-        let status_bit = if self.status { 0x80 } else { 0 };
         let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-
-        status_bit | counter_selection_bit
+        counter_selection_bit
       }
       _ => panic!("Channel 4 read register out of range: {:04X}", loc),
     }
@@ -70,13 +68,13 @@ impl Channel4 {
         self.envelope.write(val);
       }
       0xFF22 => {
-        self.shift_clock_frequency = val >> 4 & 0x7;
-        self.counter_step = val >> 3 & 0x01;
-        self.dividing_ratio = val & 0x03;
+        self.shift_clock_frequency = val >> 4;
+        self.counter_step = (val >> 3) & 0x01;
+        self.dividing_ratio = val & 0x07;
       }
       0xFF23 => {
-        self.status = if val >> 7 == 1 { true } else { false };
-        self.counter_selection = if val >> 6 == 1 { true } else { false };
+        self.status = if (val & 0x80) == 0x80 { true } else { false };
+				self.counter_selection = if (val & 0x40) == 0x40 { true } else { false };
 
         if self.status {
           self.initialize();
@@ -152,3 +150,55 @@ impl Channel4 {
     }
   }
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn create_test_channel4() -> Channel4 {
+        Channel4::new()
+    }
+
+		#[test]
+    fn test_NR41_read_write () {
+        let mut ch4 = create_test_channel4();
+				ch4.write(0xFF20, 0xFF);
+
+				assert_eq!(ch4.length_counter, 0x3F);
+				assert_eq!(ch4.read(0xFF20), 0x3F);
+    }
+
+		#[test]
+    fn test_NR42_read_write () {
+      let mut ch4 = create_test_channel4();
+      ch4.write(0xFF21, 0xFF);
+
+      assert_eq!(ch4.envelope.initial_volume, 15);
+      assert_eq!(ch4.envelope.direction, 1);
+      assert_eq!(ch4.envelope.length_load, 7);
+      assert_eq!(ch4.read(0xFF21), 0xFF);
+    }
+
+		#[test]
+    fn test_NR43_read_write () {
+        let mut ch4 = create_test_channel4();
+				ch4.write(0xFF22, 0xFF);
+
+				assert_eq!(ch4.shift_clock_frequency, 15);
+        assert_eq!(ch4.counter_step, 1);
+        assert_eq!(ch4.dividing_ratio, 7);
+				assert_eq!(ch4.read(0xFF22), 0xFF);
+    }
+
+		
+		#[test]
+    fn test_NR44_read_write () {
+        let mut ch4 = create_test_channel4();
+				ch4.write(0xFF23, 0xFF);
+
+				assert_eq!(ch4.status, true);
+				assert_eq!(ch4.counter_selection, true);
+				assert_eq!(ch4.read(0xFF23), 0x40);
+    }
+	}

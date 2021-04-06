@@ -71,16 +71,14 @@ impl Channel1 {
 			0xFF10 => self.sweep.read(),
 			0xFF11 => {
 				let pattern_bits = pattern_to_u8(self.wave_pattern);
-				pattern_bits << 6 | self.length_counter & 0x3F
+				pattern_bits << 6
 			}
 			0xFF12 => self.envelope.read(),
 			0xFF13 => (self.frequency_load & 0x00FF) as u8,
 			0xFF14 => {
-				let status_bit = if self.status { 0x80 } else { 0 };
-				let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-				let frequency_high_bits = (self.frequency_load & 0x07) as u8;
+				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
 
-				status_bit | counter_selection_bit | frequency_high_bits
+				counter_selection_bit 
 			}
 			_ => panic!("Channel 1 read register out of range: {:04X}", loc),
 		}
@@ -94,7 +92,7 @@ impl Channel1 {
 			0xFF11 => {
 				let pattern_bits = val >> 6;
 				self.wave_pattern = u8_to_pattern(pattern_bits).unwrap();
-				self.length_counter = val & 0x3F;
+				self.length_counter = 64 - (val & 0x3F);
 			}
 			0xFF12 => {
 				self.envelope.write(val);
@@ -286,3 +284,69 @@ impl Channel1 {
 	// 	}
 	// }
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn create_test_channel1() -> Channel1 {
+        Channel1::new()
+    }
+
+    #[test]
+    fn test_NR10_read_write () {
+        let mut ch1 = create_test_channel1();
+				ch1.write(0xFF10, 0xFF);
+
+				assert_eq!(ch1.sweep.time, 7);
+				assert_eq!(ch1.sweep.direction, 1);
+				assert_eq!(ch1.sweep.shift, 7);
+
+				assert_eq!(ch1.read(0xFF10), 0x7F);
+    }
+
+		#[test]
+    fn test_NR11_read_write () {
+        let mut ch1 = create_test_channel1();
+				ch1.write(0xFF11, 0xFF);
+
+				let pattern_bits = pattern_to_u8(ch1.wave_pattern);
+				assert_eq!(pattern_bits, 3);
+				assert_eq!(ch1.length_counter, 1);
+
+				assert_eq!(ch1.read(0xFF11), 0xC0);
+    }
+
+		#[test]
+    fn test_NR12_read_write () {
+        let mut ch1 = create_test_channel1();
+				ch1.write(0xFF12, 0xFF);
+
+				assert_eq!(ch1.envelope.initial_volume, 15);
+				assert_eq!(ch1.envelope.direction, 1);
+				assert_eq!(ch1.envelope.length_load, 7);
+				assert_eq!(ch1.read(0xFF12), 0xFF);
+    }
+
+		#[test]
+    fn test_NR13_read_write () {
+        let mut ch1 = create_test_channel1();
+				ch1.write(0xFF13, 0xFF);
+
+				assert_eq!(ch1.frequency_load, 255);
+				assert_eq!(ch1.read(0xFF13), 0xFF);
+    }
+
+		
+		#[test]
+    fn test_NR14_read_write () {
+        let mut ch1 = create_test_channel1();
+				ch1.write(0xFF14, 0xFF);
+
+				assert_eq!(ch1.status, true);
+				assert_eq!(ch1.counter_selection, true);
+				assert_eq!(ch1.frequency_load, 1792);
+				assert_eq!(ch1.read(0xFF14), 0x40);
+    }
+	}
