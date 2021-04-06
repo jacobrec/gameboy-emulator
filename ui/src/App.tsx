@@ -127,6 +127,18 @@ function GamePad() {
   );
 }
 
+function MenuItem (props: any) {
+  let {text, onClick} = props;
+  return (
+      <ListItem onClick={onClick} button key={text}>
+          <ListItemIcon>
+            {props.children}
+          </ListItemIcon>
+          <ListItemText primary={text} />
+        </ListItem>
+
+  )
+}
 
 function ResponsiveDrawer(props: any) {
   const classes = useStyles();
@@ -136,29 +148,15 @@ function ResponsiveDrawer(props: any) {
     setMobileOpen(!mobileOpen);
   };
 
-  const swtch = (index: number) => {
-    switch(index) {
-      case 0: return <GetAppIcon/>;
-      case 1: return <SaveIcon/>;
-      case 2: return <SettingsIcon/>;
-
-      default: return <h1>No project match</h1>
-    }
-  };
-
+  let w: any = window;
   const drawerContent = (
     <div>
       <div className={classes.toolbar} />
       <Divider />
       <List>
-        {['Load', 'Save', 'Settings'].map((text, index) => (
-          <ListItem button key={text}>
-            <ListItemIcon>
-              {swtch(index)}
-            </ListItemIcon>
-            <ListItemText primary={text} />
-          </ListItem>
-        ))}
+        <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
+        <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
+        <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
       </List>
     </div>
   );

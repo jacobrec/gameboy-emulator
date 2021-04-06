@@ -54,3 +54,24 @@ pub fn button_up(b: isize) {
         GAMEBOY.as_mut().unwrap().button_up(bt)
     }
 }
+
+#[wasm_bindgen]
+pub fn save_state() -> Vec<u8>{
+    unsafe {
+        let state = GAMEBOY.as_mut().unwrap().save();
+        return bincode::serialize(&state).unwrap();
+    }
+}
+
+#[wasm_bindgen]
+pub fn load_state(state: Vec<u8>){
+    unsafe {
+        match bincode::deserialize(&state) {
+            Ok(deser) =>  {
+                let save: cpu::SaveState = deser;
+                GAMEBOY.as_mut().unwrap().load(&save);
+            }
+            _ => panic!("Failed to load savestate")
+        }
+    }
+}

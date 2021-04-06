@@ -1,8 +1,11 @@
+import localForage from 'localforage';
 interface Wasm {
     button_down: Function,
     button_up: Function,
     update: Function,
     init: Function,
+    save_state: Function,
+    load_state: Function,
 }
 
 export enum Button {
@@ -14,6 +17,10 @@ export enum Button {
     DRight,
     A,
     B
+}
+interface SaveState {
+    data: Uint8Array,
+    date: number,
 }
 
 export default class Emulator {
@@ -29,6 +36,7 @@ export default class Emulator {
 
     load_rom(data: Uint8Array) {
         let w: any = window;
+        w.lf = localForage
         if (!w.has_loaded) {
             this.wasm?.init(data);
             w.has_loaded = true;
@@ -42,6 +50,36 @@ export default class Emulator {
     }
     button_up(b: Button): number {
         return this.wasm?.button_up(b);
+    }
+
+    make_save_state() {
+        let data: Uint8Array = this.wasm?.save_state();
+        let save: SaveState = {
+            date: Date.now(),
+            data
+        }
+        localForage.getItem("saves").then((saves: any) => {
+            // saves: Array<SaveState> | null
+            if (saves === null) {
+                saves = []
+            }
+            saves.push(save)
+            localForage.setItem("saves", saves)
+        })
+    }
+
+    load_save_state() {
+        localForage.getItem("saves").then((saves: any) => {
+            // saves: Array<SaveState> | null
+            if (saves === null) {
+                console.log("No Saves to load from");
+                return
+            }
+            let save = saves[saves.length - 1];
+            console.log("Loading save ", save);
+            this.wasm?.load_state(save.data);
+        })
+
     }
 
     update() {

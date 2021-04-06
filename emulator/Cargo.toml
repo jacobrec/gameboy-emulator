@@ -41,9 +41,19 @@ wasm-bindgen-test = "0.3.13"
 
 [profile.release]
 #debug = true
-# Tell `rustc` to optimize for small code size.
+# [3, 2, "s", "z"] // from largest to smallest sizes
+codegen-units = 1
 opt-level = 3
 
 [package.metadata.wasm-pack.profile.release]
 #wasm-opt = ['-O4', '-g']
 wasm-opt = ['-O4']
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+debug-js-glue = false
+demangle-name-section = true
+dwarf-debug-info = false
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+debug-js-glue = true
+demangle-name-section = true
+dwarf-debug-info = false

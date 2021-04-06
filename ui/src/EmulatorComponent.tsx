@@ -22,7 +22,6 @@ export const EmulatorScreen = (props: EmulatorProps) => {
     }
 
     useEffect(() => {
-        // let inter = setInterval(() => {emulator.update();}, 10);
         let d: Document = document;
         let c: HTMLElement | null = d.getElementById(id) as HTMLCanvasElement;
         let ctx: Context = null;
@@ -52,6 +51,8 @@ export const EmulatorScreen = (props: EmulatorProps) => {
     if (romdata.length > 0) {
         console.log(romdata)
         emulator.load_rom(romdata)
+        let w: any = window;
+        w.emu = emulator;
     }
 
     return (
