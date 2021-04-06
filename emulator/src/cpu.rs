@@ -2375,8 +2375,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xF0);
         test_cpu.tick();
 
@@ -2404,8 +2404,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), true);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();
@@ -2434,8 +2434,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0x01);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();
@@ -2464,8 +2464,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), true);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();
