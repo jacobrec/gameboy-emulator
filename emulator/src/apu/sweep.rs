@@ -19,7 +19,7 @@ impl Sweep {
   pub fn read(&self) -> u8 {
     let direction: u8 = self.direction << 3;
     let time: u8 = self.time << 4;
-    0x80 | direction | time | self.shift
+    direction | time | self.shift
   }
 
   pub fn write(&mut self, value: u8) {

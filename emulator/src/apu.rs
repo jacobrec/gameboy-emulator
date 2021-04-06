@@ -158,11 +158,11 @@ impl APU {
             self.frame_sequencer_count = 8192;
             match self.frame_sequencer {
                 0 | 4 => {
-                    // Length counter is cloked on each other step
+                    // Length counter is clocked on each other step
                     self.clock_length();
                 }
                 2 | 6 => {
-                    // Length counter is cloked on each other step
+                    // Length counter is clocked on each other step
                     self.clock_length();
                     // Sweep generator clocked on every 2nd and 6th step
                     self.channel1.sweep_step();
@@ -183,7 +183,7 @@ impl APU {
 
         self.down_sample_count -= 1;
         if self.down_sample_count <= 0 {
-            self.down_sample_count = 87;
+            self.down_sample_count = 95;
             let mut bufferin_s02: f32 = 0.5;
             let mut bufferin_s01: f32;
 
@@ -238,6 +238,8 @@ impl APU {
             // Fill buffer with mixed sample
             self.audio_buffer[self.audio_buffer_position + 1] = bufferin_s02;
             self.audio_buffer_position += 2;
+
+            println!("{:?}", self.audio_buffer);
         }
 
         // Reset buffer position if we reach max

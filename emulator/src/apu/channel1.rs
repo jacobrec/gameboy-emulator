@@ -38,7 +38,7 @@ pub struct Channel1 {
 	pub sweep: Sweep,
 	sweep_enable: bool,
 	sweep_shadow: u16,
-	sweep_time: i32,
+	sweep_time: u8,
 	volume: u8,
 	pub wave_pattern: Pattern,
 }
@@ -121,7 +121,7 @@ impl Channel1 {
 		self.frequency_count -= 1;
 		if self.frequency_count <= 0 {
 			self.frequency_count = (2048 - self.frequency_load as i32) * 4;
-			self.sequence_pointer = (self.sequence_pointer + 1) & 0x07;
+			self.sequence_pointer = (self.sequence_pointer + 1) % 8;
 		}
 		if self.enabled && self.dac_enabled {
 			self.output_volume = self.volume;
@@ -155,15 +155,15 @@ impl Channel1 {
 			if self.envelope.length == 0 {
 				self.envelope.length = 8;
 			}
-			println!("Envelope length: {}", self.envelope.length);
+			// println!("Envelope length: {}", self.envelope.length);
 			if self.envelope.length > 0 {
-				println!("Envelope running & Envelope length > 0");
-				println!("Volume is: {}", self.volume);
+				// println!("Envelope running & Envelope length > 0");
+				// println!("Volume is: {}", self.volume);
 				if self.envelope.direction == 1 && self.volume < 15 {
-					println!("Increasing volume");
+					// println!("Increasing volume");
 					self.volume += 1;
 				} else if self.envelope.direction == 0 && self.volume > 0 {
-					println!("Decreasing volume");
+					// println!("Decreasing volume");
 					self.volume -= 1;
 				}
 			}
@@ -195,32 +195,52 @@ impl Channel1 {
 
 	// NR11 Sweep register tick
 	pub fn sweep_step(&mut self) {
-		self.sweep_time -= 1;
-		if self.sweep_time <= 0 {
-			self.sweep_time = self.sweep.time as i32;
-			if self.sweep_time == 0 {
-				self.sweep_time = 8;
-			}
-			if self.sweep_enable && self.sweep_time > 0 {
-				let new_frequency = self.sweep_calculation();
-				if new_frequency <= 2047 && self.sweep.shift > 0 {
-					self.sweep_shadow = new_frequency;
-					self.frequency_load = new_frequency;
-					self.sweep_calculation();
-				}
+		// Initial sweep is 0
+		if self.sweep.time == 0 {
+			return;
+		}
+
+		if self.sweep_time > 0 {
+			self.sweep_time -= 1;
+		} else {
+			self.sweep_time = self.sweep.time;
+			let new_frequency = self.sweep_calculation();
+			if new_frequency <= 2047 && self.sweep.shift > 0 {
+				// Sweep shadow is X(t-1)
+				self.sweep_shadow = new_frequency;
+				self.frequency_load = new_frequency;
 				self.sweep_calculation();
 			}
 		}
+
+		// self.sweep_time -= 1;
+		// if self.sweep_time <= 0 {
+		// 	self.sweep_time = self.sweep.time as i32;
+
+		// 	if self.sweep_enable && self.sweep_time > 0 {
+		// 		let new_frequency = self.sweep_calculation();
+		// 		if new_frequency <= 2047 && self.sweep.shift > 0 {
+		// 			// Sweep shadow is X(t-1)
+		// 			self.sweep_shadow = new_frequency;
+		// 			self.frequency_load = new_frequency;
+		// 			self.sweep_calculation();
+		// 		}
+		// 		self.sweep_calculation();
+		// 	}
+		// }
 	}
 
 	// Calculates new frequency based on sweep shift.
+	// X(t) = X(t-1) +/- X(t-1)/2^n
 	fn sweep_calculation(&mut self) -> u16 {
-		let mut new_frequency: u16 = 0;
-		new_frequency = self.sweep_shadow >> self.sweep.shift;
+		// X(t-1)/2^n
+		let mut new_frequency = self.sweep_shadow >> self.sweep.shift;
 
 		new_frequency = if self.sweep.direction == 0 {
+			// Sweep direction 0 is increase
 			self.sweep_shadow + new_frequency
 		} else {
+			// Sweep direction 1 is decrease
 			self.sweep_shadow - new_frequency
 		};
 
@@ -244,7 +264,7 @@ impl Channel1 {
 		self.envelope.length = self.envelope.length_load as i32;
 		self.volume = self.envelope.initial_volume;
 		self.sweep_shadow = self.frequency_load;
-		self.sweep_time = self.sweep.time as i32;
+		self.sweep_time = self.sweep.time;
 
 		if self.sweep_time == 0 {
 			self.sweep_time = 8;
@@ -255,14 +275,14 @@ impl Channel1 {
 		}
 	}
 
-	pub fn dac_output(&self) -> f32 {
-		if self.dac_enabled && self.enabled {
-			let vol_output = (self.volume
-				* WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize])
-				as f32;
-			vol_output / 7.5 - 1.0
-		} else {
-			0.0
-		}
-	}
+	// pub fn dac_output(&self) -> f32 {
+	// 	if self.dac_enabled && self.enabled {
+	// 		let vol_output = (self.volume
+	// 			* WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize])
+	// 			as f32;
+	// 		vol_output / 7.5 - 1.0
+	// 	} else {
+	// 		0.0
+	// 	}
+	// }
 }
