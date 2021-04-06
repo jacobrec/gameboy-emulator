@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import Emulator from './Emulator';
+import Emulator, { Button } from './Emulator';
+import { EmulatorScreen } from './EmulatorComponent';
 import { useForm } from 'react-hook-form';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
@@ -240,9 +241,7 @@ function ResponsiveDrawer(props: any) {
 }
 
 function App() {
-  const [count, setCount] = useState(0);
   const [emulator, setEmulator] = useState(new Emulator());
-  const [intervals, setIntervals] = useState(false);
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
   const [keyPress, setKeyPress] = useState('up');
@@ -278,16 +277,8 @@ function App() {
 
 
 
-  if (!intervals) {
-    setIntervals(true);
-    setInterval(() => {
-      emulator.update();
-    }, 10);
-    const checker = () => {
-      setCount(emulator.get_screen())
-      requestAnimationFrame(checker);
-    };
-    requestAnimationFrame(checker);
+  const callback = (downer: Function, upper: Function) => {
+    downer(Button.DUp)
   }
 
   return (
@@ -302,7 +293,11 @@ function App() {
         alignItems="center"
       >
         <Grid item>
-          <Screen keyPressed={keyPress} buttons={controls}/>
+          {
+             (rom.constructor === File) ?
+              <EmulatorScreen id={"gb-emulator"} callbackRegister={callback} rom={rom} />
+              : <p>Waiting for ROM</p>
+          }
         </Grid>
         <Divider/>
         <Grid item>

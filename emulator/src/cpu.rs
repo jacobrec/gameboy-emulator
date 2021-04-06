@@ -89,6 +89,9 @@ impl CPU {
     pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.bus.get_screen()
     }
+    pub fn get_canvas(&self) -> crate::ppu::Canvas {
+        return self.bus.get_canvas()
+    }
 
     pub fn new(mut bus: crate::bus::Bus) -> Self {
         let recievables = Recievables::new();

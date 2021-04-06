@@ -73,6 +73,9 @@ impl Bus {
     pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.ppu.get_screen()
     }
+    pub fn get_canvas(&self) -> crate::ppu::Canvas {
+        return self.ppu.get_canvas()
+    }
 
     pub fn with_bios(rom: Cartridge, bios: Vec<u8>) -> Self {
         let mut bus = Self::new(rom);

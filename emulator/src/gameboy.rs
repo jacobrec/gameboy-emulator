@@ -64,6 +64,9 @@ impl Gameboy {
     pub fn get_screen(&self) -> &crate::ppu::Screen {
         return self.cpu.get_screen()
     }
+    pub fn get_canvas(&self) -> crate::ppu::Canvas {
+        return self.cpu.get_canvas()
+    }
 
     pub fn print_cpu_state(&self) {
         self.cpu.print_state();
