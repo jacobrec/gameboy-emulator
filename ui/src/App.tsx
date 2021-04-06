@@ -127,29 +127,6 @@ function GamePad() {
   );
 }
 
-function Screen(props: any) {
-
-  const swtch = (keyString: any) => {
-    switch(keyString) {
-      case props.buttons.up: return "UP";
-      case props.buttons.left: return "LEFT";
-      case props.buttons.right: return "RIGHT";
-      case props.buttons.down: return "DOWN";
-      case props.buttons.a: return "A";
-      case props.buttons.b: return "B";
-      case props.buttons.start: return "START";
-      case props.buttons.select: return "SELECT";
-
-      default: return " "
-    }
-  };
-
-  return (
-    <div className="screen">
-      <h1>Key Pressed: {swtch(props.keyPressed)}</h1>
-    </div>
-  );
-}
 
 function ResponsiveDrawer(props: any) {
   const classes = useStyles();
@@ -314,11 +291,13 @@ function App() {
         alignItems="center"
       >
         <Grid item>
+          <div className="screen">
           {
              (rom.constructor === File) ?
               <EmulatorScreen id={"gb-emulator"} rom={rom} />
               : <p>Waiting for ROM</p>
           }
+          </div>
         </Grid>
         <Divider/>
         <Grid item>
