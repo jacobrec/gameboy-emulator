@@ -11,16 +11,20 @@ enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
 
-#[derive(Debug,Clone,Copy,Serialize, Deserialize)]
+#[derive(Debug,Clone,Serialize, Deserialize)]
 pub struct DebugOptions {
     pub debug_print: bool,
     pub debug_step: bool,
+    pub break_points: Vec<u16>, // wait for enter when pc is here
+    pub watch_points: Vec<u16>, // wait for enter when this memory is written to
 }
 impl DebugOptions {
     pub fn default() -> Self {
         Self {
             debug_print: true,
             debug_step: false,
+            break_points: Vec::new(),
+            watch_points: Vec::new(),
         }
     }
 }
@@ -58,7 +62,7 @@ impl SaveState {
             pc: cpu.pc,
             bus: cpu.bus.clone(),
             cycles: cpu.cycles,
-            debug_options: cpu.debug_options,
+            debug_options: cpu.debug_options.clone(),
             recievables,
             ime: cpu.ime,
         }
@@ -77,7 +81,7 @@ impl SaveState {
             registers: self.registers.clone(),
             cycles: self.cycles,
             bus,
-            debug_options: self.debug_options,
+            debug_options: self.debug_options.clone(),
             recievables,
             ime: self.ime,
         }
@@ -324,10 +328,22 @@ impl CPU {
         self.interrupt();
         let instruction = self.next_op();
         self.execute(instruction);
-        if self.debug_options.debug_step {
-            use std::io::{self, BufRead};
-            let stdin = io::stdin();
-            let line1 = stdin.lock().lines().next().unwrap().unwrap();
+        if cfg!(debug_assertions) {
+            if self.debug_options.break_points.contains(&self.pc) {
+                self.wait_for_enter();
+            } else if self.debug_options.debug_step {
+                self.wait_for_enter();
+            }
+        }
+    }
+
+    fn wait_for_enter(&mut self) {
+        use std::io::{self, BufRead};
+        let stdin = io::stdin();
+        let line1 = stdin.lock().lines().next().unwrap().unwrap();
+        self.debug_options.debug_step = true;
+        if line1.contains("run") {
+            self.debug_options.debug_step = false;
         }
     }
 
@@ -378,6 +394,12 @@ impl CPU {
     }
 
     fn write(&mut self, loc: u16, val: u8) {
+        if cfg!(debug_assertions) {
+            if self.debug_options.watch_points.contains(&loc) {
+                self.wait_for_enter();
+            }
+        }
+
         let data = self.bus.write(loc, val);
         self.clock();
     }
@@ -678,7 +700,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        if self.debug_options.debug_print {
+        if cfg!(debug_assertions) && self.debug_options.debug_print {
             print!("{:<15} => ", format!("{}", op));
         }
         fn isLoc16Bit (l: Location) -> bool {
