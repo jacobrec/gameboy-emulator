@@ -332,11 +332,14 @@ impl CPU {
     }
 
     pub fn print_state(&self) {
-        println!("CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
-                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}",
+        print!("CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
+                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}|[HL]:{:02X}",
                  self.cycles, self.pc, self.sp, self.f(), self.a(),
-                 self.b(), self.c(), self.d(), self.e(), self.h(), self.l()
-        )
+                 self.b(), self.c(), self.d(), self.e(), self.h(), self.l(),
+                 self.bus.read(self.hl())
+        );
+        println!("");
+
     }
 
     pub fn print_alt_state(&mut self) {
@@ -1196,12 +1199,14 @@ impl CPU {
 #[cfg(test)]
 mod test {
     use crate::bus::Bus;
-    use crate::gameboy::ROM;
+    use crate::cartridge::Cartridge;
     use crate::cpu::{CPU, Flag};
     use crate::instruction::{Register16Loc, RegisterLoc};
 
     fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
-        CPU::new(Bus::new(ROM::from_data(instruction_set)))
+        let mut cpu = CPU::new(Bus::new(Cartridge::test(instruction_set)));
+        cpu.debug_options.debug_print = true;
+        cpu
     }
 
     #[test]
@@ -2252,10 +2257,11 @@ mod test {
         let rom_data = vec![0xCB,0x7F,0xCB,0x65,0xCB,0x46,0xCB,0x4E];
         let mut test_cpu = create_test_cpu(rom_data);
         
-        test_cpu.set_register(RegisterLoc::A, 0x80);
-        test_cpu.set_register(RegisterLoc::L, 0xEF);
+        test_cpu.set_register(RegisterLoc::A, 0x80); // 0b10000000
+        test_cpu.set_register(RegisterLoc::L, 0xEF); // 0b11101111
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 2 CYCLES
         assert_eq!(test_cpu.cycles, 8);
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
@@ -2263,6 +2269,7 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 2 CYCLES
         assert_eq!(test_cpu.cycles, 16);
         assert_eq!(test_cpu.get_flag(Flag::Zero), true);
@@ -2272,19 +2279,21 @@ mod test {
         // Reset HL
         test_cpu.set_register(RegisterLoc::H, 0x00);
         test_cpu.set_register(RegisterLoc::L, 0x00);
-        // 1 CYCLES
-        test_cpu.set_register(RegisterLoc::MemHL, 0xFE);
+        // ROM is read only
 
         test_cpu.tick();
+        test_cpu.print_state();
+        // ROM[0] = 0xCB => 0b11001011
         // 3 CYCLES
-        assert_eq!(test_cpu.cycles, 32);
-        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 3 CYCLES
-        assert_eq!(test_cpu.cycles, 44);
+        assert_eq!(test_cpu.cycles, 40);
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
@@ -2310,8 +2319,8 @@ mod test {
         assert_eq!(test_cpu.get_register(RegisterLoc::L), 0xBB);
 
         // Reset HL
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         // 1 CYCLE
         test_cpu.set_register(RegisterLoc::MemHL, 0x00);
 
