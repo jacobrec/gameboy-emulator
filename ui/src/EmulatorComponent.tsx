@@ -5,16 +5,12 @@ import Emulator, { Button } from './Emulator';
 
 type EmulatorProps = {
     id: string,
-    callbackRegister: (down: (key: Button) => void, up: (key: Button) => void) => void,
     rom: any,
 }
 export const EmulatorScreen = (props: EmulatorProps) => {
-    let w: any = window;
     let [romdata, setRomData] = useState(new Uint8Array())
     let [emulator, setEmulator] = useState(new Emulator())
-    let { id, callbackRegister, rom } = props;
-    let pressDown = (key: Button) => {}
-    let pressUp = (key: Button) => {}
+    let { id, rom } = props;
 
 
     if (rom.constructor === File && romdata.length == 0) {
@@ -26,7 +22,6 @@ export const EmulatorScreen = (props: EmulatorProps) => {
     }
 
     useEffect(() => {
-        // let inter = setInterval(() => {emulator.update();}, 10);
         let d: Document = document;
         let c: HTMLElement | null = d.getElementById(id) as HTMLCanvasElement;
         let ctx: Context = null;
@@ -44,7 +39,6 @@ export const EmulatorScreen = (props: EmulatorProps) => {
             let data = emulator.update();
             imd.data.set(new Uint8ClampedArray(data.buffer));
             ctx.putImageData(imd, 0, 0);
-            w.data = data;
             ani = requestAnimationFrame(checker);
         };
         ani = requestAnimationFrame(checker);
@@ -57,9 +51,10 @@ export const EmulatorScreen = (props: EmulatorProps) => {
     if (romdata.length > 0) {
         console.log(romdata)
         emulator.load_rom(romdata)
+        let w: any = window;
+        w.emu = emulator;
     }
 
-    callbackRegister(pressDown, pressUp);
     return (
         <canvas id={id} width={160} height={144}></canvas>
     )

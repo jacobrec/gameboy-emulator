@@ -1,14 +1,14 @@
 use crate::cartridge::Cartridge;
 use crate::cpu::CPU;
 
-pub const BUT_A: u8 = 0b1;
-pub const BUT_B: u8 = 0b10;
-pub const BUT_LEFT: u8 = 0b100;
-pub const BUT_RIGHT: u8 = 0b1000;
-pub const BUT_UP: u8 = 0b10000;
-pub const BUT_DOWN: u8 = 0b100000;
-pub const BUT_START: u8 = 0b1000000;
-pub const BUT_SELECT: u8 = 0b10000000;
+pub const BUT_START: u8 = 0b1;
+pub const BUT_SELECT: u8 = 0b10;
+pub const BUT_UP: u8 = 0b100;
+pub const BUT_DOWN: u8 = 0b1000;
+pub const BUT_LEFT: u8 = 0b10000;
+pub const BUT_RIGHT: u8 = 0b100000;
+pub const BUT_A: u8 = 0b1000000;
+pub const BUT_B: u8 = 0b10000000;
 
 pub struct GameboyBuilder {
     rom: Option<Cartridge>,

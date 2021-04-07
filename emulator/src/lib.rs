@@ -1,13 +1,13 @@
-mod utils;
-mod cpu;
 mod apu;
 mod bus;
-mod timer;
-mod ppu;
-mod instruction;
-mod gameboy;
-mod cpu_recievable;
 mod cartridge;
+mod cpu;
+mod cpu_recievable;
+mod gameboy;
+mod instruction;
+mod ppu;
+mod timer;
+mod utils;
 
 use wasm_bindgen::prelude::*;
 
@@ -15,41 +15,59 @@ use wasm_bindgen::prelude::*;
 // frontend for the gb object, and just get that back each update call
 static mut GAMEBOY: Option<gameboy::Gameboy> = None;
 
-
 #[wasm_bindgen]
 pub fn init(romdata: Vec<u8>) {
     utils::set_panic_hook();
     let gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
         .build();
-    unsafe {
-        GAMEBOY = Some(gameboy)
-    }
+    unsafe { GAMEBOY = Some(gameboy) }
 }
 
 #[wasm_bindgen]
 pub fn update(x: usize) -> Vec<u32> {
     for _ in 0..x {
         unsafe {
-          GAMEBOY.as_mut().unwrap().tick();
+            GAMEBOY.as_mut().unwrap().tick();
         }
     }
+    unsafe { GAMEBOY.as_mut().unwrap().get_canvas().to_vec() }
+}
+
+#[wasm_bindgen]
+pub fn get_audio_buffer() -> Vec<f32> {
+    unsafe { GAMEBOY.as_mut().unwrap().get_audio_buffer().to_vec() }
+}
+
+#[wasm_bindgen]
+pub fn button_down(b: isize) {
+    let bt = 1 << b; // ensure Emulator.ts and gameboy.rs have buttons in the same order
+    unsafe { GAMEBOY.as_mut().unwrap().button_down(bt) }
+}
+
+#[wasm_bindgen]
+pub fn button_up(b: isize) {
+    let bt = 1 << b; // ensure Emulator.ts and gameboy.rs have buttons in the same order
+    unsafe { GAMEBOY.as_mut().unwrap().button_up(bt) }
+}
+
+#[wasm_bindgen]
+pub fn save_state() -> Vec<u8> {
     unsafe {
-        GAMEBOY.as_mut().unwrap().get_canvas().to_vec()
+        let state = GAMEBOY.as_mut().unwrap().save();
+        return bincode::serialize(&state).unwrap();
     }
 }
 
 #[wasm_bindgen]
-pub fn press_button(b: isize) {
-    match b {
-        0 => (), // Start
-        1 => (), // Select
-        2 => (), // DUp
-        3 => (), // DDown
-        4 => (), // DLeft
-        5 => (), // DRight
-        6 => (), // A
-        7 => (), // B
-        _ => panic!("Unknown button pressed")
+pub fn load_state(state: Vec<u8>) {
+    unsafe {
+        match bincode::deserialize(&state) {
+            Ok(deser) => {
+                let save: cpu::SaveState = deser;
+                GAMEBOY.as_mut().unwrap().load(&save);
+            }
+            _ => panic!("Failed to load savestate"),
+        }
     }
 }

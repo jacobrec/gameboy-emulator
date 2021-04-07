@@ -118,6 +118,7 @@ JoypadMovement:
     ld A, [$FF00]
     bit 1, A
     jr Z, MoveLeft
+    jr DoneMove
 MoveRight:
     ld A, [$FE01]               ; sprite 0 x loc
     inc A
