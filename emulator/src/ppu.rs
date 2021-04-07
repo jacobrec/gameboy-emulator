@@ -325,27 +325,29 @@ impl PPU {
     }
 
 
-    fn overlay_sprites(&mut self) {
+    fn overlay_sprites(&mut self, mut dt: [PixelData; 8]) -> [PixelData; 8]{
         let y = self.registers[LY];
         let x = self.lx;
-        for s in self.active_sprites.iter() {
-            if let Some(s) = s {
-                let s = self.oam_ram[*s];
-                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
-                    let ey = 16 + y as isize - s.pos_y as isize;
-                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
 
+        for o in 0..8 {
+            for s in self.active_sprites.iter() {
+                if let Some(s) = s {
+                    let s = self.oam_ram[*s];
+                    if s.pos_x + o == x + 8 { // TODO: this will not render sprites that are off left edge
+                        let ey = 16 + y as isize - s.pos_y as isize;
+                        let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
 
-                    for i in 0..8 {
-                        if sp[i].value != 0 {
-                            if let Some(e) = self.pixel_fifo.get_mut(i) {
-                                *e = sp[i];
+                        for i in 0..8 {
+                            if sp[i].value != 0 {
+                                dt[i] = sp[i];
                             }
                         }
                     }
                 }
             }
+
         }
+        return dt;
 
     }
 
@@ -379,9 +381,10 @@ impl PPU {
             //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
-            let r = Some(self.decode_tile(loc, (y & 0b111) as usize));
+            let dt = self.decode_tile(loc, (y & 0b111) as usize);
+            let dt1 = self.overlay_sprites(dt);
             self.lx += 8;
-            r
+            Some(dt1)
         } else {
             None
         }
@@ -469,7 +472,6 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
-                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
