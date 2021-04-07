@@ -9,12 +9,14 @@ pub struct DebugOptions {
     pub debug_step: bool,
     pub break_points: Vec<u16>, // wait for enter when pc is here
     pub watch_points: Vec<u16>, // wait for enter when this memory is written to
+    pub pause_on_branch: bool,
 }
 impl DebugOptions {
     pub fn default() -> Self {
         Self {
             debug_print: true,
             debug_step: false,
+            pause_on_branch: false,
             break_points: Vec::new(),
             watch_points: Vec::new(),
         }
@@ -41,8 +43,37 @@ pub fn runline(cpu: &mut CPU) {
             Some("b") | Some("break") | Some("breakpoints") => manage_datapoints(&mut cpu.debug_options.break_points, line_data, "break"),
             Some("w") | Some("watch") | Some("watchpoints") => manage_datapoints(&mut cpu.debug_options.watch_points, line_data, "watch"),
             Some("h") | Some("help") => help(),
+            Some("set") => manage_settings(line_data, &mut cpu.debug_options),
             Some(_) => println!("Unknown Command. Try help")
         }
+    }
+}
+
+fn with_bool<F>(mut f: F, s: &str) where  F: FnMut(bool) {
+    match s {
+        "off" | "0" | "false" => f(false),
+        "on" | "1" | "true" => f(true),
+        _ => println!("Failed to parse bool"),
+    }
+}
+fn with_option_none_is_true(b: &mut bool, opt: Option<&str>) {
+    match opt {
+        Some(s) => with_bool(|x| *b = x, s),
+        None => *b = true,
+    }
+}
+
+fn manage_settings(mut options: std::str::SplitWhitespace, dbo: &mut DebugOptions) {
+    match options.next() {
+        Some("pause_on_break") => with_option_none_is_true(&mut dbo.pause_on_branch, options.next()),
+        Some("cpu_print") => with_option_none_is_true(&mut dbo.debug_print, options.next()),
+        Some("help") => {
+            println!("Sets a value. Examples:");
+            println!("  set pause_on_break");
+            println!("  set cpu_print off");
+        },
+        Some(_) => println!("Unknown set argument. Try set help"),
+        None => println!("Set requires an argument. Try set help"),
     }
 }
 
@@ -82,6 +113,7 @@ fn help() {
     println!("  breakpoints");
     println!("  step");
     println!("  continue");
+    println!("  set help");
     println!("  help");
 }
 
@@ -90,7 +122,6 @@ fn with_number<F>(mut f: F, s: &str) where  F: FnMut(u16) {
         Some(i) => f(i),
         None => println!("Failed to parse u16 number from: [{}]", s)
     }
-
 }
 
 fn parse_number16(s: &str) -> Option<u16> {
