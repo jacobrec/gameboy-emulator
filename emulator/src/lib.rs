@@ -1,4 +1,5 @@
 mod utils;
+mod debugger;
 mod cpu;
 mod apu;
 mod bus;

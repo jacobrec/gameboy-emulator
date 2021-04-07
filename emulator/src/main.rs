@@ -6,6 +6,7 @@ use std::thread;
 
 
 mod utils;
+mod debugger;
 mod cartridge;
 mod cpu;
 mod timer;
@@ -201,7 +202,7 @@ fn main() {
 
     let args = get_args();
     let d = args.display;
-    let mut db = cpu::DebugOptions::default();
+    let mut db = debugger::DebugOptions::default();
     let saver: Saver = Arc::new(Mutex::new(VecDeque::new()));
 
     gameboy.button_down(gameboy::BUT_RIGHT);
