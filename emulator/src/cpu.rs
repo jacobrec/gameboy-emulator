@@ -1,50 +1,21 @@
-<<<<<<< HEAD
 use crate::cpu_recievable::{CpuRecievable, CpuRecievable::*, Interrupt, Recievables};
+use crate::debugger::DebugOptions;
 use crate::instruction::{
     Instruction, JmpFlag, Jump, Location, Offset, Register16Loc, RegisterLoc,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
-use std::rc::Rc;
-=======
-use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
-use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
-use crate::debugger::DebugOptions;
-use serde::{Serialize, Deserialize};
->>>>>>> master
 
 pub enum Rotate {
     Right,
     Left,
 }
 
-<<<<<<< HEAD
-enum Flag {
+pub enum Flag {
     Zero,
     AddSub,
     HalfCarry,
     Carry,
 }
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct DebugOptions {
-    pub debug_print: bool,
-    pub debug_step: bool,
-}
-impl DebugOptions {
-    pub fn default() -> Self {
-        Self {
-            debug_print: true,
-            debug_step: false,
-        }
-    }
-}
-=======
-pub enum Flag {
-    Zero, AddSub, HalfCarry, Carry
-}
-
->>>>>>> master
 
 pub struct CPU {
     pub(crate) registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
@@ -188,44 +159,43 @@ impl CPU {
         cpu
     }
 
-<<<<<<< HEAD
-    fn a(&self) -> u8 {
+    pub fn a(&self) -> u8 {
         self.registers[6]
     }
-    fn b(&self) -> u8 {
+    pub fn b(&self) -> u8 {
         self.registers[4]
     }
-    fn c(&self) -> u8 {
+    pub fn c(&self) -> u8 {
         self.registers[5]
     }
-    fn d(&self) -> u8 {
+    pub fn d(&self) -> u8 {
         self.registers[2]
     }
-    fn e(&self) -> u8 {
+    pub fn e(&self) -> u8 {
         self.registers[3]
     }
-    fn f(&self) -> u8 {
+    pub fn f(&self) -> u8 {
         self.registers[7]
     }
-    fn h(&self) -> u8 {
+    pub fn h(&self) -> u8 {
         self.registers[0]
     }
-    fn l(&self) -> u8 {
+    pub fn l(&self) -> u8 {
         self.registers[1]
     }
-    fn af(&self) -> u16 {
+    pub fn af(&self) -> u16 {
         ((self.a() as u16) << 8) | self.f() as u16
     }
-    fn bc(&self) -> u16 {
+    pub fn bc(&self) -> u16 {
         ((self.b() as u16) << 8) | self.c() as u16
     }
-    fn de(&self) -> u16 {
+    pub fn de(&self) -> u16 {
         ((self.d() as u16) << 8) | self.e() as u16
     }
-    fn hl(&self) -> u16 {
+    pub fn hl(&self) -> u16 {
         ((self.h() as u16) << 8) | self.l() as u16
     }
-    fn pc(&self) -> u16 {
+    pub fn pc(&self) -> u16 {
         self.pc
     }
 
@@ -270,35 +240,6 @@ impl CPU {
         self.set_h((v >> 8) as u8);
         self.set_l((v & 0xFF) as u8)
     }
-=======
-    pub fn a(&self) -> u8 {self.registers[6]}
-    pub fn b(&self) -> u8 {self.registers[4]}
-    pub fn c(&self) -> u8 {self.registers[5]}
-    pub fn d(&self) -> u8 {self.registers[2]}
-    pub fn e(&self) -> u8 {self.registers[3]}
-    pub fn f(&self) -> u8 {self.registers[7]}
-    pub fn h(&self) -> u8 {self.registers[0]}
-    pub fn l(&self) -> u8 {self.registers[1]}
-    pub fn af(&self) -> u16 {((self.a() as u16) << 8) | self.f() as u16}
-    pub fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
-    pub fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
-    pub fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
-    pub fn pc(&self) -> u16 {self.pc}
-
-    fn set_a(&mut self, v: u8) {self.registers[6] = v}
-    fn set_b(&mut self, v: u8) {self.registers[4] = v}
-    fn set_c(&mut self, v: u8) {self.registers[5] = v}
-    fn set_d(&mut self, v: u8) {self.registers[2] = v}
-    fn set_e(&mut self, v: u8) {self.registers[3] = v}
-    fn set_f(&mut self, v: u8) {self.registers[7] = v}
-    fn set_h(&mut self, v: u8) {self.registers[0] = v}
-    fn set_l(&mut self, v: u8) {self.registers[1] = v}
-
-    fn set_af(&mut self, v: u16) {self.set_a((v >> 8) as u8); self.set_f((v & 0xFF) as u8)}
-    fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
-    fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
-    fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
->>>>>>> master
 
     pub fn set_debug_options(&mut self, b: DebugOptions) {
         self.debug_options = b
@@ -453,10 +394,9 @@ impl CPU {
     }
 
     pub fn print_state(&self) {
-<<<<<<< HEAD
-        println!(
+        print!(
             "CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
-                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}",
+                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}|[HL]:{:02X}",
             self.cycles,
             self.pc,
             self.sp,
@@ -467,18 +407,10 @@ impl CPU {
             self.d(),
             self.e(),
             self.h(),
-            self.l()
-        )
-=======
-        print!("CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
-                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}|[HL]:{:02X}",
-                 self.cycles, self.pc, self.sp, self.f(), self.a(),
-                 self.b(), self.c(), self.d(), self.e(), self.h(), self.l(),
-                 self.bus.read(self.hl())
+            self.l(),
+            self.bus.read(self.hl())
         );
         println!("");
-
->>>>>>> master
     }
 
     pub fn print_alt_state(&mut self) {
@@ -1444,21 +1376,13 @@ impl CPU {
 mod test {
     use crate::bus::Bus;
     use crate::cartridge::Cartridge;
-<<<<<<< HEAD
     use crate::cpu::{Flag, CPU};
-    use crate::instruction::{Register16Loc, RegisterLoc};
-
-    fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
-        CPU::new(Bus::new(Cartridge::from_data(instruction_set)))
-=======
-    use crate::cpu::{CPU, Flag};
     use crate::instruction::{Register16Loc, RegisterLoc};
 
     fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
         let mut cpu = CPU::new(Bus::new(Cartridge::test(instruction_set)));
         cpu.debug_options.debug_print = true;
         cpu
->>>>>>> master
     }
 
     #[test]
@@ -2498,14 +2422,8 @@ mod test {
     fn test_bit() {
         let rom_data = vec![0xCB, 0x7F, 0xCB, 0x65, 0xCB, 0x46, 0xCB, 0x4E];
         let mut test_cpu = create_test_cpu(rom_data);
-<<<<<<< HEAD
-        test_cpu.set_register(RegisterLoc::A, 0x80);
-        test_cpu.set_register(RegisterLoc::L, 0xEF);
-=======
-        
         test_cpu.set_register(RegisterLoc::A, 0x80); // 0b10000000
         test_cpu.set_register(RegisterLoc::L, 0xEF); // 0b11101111
->>>>>>> master
 
         test_cpu.tick();
         test_cpu.print_state();
