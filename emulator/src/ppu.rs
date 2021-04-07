@@ -376,7 +376,9 @@ impl PPU {
             //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
-            Some(self.decode_tile(loc, (y & 0b111) as usize))
+            let r = Some(self.decode_tile(loc, (y & 0b111) as usize));
+            self.lx += 8;
+            r
         } else {
             None
         }
@@ -474,7 +476,6 @@ impl PPU {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
                     }
-                    self.lx += 1
                 }
 
                 let new_pixels = self.fetch();
