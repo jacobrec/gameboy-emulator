@@ -158,6 +158,11 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
 
         let savestatefile = "savestate";
         match saver.lock().unwrap().pop_front() {
+            Some(SignalOp::Break) => {
+                gameboy.debug_break();
+                println!("Debug!")
+
+            },
             Some(SignalOp::SaveState) => {
                 let mut f = BufWriter::new(File::create(savestatefile).unwrap());
                 let state = gameboy.save();
@@ -186,14 +191,14 @@ use std::sync::{Mutex,Arc};
 
 enum SignalOp {
     SaveState,
-    LoadState
+    LoadState,
+    Break,
 }
 type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
 
 fn main() {
-    let romdata = open_file("tmp.gb");
     // let romdata = open_file("cpu_instrs.gb");
-    // let romdata = open_file("testrom/jtest.gb");
+    let romdata = open_file("testrom/jtest.gb");
     let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
@@ -226,14 +231,15 @@ fn main() {
         std::process::exit(0x01);
     }).expect("Error setting Ctrl-C handler");
 
-    use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2};
-    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2]).unwrap();
+    use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2, SIGALRM};
+    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
     let saver2 = saver.clone();
     thread::spawn(move || {
         for sig in signals.forever() {
             match sig {
                 SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
                 SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
+                SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
                 _ => println!("Received signal {:?}", sig),
             }
 

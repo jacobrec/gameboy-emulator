@@ -519,14 +519,14 @@ impl PPU {
         let l = loc as usize - 0x8000;
         // print!("PPU Write: [{:04X}] = {:02X}. During mode {:?}\n", loc, val, self.get_mode());
         match self.get_mode() {
-            Mode::VRAM => (),
+            Mode::VRAM => self.vram[l] = val, // TODO: do nothing
             _ => self.vram[l] = val,
         }
     }
     pub fn read(&self, loc: u16) -> u8 {
         let l = loc as usize - 0x8000;
         match self.get_mode() {
-            Mode::VRAM => 0xFF,
+            Mode::VRAM => self.vram[l], // TODO: this should be 0xFF
             _ => self.vram[l],
         }
     }

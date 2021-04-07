@@ -124,9 +124,9 @@ fn print(cpu: &mut CPU, mut options: std::str::SplitWhitespace) {
                             for idx in start..=end {
                                 i += 1;
                                 print!("{:02X} ", cpu.bus.read(idx));
-                                if i % 0x20 == 0 {
+                                if i % 0x10 == 0 {
                                     println!("");
-                                    print!("{:04X}: ", i);
+                                    print!("{:04X}: ", idx + 1);
                                 }
                             }
                             println!("");
