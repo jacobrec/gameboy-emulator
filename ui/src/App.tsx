@@ -88,7 +88,7 @@ function FileSubmission(props: any) {
   );
 }
 
-function GamePad() {
+function GamePad(props: any) {
   return (
     <div className="gamepad">
       <Grid 
@@ -99,27 +99,27 @@ function GamePad() {
       >
         <Grid item>
           <Grid item className="up-button">
-            <UpButton className="direction-pad"/>
+            <UpButton className="direction-pad" onClick={() => props.onClick(Button.DUp)}/>
           </Grid>
           <Grid item className="left-button">
-            <LeftButton className="direction-pad"/>
+            <LeftButton className="direction-pad" onClick={() => props.onClick(Button.DLeft)}/>
           </Grid>
           <Grid item className="right-button">
-            <RightButton className="direction-pad"/>
+            <RightButton className="direction-pad" onClick={() => props.onClick(Button.DRight)}/>
           </Grid>
           <Grid item className="down-button">
-            <DownButton className="direction-pad"/>
+            <DownButton className="direction-pad" onClick={() => props.onClick(Button.DDown)}/>
           </Grid>
         </Grid>
 
         <Grid item>
-          <SelectButtonAngled className="direction-pad"/>
-          <StartButtonAngled className="direction-pad"/>
+          <SelectButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Select)}/>
+          <StartButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Start)}/>
         </Grid>
 
         <Grid item>
-            <AButton className="direction-pad"/>
-            <BButton className="direction-pad"/>
+            <AButton className="direction-pad" onClick={() => props.onClick(Button.A)}/>
+            <BButton className="direction-pad" onClick={() => props.onClick(Button.B)}/>
         </Grid>
        
       </Grid>
@@ -220,7 +220,7 @@ function App() {
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
-  const [keyPress, setKeyPress] = useState('up');
+  // const [keyPress, setKeyPress] = useState('up');
   const [controls, setControls] = useState({
     up:'w', 
     left:'a', 
@@ -255,13 +255,24 @@ function App() {
 
   const handleKeyDown = (event: any) => {
     // console.log(event);
-    setKeyPress(event.key);
+    // setKeyPress(event.key);
     w.button_down(decodeButton(event.key))
   }
   const handleKeyUp = (event: any) => {
     // console.log(event);
-    setKeyPress(event.key);
+    // setKeyPress(event.key);
     w.button_up(decodeButton(event.key))
+  }
+
+  function sleep(ms: any) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+
+  const handleClick = (button: Button) => {
+    // console.log(button);
+    w.button_down(button);
+    sleep(85).then(() => {w.button_up(button);});
   }
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -272,8 +283,6 @@ function App() {
       window.removeEventListener('keyup', handleKeyUp);
     }
   }, [])
-
-
 
 
 
@@ -299,11 +308,13 @@ function App() {
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad />
+          <GamePad onClick={handleClick}/>
         </Grid>
       </Grid>
     </div>
   );
 }
+
+
 
 export default App;
