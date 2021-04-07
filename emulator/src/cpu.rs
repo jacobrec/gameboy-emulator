@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 use crate::cpu_recievable::{CpuRecievable, CpuRecievable::*, Interrupt, Recievables};
 use crate::instruction::{
     Instruction, JmpFlag, Jump, Location, Offset, Register16Loc, RegisterLoc,
@@ -5,12 +6,19 @@ use crate::instruction::{
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::rc::Rc;
+=======
+use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
+use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
+use crate::debugger::DebugOptions;
+use serde::{Serialize, Deserialize};
+>>>>>>> master
 
-enum Rotate {
+pub enum Rotate {
     Right,
     Left,
 }
 
+<<<<<<< HEAD
 enum Flag {
     Zero,
     AddSub,
@@ -31,16 +39,22 @@ impl DebugOptions {
         }
     }
 }
+=======
+pub enum Flag {
+    Zero, AddSub, HalfCarry, Carry
+}
+
+>>>>>>> master
 
 pub struct CPU {
-    registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
-    sp: u16,
-    pc: u16,
-    bus: crate::bus::Bus,
-    cycles: usize,
-    debug_options: DebugOptions,
-    recievables: Recievables,
-    ime: bool,
+    pub(crate) registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
+    pub(crate) sp: u16,
+    pub(crate) pc: u16,
+    pub(crate) bus: crate::bus::Bus,
+    pub(crate) cycles: usize,
+    pub(crate) debug_options: DebugOptions,
+    pub(crate) recievables: Recievables,
+    pub(crate) ime: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -64,7 +78,7 @@ impl SaveState {
             pc: cpu.pc,
             bus: cpu.bus.clone(),
             cycles: cpu.cycles,
-            debug_options: cpu.debug_options,
+            debug_options: cpu.debug_options.clone(),
             recievables,
             ime: cpu.ime,
         }
@@ -83,7 +97,7 @@ impl SaveState {
             registers: self.registers.clone(),
             cycles: self.cycles,
             bus,
-            debug_options: self.debug_options,
+            debug_options: self.debug_options.clone(),
             recievables,
             ime: self.ime,
         }
@@ -174,6 +188,7 @@ impl CPU {
         cpu
     }
 
+<<<<<<< HEAD
     fn a(&self) -> u8 {
         self.registers[6]
     }
@@ -255,6 +270,35 @@ impl CPU {
         self.set_h((v >> 8) as u8);
         self.set_l((v & 0xFF) as u8)
     }
+=======
+    pub fn a(&self) -> u8 {self.registers[6]}
+    pub fn b(&self) -> u8 {self.registers[4]}
+    pub fn c(&self) -> u8 {self.registers[5]}
+    pub fn d(&self) -> u8 {self.registers[2]}
+    pub fn e(&self) -> u8 {self.registers[3]}
+    pub fn f(&self) -> u8 {self.registers[7]}
+    pub fn h(&self) -> u8 {self.registers[0]}
+    pub fn l(&self) -> u8 {self.registers[1]}
+    pub fn af(&self) -> u16 {((self.a() as u16) << 8) | self.f() as u16}
+    pub fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
+    pub fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
+    pub fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
+    pub fn pc(&self) -> u16 {self.pc}
+
+    fn set_a(&mut self, v: u8) {self.registers[6] = v}
+    fn set_b(&mut self, v: u8) {self.registers[4] = v}
+    fn set_c(&mut self, v: u8) {self.registers[5] = v}
+    fn set_d(&mut self, v: u8) {self.registers[2] = v}
+    fn set_e(&mut self, v: u8) {self.registers[3] = v}
+    fn set_f(&mut self, v: u8) {self.registers[7] = v}
+    fn set_h(&mut self, v: u8) {self.registers[0] = v}
+    fn set_l(&mut self, v: u8) {self.registers[1] = v}
+
+    fn set_af(&mut self, v: u16) {self.set_a((v >> 8) as u8); self.set_f((v & 0xFF) as u8)}
+    fn set_bc(&mut self, v: u16) {self.set_b((v >> 8) as u8); self.set_c((v & 0xFF) as u8)}
+    fn set_de(&mut self, v: u16) {self.set_d((v >> 8) as u8); self.set_e((v & 0xFF) as u8)}
+    fn set_hl(&mut self, v: u16) {self.set_h((v >> 8) as u8); self.set_l((v & 0xFF) as u8)}
+>>>>>>> master
 
     pub fn set_debug_options(&mut self, b: DebugOptions) {
         self.debug_options = b
@@ -395,14 +439,21 @@ impl CPU {
         // println!("Instruction: {}", instruction);
         // self.print_state();
         self.execute(instruction);
-        if self.debug_options.debug_step {
-            use std::io::{self, BufRead};
-            let stdin = io::stdin();
-            let line1 = stdin.lock().lines().next().unwrap().unwrap();
+        if cfg!(debug_assertions) {
+            if self.debug_options.break_points.contains(&self.pc) {
+                self.wait_for_enter();
+            } else if self.debug_options.debug_step {
+                self.wait_for_enter();
+            }
         }
     }
 
+    fn wait_for_enter(&mut self) {
+        crate::debugger::runline(self);
+    }
+
     pub fn print_state(&self) {
+<<<<<<< HEAD
         println!(
             "CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
                   B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}",
@@ -418,6 +469,16 @@ impl CPU {
             self.h(),
             self.l()
         )
+=======
+        print!("CLK:{}|PC:0x{:04X}|SP:0x{:04X}|F:0x{:02X}|A:0x{:02X}|\
+                  B:0x{:02X}|C:0x{:02X}|D:0x{:02X}|E:0x{:02X}|H:0x{:02X}|L:0x{:02X}|[HL]:{:02X}",
+                 self.cycles, self.pc, self.sp, self.f(), self.a(),
+                 self.b(), self.c(), self.d(), self.e(), self.h(), self.l(),
+                 self.bus.read(self.hl())
+        );
+        println!("");
+
+>>>>>>> master
     }
 
     pub fn print_alt_state(&mut self) {
@@ -481,6 +542,12 @@ impl CPU {
     }
 
     fn write(&mut self, loc: u16, val: u8) {
+        if cfg!(debug_assertions) {
+            if self.debug_options.watch_points.contains(&loc) {
+                self.wait_for_enter();
+            }
+        }
+
         let data = self.bus.write(loc, val);
         self.clock();
     }
@@ -857,7 +924,7 @@ impl CPU {
     }
 
     fn execute(&mut self, op: Instruction) {
-        if self.debug_options.debug_print {
+        if cfg!(debug_assertions) && self.debug_options.debug_print {
             print!("{:<15} => ", format!("{}", op));
         }
         fn isLoc16Bit(l: Location) -> bool {
@@ -1377,11 +1444,21 @@ impl CPU {
 mod test {
     use crate::bus::Bus;
     use crate::cartridge::Cartridge;
+<<<<<<< HEAD
     use crate::cpu::{Flag, CPU};
     use crate::instruction::{Register16Loc, RegisterLoc};
 
     fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
         CPU::new(Bus::new(Cartridge::from_data(instruction_set)))
+=======
+    use crate::cpu::{CPU, Flag};
+    use crate::instruction::{Register16Loc, RegisterLoc};
+
+    fn create_test_cpu(instruction_set: Vec<u8>) -> CPU {
+        let mut cpu = CPU::new(Bus::new(Cartridge::test(instruction_set)));
+        cpu.debug_options.debug_print = true;
+        cpu
+>>>>>>> master
     }
 
     #[test]
@@ -2421,10 +2498,17 @@ mod test {
     fn test_bit() {
         let rom_data = vec![0xCB, 0x7F, 0xCB, 0x65, 0xCB, 0x46, 0xCB, 0x4E];
         let mut test_cpu = create_test_cpu(rom_data);
+<<<<<<< HEAD
         test_cpu.set_register(RegisterLoc::A, 0x80);
         test_cpu.set_register(RegisterLoc::L, 0xEF);
+=======
+        
+        test_cpu.set_register(RegisterLoc::A, 0x80); // 0b10000000
+        test_cpu.set_register(RegisterLoc::L, 0xEF); // 0b11101111
+>>>>>>> master
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 2 CYCLES
         assert_eq!(test_cpu.cycles, 8);
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
@@ -2432,6 +2516,7 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 2 CYCLES
         assert_eq!(test_cpu.cycles, 16);
         assert_eq!(test_cpu.get_flag(Flag::Zero), true);
@@ -2441,19 +2526,21 @@ mod test {
         // Reset HL
         test_cpu.set_register(RegisterLoc::H, 0x00);
         test_cpu.set_register(RegisterLoc::L, 0x00);
-        // 1 CYCLES
-        test_cpu.set_register(RegisterLoc::MemHL, 0xFE);
+        // ROM is read only
 
         test_cpu.tick();
+        test_cpu.print_state();
+        // ROM[0] = 0xCB => 0b11001011
         // 3 CYCLES
-        assert_eq!(test_cpu.cycles, 32);
-        assert_eq!(test_cpu.get_flag(Flag::Zero), true);
+        assert_eq!(test_cpu.cycles, 28);
+        assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
 
         test_cpu.tick();
+        test_cpu.print_state();
         // 3 CYCLES
-        assert_eq!(test_cpu.cycles, 44);
+        assert_eq!(test_cpu.cycles, 40);
         assert_eq!(test_cpu.get_flag(Flag::Zero), false);
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), true);
         assert_eq!(test_cpu.get_flag(Flag::AddSub), false);
@@ -2477,8 +2564,8 @@ mod test {
         assert_eq!(test_cpu.get_register(RegisterLoc::L), 0xBB);
 
         // Reset HL
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         // 1 CYCLE
         test_cpu.set_register(RegisterLoc::MemHL, 0x00);
 
@@ -2505,8 +2592,8 @@ mod test {
         assert_eq!(test_cpu.get_register(RegisterLoc::L), 0x39);
 
         // Reset HL
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         // 1 CYCLE
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
 
@@ -2529,8 +2616,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xF0);
         test_cpu.tick();
 
@@ -2556,8 +2643,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), true);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();
@@ -2584,8 +2671,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), false);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0x01);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();
@@ -2612,8 +2699,8 @@ mod test {
         assert_eq!(test_cpu.get_flag(Flag::HalfCarry), false);
         assert_eq!(test_cpu.get_flag(Flag::Carry), true);
 
-        test_cpu.set_register(RegisterLoc::H, 0x00);
-        test_cpu.set_register(RegisterLoc::L, 0x00);
+        test_cpu.set_register(RegisterLoc::H, 0xFF);
+        test_cpu.set_register(RegisterLoc::L, 0x80);
         test_cpu.set_register(RegisterLoc::MemHL, 0xFF);
         test_cpu.set_flag(Flag::Carry, false);
         test_cpu.tick();

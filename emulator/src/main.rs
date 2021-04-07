@@ -8,13 +8,16 @@ use std::time::{Duration, Instant};
 
 mod apu;
 mod bus;
+
 mod cartridge;
 mod cpu;
 mod cpu_recievable;
+mod debugger;
 mod gameboy;
 mod instruction;
 mod ppu;
 mod timer;
+mod utils;
 mod utils;
 
 static ESC: &str = "\u{001b}";
@@ -36,6 +39,8 @@ enum Display {
 struct Args {
     display: Display,
     stepmode: bool,
+    breaks: Vec<u16>,
+    watches: Vec<u16>,
 }
 fn cleanup_screen(d: Display) {
     match d {
@@ -51,10 +56,30 @@ impl Drop for Args {
     }
 }
 
+fn parse_number16(s: &str) -> u16 {
+    if s.starts_with("0x") {
+        u16::from_str_radix(s.trim_start_matches("0x"), 16).unwrap()
+    } else if s.starts_with("0b") {
+        u16::from_str_radix(s.trim_start_matches("0b"), 2).unwrap()
+    } else {
+        u16::from_str_radix(s, 10).unwrap()
+    }
+}
+
+fn number_prefixed(pre: &str, s: &str) -> Option<u16> {
+    if s.starts_with(pre) {
+        Some(parse_number16(s.trim_start_matches(pre)))
+    } else {
+        None
+    }
+}
+
 fn get_args() -> Args {
     let args: Vec<String> = env::args().collect();
     let mut display = Display::None;
     let mut stepmode = false;
+    let mut breaks = Vec::new();
+    let mut watches = Vec::new();
     if args.iter().any(|x| x == "--ascii") {
         display = Display::AsciiHalf;
         println!("Display: Ascii");
@@ -71,7 +96,18 @@ fn get_args() -> Args {
     if args.iter().any(|x| x == "--cpu") {
         display = Display::CPU;
     }
-    Args { display, stepmode }
+    for x in args.iter() {
+        number_prefixed("-b", x).map(|n| breaks.push(n));
+        number_prefixed("--break", x).map(|n| breaks.push(n));
+        number_prefixed("-w", x).map(|n| watches.push(n));
+        number_prefixed("--watch", x).map(|n| watches.push(n));
+    }
+    Args {
+        display,
+        stepmode,
+        watches,
+        breaks,
+    }
 }
 
 fn ascii_half_print(screen: &ppu::Screen) {
@@ -145,6 +181,10 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
 
         let savestatefile = "savestate";
         match saver.lock().unwrap().pop_front() {
+            Some(SignalOp::Break) => {
+                gameboy.debug_break();
+                println!("Debug!")
+            }
             Some(SignalOp::SaveState) => {
                 let mut f = BufWriter::new(File::create(savestatefile).unwrap());
                 let state = gameboy.save();
@@ -173,6 +213,7 @@ use std::sync::{Arc, Mutex};
 enum SignalOp {
     SaveState,
     LoadState,
+    Break,
 }
 type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
 
@@ -189,7 +230,7 @@ fn main() {
 
     let args = get_args();
     let d = args.display;
-    let mut db = cpu::DebugOptions::default();
+    let mut db = debugger::DebugOptions::default();
     let saver: Saver = Arc::new(Mutex::new(VecDeque::new()));
 
     gameboy.button_down(gameboy::BUT_RIGHT);
@@ -202,6 +243,8 @@ fn main() {
     }
 
     db.debug_step = args.stepmode;
+    db.break_points = args.breaks.clone();
+    db.watch_points = args.watches.clone();
     gameboy.set_debug_options(db);
 
     ctrlc::set_handler(move || {
@@ -212,18 +255,19 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    // use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2};
-    // let signals = Signals::new(&vec![SIGUSR1, SIGUSR2]).unwrap();
-    // let saver2 = saver.clone();
-    // thread::spawn(move || {
-    //     for sig in signals.forever() {
-    //         match sig {
-    //             SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
-    //             SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
-    //             _ => println!("Received signal {:?}", sig),
-    //         }
-    //     }
-    // });
+    use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
+    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
+    let saver2 = saver.clone();
+    thread::spawn(move || {
+        for sig in signals.forever() {
+            match sig {
+                SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
+                SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
+                SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
+                _ => println!("Received signal {:?}", sig),
+            }
+        }
+    });
 
     main_loop(gameboy, args, saver);
 }

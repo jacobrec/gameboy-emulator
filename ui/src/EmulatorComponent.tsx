@@ -8,18 +8,12 @@ type EmulatorProps = {
     rom: any,
 }
 export const EmulatorScreen = (props: EmulatorProps) => {
-    let [romdata, setRomData] = useState(new Uint8Array())
+    let w: any = window;
+    let [romdata, setRomData] = useState(false)
     let [emulator, setEmulator] = useState(new Emulator())
     let { id, rom } = props;
 
 
-    if (rom.constructor === File && romdata.length == 0) {
-        let starter = async () => {
-            let ab = await rom.arrayBuffer();
-            setRomData(new Uint8Array(ab));
-        };
-        starter();
-    }
 
     useEffect(() => {
         let d: Document = document;
@@ -41,18 +35,24 @@ export const EmulatorScreen = (props: EmulatorProps) => {
             ctx.putImageData(imd, 0, 0);
             ani = requestAnimationFrame(checker);
         };
-        ani = requestAnimationFrame(checker);
+        if (romdata) {
+            ani = requestAnimationFrame(checker);
+        }
         return () => {
             // window.clearInterval(inter)
             cancelAnimationFrame(ani);
         }
     })
 
-    if (romdata.length > 0) {
-        console.log(romdata)
-        emulator.load_rom(romdata)
-        let w: any = window;
+    if (romdata) {
+        console.log(w.rom)
+        emulator.load_rom(w.rom)
         w.emu = emulator;
+    } else if (rom.constructor === File) {
+        rom.arrayBuffer().then((e) => {
+            w.rom = new Uint8Array(e);
+            setRomData(true);
+        })
     }
 
     return (

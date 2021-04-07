@@ -5,3 +5,4 @@ jtest.gb
 dtestrom.o
 dtest.gb
 testrom
+*.dump

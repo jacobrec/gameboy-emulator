@@ -26,6 +26,17 @@ impl Cartridge {
         false
     }
 
+    pub fn test(data: Vec<u8>) -> Self {
+        Self {
+            data: data.clone(),
+            mapper: Mapper::ROM,
+            ramBanks: 0,
+            romBanks: 0,
+            rom: data,
+            ram: Vec::new(),
+        }
+    }
+
     pub fn from_data(data: Vec<u8>) -> Self {
         let mapper = Cartridge::check_mapper(&data);
         let romBanks: usize = 2 * 2u32.pow(data[0x148] as u32) as usize;
@@ -46,7 +57,7 @@ impl Cartridge {
 
     pub fn read(&self, loc: u16) -> u8 {
         match self.mapper {
-            Mapper::ROM => self.rom[loc as usize],
+            Mapper::ROM => if self.rom.len() < loc.into() { 0x49 } else {self.rom[loc as usize]},
             Mapper::MBC1(ram, bank, hibank, simple) => {
                 let loc = loc as usize;
                 // Bank ram, rom low, rom high

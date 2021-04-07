@@ -3,6 +3,7 @@ mod bus;
 mod cartridge;
 mod cpu;
 mod cpu_recievable;
+mod debugger;
 mod gameboy;
 mod instruction;
 mod ppu;
