@@ -229,21 +229,24 @@ impl std::fmt::Display for PixelData {
 
 impl PPU {
     pub fn new() -> Self {
-        PPU {
-            screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT].to_vec(),
-            vram: [0u8; 0x2000].to_vec(),
-            registers: [0u8; 0x10].to_vec(),
-            oam_ram: [Sprite::new(); 40].to_vec(),
-            tick: 0,
-            active_sprites: [None; 10],
-            pixel_fifo: VecDeque::new(),
-            pixels_pushed: 0,
-            fetch_state: Wrapping(0),
-            is_window: false,
-            lx: 0,
-            recievables: None,
-            dma: DMAManager::new(),
-        }
+        let mut ppu =
+            PPU {
+                screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT].to_vec(),
+                vram: [0u8; 0x2000].to_vec(),
+                registers: [0u8; 0x10].to_vec(),
+                oam_ram: [Sprite::new(); 40].to_vec(),
+                tick: 0,
+                active_sprites: [None; 10],
+                pixel_fifo: VecDeque::new(),
+                pixels_pushed: 0,
+                fetch_state: Wrapping(0),
+                is_window: false,
+                lx: 0,
+                recievables: None,
+                dma: DMAManager::new(),
+            };
+        ppu.registers[LY] = 143;
+        ppu
     }
 
     pub fn get_canvas(&self) -> Canvas {

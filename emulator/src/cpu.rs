@@ -285,9 +285,12 @@ impl CPU {
         // https://gbdev.io/pandocs/#interrupt-service-routine
         let loc: u8 = 0x40 + 0x8 * id;
         self.bus.reg_if.data &= !(1 << id);
+        if cfg!(debug_assertions) {
+            println!("Interrupt Occurred: loc: {}. Pushing sp({})", loc, self.sp);
+        }
         self.clock();
         self.clock();
-        self.stack_push(self.sp);
+        self.stack_push(self.pc);
         self.set_pc(loc as u16);
     }
 
@@ -392,7 +395,7 @@ impl CPU {
 
     fn next(&mut self) -> u8 {
         let data = self.read(self.pc);
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         return data
     }
     fn next_signed(&mut self) -> i8 {
@@ -687,7 +690,7 @@ impl CPU {
 
     fn execute(&mut self, op: Instruction) {
         if cfg!(debug_assertions) && self.debug_options.debug_print {
-            print!("{:<15} => ", format!("{}", op));
+            print!("{:<16} => ", format!("{}", op));
         }
         fn isLoc16Bit (l: Location) -> bool {
             match l {
@@ -1055,21 +1058,15 @@ impl CPU {
                         Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
                         Jump::Absolute(v16) => v16,
                     };
-                    self.clock();
-                    self.pc = dest;
+                    self.set_pc(dest);
                 }
             },
             Instruction::Jmp(j, None) => {
-
                 let dest = match j {
-                    Jump::Relative(v8) => {
-                        self.clock();
-                        ((self.pc as i32) + (v8 as i32)) as u16
-                    },
+                    Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
                     Jump::Absolute(v16) => v16,
                 };
-                self.pc = dest;
-        
+                self.set_pc(dest);
             },
             Instruction::Rl(r) => {
                 self.rotate_register(r, Rotate::Left, true);
