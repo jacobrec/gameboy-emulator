@@ -89,60 +89,39 @@ function FileSubmission(props: any) {
 }
 
 function GamePad(props: any) {
+
   return (
     <div className="gamepad">
-      <Grid 
-        container
-        direction="row"
-        justify="space-evenly"
-        alignItems="stretch"
-      >
-        <Grid item>
+      <Draggable bounds={{top: -10}} grid={[25,25]} defaultPosition={{x: 125, y: 0}}>
+        <UpButton className="icon-button" onClick={() => props.onClick(Button.DUp)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="up-button">
-              <UpButton className="direction-pad" onClick={() => props.onClick(Button.DUp)}/>
-            </Grid>
-          </Draggable>
+      <Draggable bounds={{top: -10}} grid={[10,10]} defaultPosition={{x: -25, y: 100}}>
+        <LeftButton className="icon-button" onClick={() => props.onClick(Button.DLeft)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="left-button">
-              <LeftButton className="direction-pad" onClick={() => props.onClick(Button.DLeft)}/>
-            </Grid>
-          </Draggable>
+      <Draggable bounds={{top: -50}} grid={[10,10]} defaultPosition={{x: 115, y: 100}}>
+        <RightButton className="icon-button" onClick={() => props.onClick(Button.DRight)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="right-button">
-              <RightButton className="direction-pad" onClick={() => props.onClick(Button.DRight)}/>
-            </Grid>
-          </Draggable>
+      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: -33, y: 73}}>
+        <DownButton className="icon-button" onClick={() => props.onClick(Button.DDown)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="down-button">
-              <DownButton className="direction-pad" onClick={() => props.onClick(Button.DDown)}/>
-            </Grid>
-          </Draggable>
-        </Grid>
+      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 290, y: 10}}>
+        <SelectButtonAngled className="icon-button" onClick={() => props.onClick(Button.Select)}/>
+      </Draggable>
+      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 375, y: -40}}>
+        <StartButtonAngled className="icon-button" onClick={() => props.onClick(Button.Start)}/>
+      </Draggable>
 
-        <Grid item>
-          <Draggable>
-            <SelectButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Select)}/>
-          </Draggable>
-          <Draggable>
-            <StartButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Start)}/>
-          </Draggable>
-        </Grid>
-
-        <Grid item>
-          <Draggable>
-            <AButton className="direction-pad" onClick={() => props.onClick(Button.A)}/>
-          </Draggable>
-          <Draggable>
-            <BButton className="direction-pad" onClick={() => props.onClick(Button.B)}/>
-          </Draggable>
-        </Grid>
+      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 595, y: 75}}>
+        <AButton className="icon-button" onClick={() => props.onClick(Button.A)}/>
+      </Draggable>
+      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 640, y: -35}}>
+        <BButton className="icon-button" onClick={() => props.onClick(Button.B)}/>
+      </Draggable>
        
-      </Grid>
     </div>
   );
 }
