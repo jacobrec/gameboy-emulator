@@ -121,6 +121,7 @@ pub struct PPU {
     active_sprites: [Option<usize>; 10],
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
+    pixels_popped: usize,
     fetch_state: Wrapping<u8>,
     lx: u8,
     is_window: bool,
@@ -140,6 +141,7 @@ impl Clone for PPU {
             active_sprites: self.active_sprites.clone(),
             pixel_fifo: self.pixel_fifo.clone(),
             pixels_pushed: self.pixels_pushed.clone(),
+            pixels_popped: self.pixels_popped.clone(),
             fetch_state: self.fetch_state.clone(),
             lx: self.lx,
             is_window: self.is_window,
@@ -239,6 +241,7 @@ impl PPU {
                 active_sprites: [None; 10],
                 pixel_fifo: VecDeque::new(),
                 pixels_pushed: 0,
+                pixels_popped: 0,
                 fetch_state: Wrapping(0),
                 is_window: false,
                 lx: 0,
@@ -302,7 +305,7 @@ impl PPU {
     }
     fn window_or_background_tilemap_loc(&self, tilemap_loc: u16) -> usize {
         let y = self.get_effective_y();
-        let x = self.lx;
+        let x = self.lx + self.pixel_fifo.len() as u8;
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
         let tile_idx = self.vram[tilemap_loc as usize + offset];
         if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
@@ -325,27 +328,27 @@ impl PPU {
     }
 
 
-    fn overlay_sprites(&mut self, mut dt: [PixelData; 8]) -> [PixelData; 8]{
+    fn overlay_sprites(&mut self){
         let y = self.registers[LY];
-        let x = self.lx;
+        let x = self.lx as u8 - self.registers[SCX];
 
         for s in self.active_sprites.iter() {
             if let Some(s) = s {
                 let s = self.oam_ram[*s];
-                if s.pos_x < x + 8 && s.pos_x >= x { // TODO: this will not render sprites that are off left edge
+                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
                     let ey = 16 + y as isize - s.pos_y as isize;
                     let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
 
                     for i in 0..8 {
                         if sp[i].value != 0 {
-                            dt[i] = sp[i];
+                            if let Some(x) = self.pixel_fifo.get_mut(i) {
+                                *x = sp[i];
+                            }
                         }
                     }
                 }
             }
         }
-        return dt;
-
     }
 
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
@@ -378,10 +381,7 @@ impl PPU {
             //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
-            let dt = self.decode_tile(loc, (y & 0b111) as usize);
-            let dt1 = self.overlay_sprites(dt);
-            self.lx += 8;
-            Some(dt1)
+            Some(self.decode_tile(loc, (y & 0b111) as usize))
         } else {
             None
         }
@@ -420,7 +420,6 @@ impl PPU {
                     }
                     self.tick = 0;
                 }
-
             },
             Mode::OAM => {
                 if self.tick == 1 {
@@ -469,6 +468,7 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
+                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
@@ -478,6 +478,7 @@ impl PPU {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
                     }
+                    self.lx = self.lx.wrapping_add(1);
                 }
 
                 let new_pixels = self.fetch();
