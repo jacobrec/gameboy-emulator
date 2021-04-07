@@ -119,9 +119,9 @@ pub struct PPU {
     tick: usize,
     oam_ram: Vec<Sprite>, // size of 40
     active_sprites: [Option<usize>; 10],
+    spriteline: Vec<PixelData>,
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
-    pixels_popped: usize,
     fetch_state: Wrapping<u8>,
     lx: u8,
     is_window: bool,
@@ -139,9 +139,9 @@ impl Clone for PPU {
             tick: self.tick,
             oam_ram: self.oam_ram.clone(),
             active_sprites: self.active_sprites.clone(),
+            spriteline: self.spriteline.clone(),
             pixel_fifo: self.pixel_fifo.clone(),
             pixels_pushed: self.pixels_pushed.clone(),
-            pixels_popped: self.pixels_popped.clone(),
             fetch_state: self.fetch_state.clone(),
             lx: self.lx,
             is_window: self.is_window,
@@ -239,9 +239,9 @@ impl PPU {
                 oam_ram: [Sprite::new(); 40].to_vec(),
                 tick: 0,
                 active_sprites: [None; 10],
+                spriteline: Vec::new(),
                 pixel_fifo: VecDeque::new(),
                 pixels_pushed: 0,
-                pixels_popped: 0,
                 fetch_state: Wrapping(0),
                 is_window: false,
                 lx: 0,
@@ -275,13 +275,19 @@ impl PPU {
         &self.screen
     }
 
-    fn lookup_color(&self, p: PixelData) -> u8 {
+    fn lookup_color(&self, p: PixelData, old: u8) -> u8 {
         let palette = match p.src {
             PixelSrc::BG => self.registers[BGP],
             PixelSrc::S1 => self.registers[OBP0],
             PixelSrc::S2 => self.registers[OBP1],
         };
         let num = palette >> ((p.value & 0b11) << 1) & 0b11;
+        if match p.src {PixelSrc::BG => false, _ => true} {
+            if p.value == 0 {
+                return old
+            }
+
+        }
         match num {
             0b00 => color00,
             0b01 => color01,
@@ -328,27 +334,31 @@ impl PPU {
     }
 
 
-    fn overlay_sprites(&mut self){
+    fn sprites_overlay(&mut self) -> Vec<PixelData> {
         let y = self.registers[LY];
-        let x = self.lx as u8 - self.registers[SCX];
+        let x = self.lx as u8;
 
+        let mut data = [PixelData {
+            src: PixelSrc::S1,
+            value: 0b00,
+        }; 168];
         for s in self.active_sprites.iter() {
             if let Some(s) = s {
                 let s = self.oam_ram[*s];
-                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
-                    let ey = 16 + y as isize - s.pos_y as isize;
-                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
-
-                    for i in 0..8 {
-                        if sp[i].value != 0 {
-                            if let Some(x) = self.pixel_fifo.get_mut(i) {
-                                *x = sp[i];
-                            }
-                        }
-                    }
+                let ey = 16 + y as isize - s.pos_y as isize;
+                let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
+                for i in 0..8 {
+                    data[s.pos_x as usize + i] = sp[i]
                 }
             }
         }
+        // TODO: get rid of data1 and go straight from slice to vec
+        let mut data1 = [PixelData {
+            src: PixelSrc::S1,
+            value: 0b00,
+        }; 160];
+        data1.copy_from_slice(&data[8..]);
+        return data1.to_vec()
     }
 
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
@@ -439,6 +449,7 @@ impl PPU {
                             break;
                         }
                     }
+                    self.spriteline = self.sprites_overlay();
                     self.set_mode(Mode::VRAM);
                 }
             },
@@ -468,11 +479,12 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
-                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
-                    let color = self.lookup_color(p);
+                    let old_color = self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH];
+                    let color_bg = self.lookup_color(p, old_color);
+                    let color = self.lookup_color(*self.spriteline.get(x).unwrap(), color_bg);
                     //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
                     if self.lx >= self.registers[SCX] {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
