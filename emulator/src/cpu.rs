@@ -1,44 +1,28 @@
 use crate::instruction::{Instruction, Location, Register16Loc, RegisterLoc, Jump, JmpFlag, Offset};
 use crate::cpu_recievable::{Recievables, CpuRecievable, CpuRecievable::*, Interrupt};
+use crate::debugger::DebugOptions;
 use serde::{Serialize, Deserialize};
 
-enum Rotate {
+pub enum Rotate {
     Right,
     Left,
 }
 
-enum Flag {
+pub enum Flag {
     Zero, AddSub, HalfCarry, Carry
 }
 
-#[derive(Debug,Clone,Serialize, Deserialize)]
-pub struct DebugOptions {
-    pub debug_print: bool,
-    pub debug_step: bool,
-    pub break_points: Vec<u16>, // wait for enter when pc is here
-    pub watch_points: Vec<u16>, // wait for enter when this memory is written to
-}
-impl DebugOptions {
-    pub fn default() -> Self {
-        Self {
-            debug_print: true,
-            debug_step: false,
-            break_points: Vec::new(),
-            watch_points: Vec::new(),
-        }
-    }
-}
 
 
 pub struct CPU {
-    registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
-    sp: u16,
-    pc: u16,
-    bus: crate::bus::Bus,
-    cycles: usize,
-    debug_options: DebugOptions,
-    recievables: Recievables,
-    ime: bool,
+    pub(crate) registers: [u8; 8], // Order: H, L, D, E, B, C, A, F
+    pub(crate) sp: u16,
+    pub(crate) pc: u16,
+    pub(crate) bus: crate::bus::Bus,
+    pub(crate) cycles: usize,
+    pub(crate) debug_options: DebugOptions,
+    pub(crate) recievables: Recievables,
+    pub(crate) ime: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -161,19 +145,19 @@ impl CPU {
         cpu
     }
 
-    fn a(&self) -> u8 {self.registers[6]}
-    fn b(&self) -> u8 {self.registers[4]}
-    fn c(&self) -> u8 {self.registers[5]}
-    fn d(&self) -> u8 {self.registers[2]}
-    fn e(&self) -> u8 {self.registers[3]}
-    fn f(&self) -> u8 {self.registers[7]}
-    fn h(&self) -> u8 {self.registers[0]}
-    fn l(&self) -> u8 {self.registers[1]}
-    fn af(&self) -> u16 {((self.a() as u16) << 8) | self.f() as u16}
-    fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
-    fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
-    fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
-    fn pc(&self) -> u16 {self.pc}
+    pub fn a(&self) -> u8 {self.registers[6]}
+    pub fn b(&self) -> u8 {self.registers[4]}
+    pub fn c(&self) -> u8 {self.registers[5]}
+    pub fn d(&self) -> u8 {self.registers[2]}
+    pub fn e(&self) -> u8 {self.registers[3]}
+    pub fn f(&self) -> u8 {self.registers[7]}
+    pub fn h(&self) -> u8 {self.registers[0]}
+    pub fn l(&self) -> u8 {self.registers[1]}
+    pub fn af(&self) -> u16 {((self.a() as u16) << 8) | self.f() as u16}
+    pub fn bc(&self) -> u16 {((self.b() as u16) << 8) | self.c() as u16}
+    pub fn de(&self) -> u16 {((self.d() as u16) << 8) | self.e() as u16}
+    pub fn hl(&self) -> u16 {((self.h() as u16) << 8) | self.l() as u16}
+    pub fn pc(&self) -> u16 {self.pc}
 
     fn set_a(&mut self, v: u8) {self.registers[6] = v}
     fn set_b(&mut self, v: u8) {self.registers[4] = v}
@@ -338,13 +322,7 @@ impl CPU {
     }
 
     fn wait_for_enter(&mut self) {
-        use std::io::{self, BufRead};
-        let stdin = io::stdin();
-        let line1 = stdin.lock().lines().next().unwrap().unwrap();
-        self.debug_options.debug_step = true;
-        if line1.contains("run") {
-            self.debug_options.debug_step = false;
-        }
+        crate::debugger::runline(self);
     }
 
     pub fn print_state(&self) {
