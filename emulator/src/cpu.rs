@@ -311,6 +311,14 @@ impl CPU {
         self.process_recievables();
         self.interrupt();
         let instruction = self.next_op();
+        if cfg!(debug_assertions) {
+            if self.debug_options.pause_on_branch {
+                match instruction {
+                    Instruction::Call (_, _) | Instruction::Jmp(_, _) => self.wait_for_enter(),
+                    _ => (),
+                }
+            }
+        }
         self.execute(instruction);
         if cfg!(debug_assertions) {
             if self.debug_options.break_points.contains(&self.pc) {

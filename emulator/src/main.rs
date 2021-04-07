@@ -197,7 +197,7 @@ enum SignalOp {
 type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
 
 fn main() {
-    let romdata = open_file("cpu_instrs.gb");
+    let romdata = open_file("cpu_instrs_jump.gb");
     // let romdata = open_file("testrom/jtest.gb");
     let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
