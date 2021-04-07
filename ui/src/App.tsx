@@ -3,6 +3,9 @@ import './App.css';
 import Emulator, { Button } from './Emulator';
 import { EmulatorScreen } from './EmulatorComponent';
 import { useForm } from 'react-hook-form';
+import Draggable from 'react-draggable';
+
+//Material UI imports
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
@@ -11,11 +14,9 @@ import MenuIcon from '@material-ui/icons/Menu';
 import { makeStyles, Theme, createStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
 import Grid from '@material-ui/core/Grid';
-
 import Divider from '@material-ui/core/Divider';
 import Drawer from '@material-ui/core/Drawer';
 import Hidden from '@material-ui/core/Hidden';
-
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
@@ -25,14 +26,13 @@ import SaveIcon from '@material-ui/icons/Save';
 import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
 
+//Icon imports
 import DownButton from './iconComponents/DownButton';
 import UpButton from './iconComponents/UpButton';
 import LeftButton from './iconComponents/LeftButton';
 import RightButton from './iconComponents/RightButton';
-
 import SelectButtonAngled from './iconComponents/SelectButtonAngled';
 import StartButtonAngled from './iconComponents/StartButtonAngled';
-
 import AButton from './iconComponents/AButton';
 import BButton from './iconComponents/BButton';
 
@@ -98,28 +98,48 @@ function GamePad(props: any) {
         alignItems="stretch"
       >
         <Grid item>
-          <Grid item className="up-button">
-            <UpButton className="direction-pad" onClick={() => props.onClick(Button.DUp)}/>
-          </Grid>
-          <Grid item className="left-button">
-            <LeftButton className="direction-pad" onClick={() => props.onClick(Button.DLeft)}/>
-          </Grid>
-          <Grid item className="right-button">
-            <RightButton className="direction-pad" onClick={() => props.onClick(Button.DRight)}/>
-          </Grid>
-          <Grid item className="down-button">
-            <DownButton className="direction-pad" onClick={() => props.onClick(Button.DDown)}/>
-          </Grid>
+
+          <Draggable>
+            <Grid item className="up-button">
+              <UpButton className="direction-pad" onClick={() => props.onClick(Button.DUp)}/>
+            </Grid>
+          </Draggable>
+
+          <Draggable>
+            <Grid item className="left-button">
+              <LeftButton className="direction-pad" onClick={() => props.onClick(Button.DLeft)}/>
+            </Grid>
+          </Draggable>
+
+          <Draggable>
+            <Grid item className="right-button">
+              <RightButton className="direction-pad" onClick={() => props.onClick(Button.DRight)}/>
+            </Grid>
+          </Draggable>
+
+          <Draggable>
+            <Grid item className="down-button">
+              <DownButton className="direction-pad" onClick={() => props.onClick(Button.DDown)}/>
+            </Grid>
+          </Draggable>
         </Grid>
 
         <Grid item>
-          <SelectButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Select)}/>
-          <StartButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Start)}/>
+          <Draggable>
+            <SelectButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Select)}/>
+          </Draggable>
+          <Draggable>
+            <StartButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Start)}/>
+          </Draggable>
         </Grid>
 
         <Grid item>
+          <Draggable>
             <AButton className="direction-pad" onClick={() => props.onClick(Button.A)}/>
+          </Draggable>
+          <Draggable>
             <BButton className="direction-pad" onClick={() => props.onClick(Button.B)}/>
+          </Draggable>
         </Grid>
        
       </Grid>
