@@ -329,23 +329,20 @@ impl PPU {
         let y = self.registers[LY];
         let x = self.lx;
 
-        for o in 0..8 {
-            for s in self.active_sprites.iter() {
-                if let Some(s) = s {
-                    let s = self.oam_ram[*s];
-                    if s.pos_x + o == x + 8 { // TODO: this will not render sprites that are off left edge
-                        let ey = 16 + y as isize - s.pos_y as isize;
-                        let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
+        for s in self.active_sprites.iter() {
+            if let Some(s) = s {
+                let s = self.oam_ram[*s];
+                if s.pos_x < x + 8 && s.pos_x >= x { // TODO: this will not render sprites that are off left edge
+                    let ey = 16 + y as isize - s.pos_y as isize;
+                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
 
-                        for i in 0..8 {
-                            if sp[i].value != 0 {
-                                dt[i] = sp[i];
-                            }
+                    for i in 0..8 {
+                        if sp[i].value != 0 {
+                            dt[i] = sp[i];
                         }
                     }
                 }
             }
-
         }
         return dt;
 
