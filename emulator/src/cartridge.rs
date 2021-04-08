@@ -2,7 +2,6 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Cartridge {
-    pub data: Vec<u8>,
     mapper: Mapper,
     rom: Vec<u8>,
     ram: Vec<u8>,
@@ -28,7 +27,6 @@ impl Cartridge {
 
     pub fn test(data: Vec<u8>) -> Self {
         Self {
-            data: data.clone(),
             mapper: Mapper::ROM,
             ramBanks: 0,
             romBanks: 0,
@@ -42,8 +40,8 @@ impl Cartridge {
         let romBanks: usize = 2 * 2u32.pow(data[0x148] as u32) as usize;
         let ramBanks: usize = if data[0x149] == 0 { 0 } else { 2u32.pow(data[0x148] as u32 - 1) as usize };
         let ram = Vec::with_capacity(RAM_BANK_SIZE * ramBanks);
-        let rom = data.clone();
-        Self {data, mapper, ramBanks, romBanks, ram, rom }
+        let rom = data;
+        Self {mapper, ramBanks, romBanks, ram, rom }
     }
 
     fn check_mapper(data: &Vec<u8>) -> Mapper {

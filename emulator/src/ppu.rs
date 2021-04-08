@@ -98,7 +98,7 @@ impl DMAManager {
         self.progress = self.progress.map(|x| x + 1).and_then(|x| if x > DMA_TRANSFER_SIZE { None } else { Some(x) });
         self.progress.map(|x| {
             let x = x - 1;
-            println!("LOC: {:02X} {:02X}", self.start_location, x);
+            // println!("LOC: {:02X} {:02X}", self.start_location, x);
             let from: u16 = ((self.start_location as u16) << 8) + x as u16;
             let to: u16 = 0xFE00 + x as u16;
             (from, to)
