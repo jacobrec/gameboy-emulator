@@ -147,7 +147,7 @@ impl Bus {
             0xFF10..=0xFF26 => self.apu.write(loc, val),
             0xFF30..=0xFF3F => self.apu.write(loc, val),
             0xFF40..=0xFF4F => { self.ppu.write_reg(loc, val) },
-            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")},
+            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Writing IO Register: {:04X}]\n{:19}", loc, "")},
             0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
             0xFFFF => self.reg_ie.data = val,
             _ => panic!("Unimplemented write range: {:04X}", loc)

@@ -480,7 +480,7 @@ impl CPU {
  
             0x07 => Instruction::Rlca,  // RLCA
             0x17 => Instruction::Rla,   // RLA
-            // 0x27 => TODO: DAA
+            0x27 => Instruction::Daa,
             0x37 => Instruction::Scf,   // SCF
 
             // 0x08 => TODO: LD (a16), SP
@@ -1172,7 +1172,25 @@ impl CPU {
             Instruction::DI => {
                 self.ime = false
             },
-            _ => unimplemented!("TODO"),
+            Instruction::Daa => {
+                let value = self.a();
+                let sub = self.get_flag(Flag::AddSub);
+                let carry = self.get_flag(Flag::Carry);
+                let half = self.get_flag(Flag::HalfCarry);
+                let correction = if half || (!sub && ((value & 0xF) > 9)) {
+                    0x6
+                } else {
+                    0
+                } | if carry || (!sub && (value > 99)) {
+                    self.set_flag(Flag::Carry, true);
+                    0x60
+                } else {
+                    0
+                };
+                let a = if sub { value.wrapping_sub(correction) } else { value.wrapping_add(correction) };
+                self.set_flag(Flag::Zero, a == 0);
+                self.set_a(a);
+            }
         }
     }
 
