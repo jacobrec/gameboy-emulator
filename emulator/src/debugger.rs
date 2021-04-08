@@ -65,11 +65,11 @@ fn with_option_none_is_true(b: &mut bool, opt: Option<&str>) {
 
 fn manage_settings(mut options: std::str::SplitWhitespace, dbo: &mut DebugOptions) {
     match options.next() {
-        Some("pause_on_break") => with_option_none_is_true(&mut dbo.pause_on_branch, options.next()),
+        Some("pause_on_branch") => with_option_none_is_true(&mut dbo.pause_on_branch, options.next()),
         Some("cpu_print") => with_option_none_is_true(&mut dbo.debug_print, options.next()),
         Some("help") => {
             println!("Sets a value. Examples:");
-            println!("  set pause_on_break");
+            println!("  set pause_on_branch");
             println!("  set cpu_print off");
         },
         Some(_) => println!("Unknown set argument. Try set help"),

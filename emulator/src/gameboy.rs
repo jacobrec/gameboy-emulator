@@ -16,7 +16,7 @@ pub struct GameboyBuilder {
 }
 
 pub struct Gameboy {
-    cpu: CPU,
+    pub(crate) cpu: CPU,
     buttons_pressed: u8,
 }
 

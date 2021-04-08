@@ -98,7 +98,7 @@ impl DMAManager {
         self.progress = self.progress.map(|x| x + 1).and_then(|x| if x > DMA_TRANSFER_SIZE { None } else { Some(x) });
         self.progress.map(|x| {
             let x = x - 1;
-            println!("LOC: {:02X} {:02X}", self.start_location, x);
+            // println!("LOC: {:02X} {:02X}", self.start_location, x);
             let from: u16 = ((self.start_location as u16) << 8) + x as u16;
             let to: u16 = 0xFE00 + x as u16;
             (from, to)
@@ -118,7 +118,7 @@ pub struct PPU {
     registers: Vec<u8>,// size of 16
     tick: usize,
     oam_ram: Vec<Sprite>, // size of 40
-    active_sprites: [Option<usize>; 10],
+    spriteline: Vec<PixelData>,
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
     fetch_state: Wrapping<u8>,
@@ -137,7 +137,7 @@ impl Clone for PPU {
             registers: self.registers.clone(),// size of 16
             tick: self.tick,
             oam_ram: self.oam_ram.clone(),
-            active_sprites: self.active_sprites.clone(),
+            spriteline: self.spriteline.clone(),
             pixel_fifo: self.pixel_fifo.clone(),
             pixels_pushed: self.pixels_pushed.clone(),
             fetch_state: self.fetch_state.clone(),
@@ -229,21 +229,24 @@ impl std::fmt::Display for PixelData {
 
 impl PPU {
     pub fn new() -> Self {
-        PPU {
-            screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT].to_vec(),
-            vram: [0u8; 0x2000].to_vec(),
-            registers: [0u8; 0x10].to_vec(),
-            oam_ram: [Sprite::new(); 40].to_vec(),
-            tick: 0,
-            active_sprites: [None; 10],
-            pixel_fifo: VecDeque::new(),
-            pixels_pushed: 0,
-            fetch_state: Wrapping(0),
-            is_window: false,
-            lx: 0,
-            recievables: None,
-            dma: DMAManager::new(),
-        }
+        let mut ppu =
+            PPU {
+                screen: [color00; SCREEN_WIDTH * SCREEN_HEIGHT].to_vec(),
+                vram: [0u8; 0x2000].to_vec(),
+                registers: [0u8; 0x10].to_vec(),
+                oam_ram: [Sprite::new(); 40].to_vec(),
+                tick: 0,
+                spriteline: Vec::new(),
+                pixel_fifo: VecDeque::new(),
+                pixels_pushed: 0,
+                fetch_state: Wrapping(0),
+                is_window: false,
+                lx: 0,
+                recievables: None,
+                dma: DMAManager::new(),
+            };
+        ppu.registers[LY] = 143;
+        ppu
     }
 
     pub fn get_canvas(&self) -> Canvas {
@@ -269,13 +272,19 @@ impl PPU {
         &self.screen
     }
 
-    fn lookup_color(&self, p: PixelData) -> u8 {
+    fn lookup_color(&self, p: PixelData, old: u8) -> u8 {
         let palette = match p.src {
             PixelSrc::BG => self.registers[BGP],
             PixelSrc::S1 => self.registers[OBP0],
             PixelSrc::S2 => self.registers[OBP1],
         };
         let num = palette >> ((p.value & 0b11) << 1) & 0b11;
+        if match p.src {PixelSrc::BG => false, _ => true} {
+            if p.value == 0 {
+                return old
+            }
+
+        }
         match num {
             0b00 => color00,
             0b01 => color01,
@@ -299,7 +308,7 @@ impl PPU {
     }
     fn window_or_background_tilemap_loc(&self, tilemap_loc: u16) -> usize {
         let y = self.get_effective_y();
-        let x = self.lx;
+        let x = self.lx.wrapping_add(self.pixel_fifo.len() as u8);
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
         let tile_idx = self.vram[tilemap_loc as usize + offset];
         if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
@@ -319,31 +328,6 @@ impl PPU {
     }
     fn sprite_tile_loc(&self, idx: u8) -> usize {
         idx as usize * 16
-    }
-
-
-    fn overlay_sprites(&mut self) {
-        let y = self.registers[LY];
-        let x = self.lx;
-        for s in self.active_sprites.iter() {
-            if let Some(s) = s {
-                let s = self.oam_ram[*s];
-                if s.pos_x == x + 8 { // TODO: this will not render sprites that are off left edge
-                    let ey = 16 + y as isize - s.pos_y as isize;
-                    let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
-
-
-                    for i in 0..8 {
-                        if sp[i].value != 0 {
-                            if let Some(e) = self.pixel_fifo.get_mut(i) {
-                                *e = sp[i];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
     }
 
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
@@ -376,9 +360,7 @@ impl PPU {
             //println!("{}", bg);
             let y = self.get_effective_y();
             let loc = bg as usize;
-            let r = Some(self.decode_tile(loc, (y & 0b111) as usize));
-            self.lx += 8;
-            r
+            Some(self.decode_tile(loc, (y & 0b111) as usize))
         } else {
             None
         }
@@ -417,26 +399,37 @@ impl PPU {
                     }
                     self.tick = 0;
                 }
-
             },
             Mode::OAM => {
                 if self.tick == 1 {
-                    self.active_sprites = [None; 10];
                 } else if self.tick == OAM_WIDTH {
                     // OAM lookup, this is normally done over 20 dots, but we'll just do it at the end
                     let mut i = 0;
                     let s_size = 8;
                     let ly = self.registers[LY];
+
+                    let mut data = [PixelData {
+                        src: PixelSrc::S1,
+                        value: 0b00,
+                    }; 168];
                     for j in 0..40 {
                         let sj = self.oam_ram[j];
                         if sj.pos_x != 0 && ly + 16 >= sj.pos_y && ly + 16 < sj.pos_y + s_size {
-                            self.active_sprites[i] = Some(j);
+                            let ey = 16 + ly as isize - sj.pos_y as isize;
+                            let sp = self.decode_tile(self.sprite_tile_loc(sj.tile), ey as usize);
+                            for i in 0..8 {
+                                let tx = sj.pos_x as usize + i;
+                                if tx < 168 {
+                                    data[tx] = sp[i]
+                                }
+                            }
                             i += 1;
                         }
                         if i >= 10 {
                             break;
                         }
                     }
+                    self.spriteline = data[8..].to_vec();
                     self.set_mode(Mode::VRAM);
                 }
             },
@@ -466,16 +459,18 @@ impl PPU {
                 }
 
                 if self.pixel_fifo.len() > 8 {
-                    self.overlay_sprites();
                     let p = self.pixel_fifo.pop_front().unwrap(); // checked in the if statement
                     let y = self.registers[LY];
                     let x = self.pixels_pushed;
-                    let color = self.lookup_color(p);
+                    let old_color = self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH];
+                    let color_bg = self.lookup_color(p, old_color);
+                    let color = self.lookup_color(*self.spriteline.get(x).unwrap(), color_bg);
                     //println!("Pixel {}: (x, y)[{},{}] -> Color: {:X}", p, x, y, color);
                     if self.lx >= self.registers[SCX] {
                         self.screen[(x as usize) + (y as usize) * SCREEN_WIDTH] = color;
                         self.pixels_pushed += 1;
                     }
+                    self.lx = self.lx.wrapping_add(1);
                 }
 
                 let new_pixels = self.fetch();
