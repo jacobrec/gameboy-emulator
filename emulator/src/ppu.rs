@@ -418,7 +418,10 @@ impl PPU {
                             let ey = 16 + ly as isize - sj.pos_y as isize;
                             let sp = self.decode_tile(self.sprite_tile_loc(sj.tile), ey as usize);
                             for i in 0..8 {
-                                data[sj.pos_x as usize + i] = sp[i]
+                                let tx = sj.pos_x as usize + i;
+                                if tx < 168 {
+                                    data[tx] = sp[i]
+                                }
                             }
                             i += 1;
                         }
