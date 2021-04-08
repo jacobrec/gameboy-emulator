@@ -43,10 +43,10 @@ pub struct APU {
     apu_enabled: bool,
     frame_sequencer: u8,
     frame_sequencer_count: u16,
-    terminal1_vin: bool,
-    terminal1_volume: u8,
-    terminal2_vin: bool,
-    terminal2_volume: u8,
+    left_terminal_vin: bool,
+    left_terminal_volume: u8,
+    right_terminal_vin: bool,
+    right_terminal_volume: u8,
 }
 
 impl APU {
@@ -60,14 +60,14 @@ impl APU {
             channel3: Channel3::new(),
             channel4: Channel4::new(),
             channel_output_selection: 0, // NR 51
-            down_sample_count: 87,
+            down_sample_count: 95,
             apu_enabled: false,          // Bit 7 of NR52
             frame_sequencer: 0,          //
             frame_sequencer_count: 8192, //
-            terminal1_vin: false,
-            terminal1_volume: 7,
-            terminal2_vin: true,
-            terminal2_volume: 7,
+            left_terminal_vin: false,
+            left_terminal_volume: 7,
+            right_terminal_vin: false,
+            right_terminal_volume: 7,
         }
     }
 
@@ -79,11 +79,11 @@ impl APU {
             0xFF30..=0xFF3F => self.channel3.read(loc),
             0xFF20..=0xFF23 => self.channel4.read(loc),
             0xFF24 => {
-                let t1_vin = if self.terminal1_vin { 0x80 } else { 0 };
-                let t1_volume = (self.terminal1_volume << 4) & 0x7;
+                let left_vin: u8 = if self.left_terminal_vin { 0x80 } else { 0 };
+                let left_volume = (self.left_terminal_volume << 4) & 0x7;
 
-                let t2_vin = if self.terminal2_vin { 0x8 } else { 0 };
-                t1_vin | t1_volume | t2_vin | self.terminal2_volume
+                let right_vin: u8 = if self.right_terminal_vin { 0x8 } else { 0 };
+                left_vin | left_volume | right_vin | self.right_terminal_volume
             }
             0xFF25 => self.channel_output_selection,
             0xFF26 => {
@@ -111,19 +111,19 @@ impl APU {
             0xFF30..=0xFF3F => self.channel3.write(loc, val),
             0xFF20..=0xFF23 => self.channel4.write(loc, val),
             0xFF24 => {
-                if val & 0x80 == 0x80 {
-                    self.terminal1_vin = true;
+                self.left_terminal_vin = if val & 0x80 == 0x80 {
+                    true
                 } else {
-                    self.terminal1_vin = false;
-                }
-                self.terminal1_volume = (val >> 4) & 0x7;
+                    false
+                };
+                self.left_terminal_volume = (val >> 4) & 0x7;
 
-                if val & 0x8 == 0x8 {
-                    self.terminal2_vin = true;
+                self.right_terminal_vin = if val & 0x08 == 0x08 {
+                    true
                 } else {
-                    self.terminal2_vin = false;
-                }
-                self.terminal2_volume = val & 0x7;
+                    false
+                };
+                self.right_terminal_volume = val & 0x7;
             }
             0xFF25 => {
                 self.channel_output_selection = val;
@@ -184,59 +184,48 @@ impl APU {
         self.down_sample_count -= 1;
         if self.down_sample_count <= 0 {
             self.down_sample_count = 95;
-            let mut bufferin_s02: f32 = 0.5;
-            let mut bufferin_s01: f32;
-
-            // NOTE: not sure if this is the correct way to get volume.
-            let volume = (128 * self.terminal1_volume as i32) / 7;
+            let mut left_buffer: f32 = 0.0;
 
             // Mix audio if bit is set in sound selection register NR51
             if self.channel_output_selection & 0x10 == ChannelBit::Channel1Left as u8 {
                 // Mix left audio terminal with channel 1
-                bufferin_s01 = self.channel1.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                left_buffer += self.channel1.dac_output();
             }
             if self.channel_output_selection & 0x20 == ChannelBit::Channel2Left as u8 {
                 // Mix left audio terminal with channel 2
-                bufferin_s01 = self.channel2.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                left_buffer += self.channel2.dac_output();
             }
             if self.channel_output_selection & 0x40 == ChannelBit::Channel3Left as u8 {
                 // Mix left audio terminal with channel 3
-                bufferin_s01 = self.channel3.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                left_buffer += self.channel3.dac_output();
             }
             if self.channel_output_selection & 0x80 == ChannelBit::Channel4Left as u8 {
                 // Mix left audio terminal with channel 4
-                bufferin_s01 = self.channel4.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                left_buffer += self.channel4.dac_output();
             }
             // Fill buffer with mixed sample
-            self.audio_buffer[self.audio_buffer_position] = bufferin_s02;
+            self.audio_buffer[self.audio_buffer_position] = left_buffer;
+            let mut right_buffer: f32 = 0.0;
 
             if self.channel_output_selection & 0x01 == ChannelBit::Channel1Right as u8 {
                 // Mix left audio terminal with channel 1
-                bufferin_s01 = self.channel1.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                right_buffer += self.channel1.dac_output();
             }
             if self.channel_output_selection & 0x02 == ChannelBit::Channel2Right as u8 {
                 // Mix left audio terminal with channel 2
-                bufferin_s01 = self.channel2.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                right_buffer += self.channel2.dac_output();
             }
             if self.channel_output_selection & 0x04 == ChannelBit::Channel3Right as u8 {
                 // Mix left audio terminal with channel 3
-                bufferin_s01 = self.channel3.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                right_buffer += self.channel3.dac_output();
             }
             if self.channel_output_selection & 0x08 == ChannelBit::Channel4Right as u8 {
                 // Mix left audio terminal with channel 4
-                bufferin_s01 = self.channel4.output_volume as f32 / 100.0;
-                self.mix(&mut bufferin_s02, bufferin_s01, volume);
+                right_buffer += self.channel4.dac_output();
             }
 
             // Fill buffer with mixed sample
-            self.audio_buffer[self.audio_buffer_position + 1] = bufferin_s02;
+            self.audio_buffer[self.audio_buffer_position + 1] = right_buffer;
             self.audio_buffer_position += 2;
 
             println!("{:?}", self.audio_buffer);

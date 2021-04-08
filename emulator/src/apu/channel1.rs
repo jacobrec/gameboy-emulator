@@ -3,19 +3,13 @@ use super::pattern::*;
 use super::sweep::Sweep;
 use serde::{Deserialize, Serialize};
 
-// const WAVE_PATTERN: [[i32; 8]; 4] = [
-// 	[-1, -1, -1, -1, 1, -1, -1, -1],
-// 	[-1, -1, -1, -1, 1, 1, -1, -1],
-// 	[-1, -1, 1, 1, 1, 1, -1, -1],
-// 	[1, 1, 1, 1, -1, -1, 1, 1],
-// ];
-
 const WAVE_PATTERN: [[u8; 8]; 4] = [
 	[0, 0, 0, 0, 0, 0, 0, 1],
 	[1, 0, 0, 0, 0, 0, 0, 1],
 	[1, 0, 0, 0, 0, 1, 1, 1],
 	[0, 1, 1, 1, 1, 1, 1, 0],
 ];
+
 
 /*
 The variable names with _load are the variables we use to store the initial values.
@@ -28,17 +22,18 @@ pub struct Channel1 {
 	dac_enabled: bool,
 	enabled: bool,
 	pub envelope: Envelope,
+	envelope_period_counter: u8,
 	envelope_running: bool,
-	frequency_count: i32,
+	frequency_count: u16,
 	frequency_load: u16,
 	length_counter: u8,
 	pub output_volume: u8,
-	sequence_pointer: u32,
+	sequence_pointer: u8,
 	pub status: bool,
 	pub sweep: Sweep,
 	sweep_enable: bool,
 	sweep_shadow: u16,
-	sweep_time: u8,
+	sweep_period_counter: u8,
 	volume: u8,
 	pub wave_pattern: Pattern,
 }
@@ -50,6 +45,7 @@ impl Channel1 {
 			dac_enabled: true,                  // Condition to check if all of envelope properties are set
 			enabled: false,                     // Condition to check if channel is enabled
 			envelope: Envelope::new(),          // NR 12 Enevlope
+			envelope_period_counter: 0,
 			envelope_running: false,            // Condition to check whether envelope is on or off
 			frequency_count: 0,                 // Actual frequency value that is updated
 			frequency_load: 0,                  // NR 13 and NR 14 bit 2-0
@@ -60,7 +56,7 @@ impl Channel1 {
 			sweep: Sweep::new(),                // NR 10 register
 			sweep_enable: false,                // Condition to check whether sweep is on or off
 			sweep_shadow: 0,                    // Sweep shadow register
-			sweep_time: 0,                      // Actual sweep time that is updated
+			sweep_period_counter: 0,            // Actual sweep time that is updated
 			volume: 0,                          // Actual envelope volume that is updated
 			wave_pattern: Pattern::HalfQuarter, // NR 11 bit 7-6
 		}
@@ -116,15 +112,17 @@ impl Channel1 {
 
 	// Channel NR13/NR14 frequency tick
 	pub fn tick(&mut self) {
-		self.frequency_count -= 1;
-		if self.frequency_count <= 0 {
-			self.frequency_count = (2048 - self.frequency_load as i32) * 4;
+		if self.frequency_count > 0 {
+			self.frequency_count -= 1;
+		} else if self.frequency_count == 0 {
+			self.frequency_count = (2048 - self.frequency_load) * 4;
 			self.sequence_pointer = (self.sequence_pointer + 1) % 8;
-		}
-		if self.enabled && self.dac_enabled {
-			self.output_volume = self.volume;
-		} else {
-			self.output_volume = 0;
+
+			if self.enabled && self.dac_enabled {
+				self.output_volume = self.volume;
+			} else {
+				self.output_volume = 0;
+			}
 		}
 
 		if WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] == 0
@@ -146,15 +144,17 @@ impl Channel1 {
 
 	// NR12 Enevelope register tick
 	pub fn envelope_step(&mut self) {
-		self.envelope.length -= 1;
+		if self.envelope_period_counter > 0 {
+			self.envelope_period_counter -= 1;
+		} else if self.envelope_period_counter == 0 {
+			self.envelope_period_counter = if self.envelope_period_counter == 0 {
+				8
+			} else {
+				self.envelope.period
+			};
 
-		if self.envelope.length <= 0 {
-			self.envelope.length = self.envelope.length_load as i32;
-			if self.envelope.length == 0 {
-				self.envelope.length = 8;
-			}
 			// println!("Envelope length: {}", self.envelope.length);
-			if self.envelope.length > 0 {
+			if self.envelope_running {
 				// println!("Envelope running & Envelope length > 0");
 				// println!("Volume is: {}", self.volume);
 				if self.envelope.direction == 1 && self.volume < 15 {
@@ -170,38 +170,14 @@ impl Channel1 {
 				self.envelope_running = false;
 			}
 		}
-
-		// if self.envelope.length_load > 0 {
-		// 	println!("Evenelope length: {}", self.envelope.length);
-		// 	if self.envelope.length > 0 {
-		// 		self.envelope.length -= 1;
-		// 	} else {
-		// 		let new_vol = if self.envelope.direction == 1 {
-		// 			self.volume + 1
-		// 		} else {
-		// 			self.volume - 1
-		// 		};
-
-		// 		if new_vol <= 15 {
-		// 			println!("Updating volume");
-		// 			self.volume = new_vol;
-		// 			self.envelope.length = self.envelope.length_load as i32;
-		// 		}
-		// 	}
-		// }
 	}
 
 	// NR11 Sweep register tick
 	pub fn sweep_step(&mut self) {
-		// Initial sweep is 0
-		if self.sweep.time == 0 {
-			return;
-		}
-
-		if self.sweep_time > 0 {
-			self.sweep_time -= 1;
+		if self.sweep_period_counter > 0 {
+			self.sweep_period_counter -= 1;
 		} else {
-			self.sweep_time = self.sweep.time;
+			self.sweep_period_counter = self.sweep.period;
 			let new_frequency = self.sweep_calculation();
 			if new_frequency <= 2047 && self.sweep.shift > 0 {
 				// Sweep shadow is X(t-1)
@@ -210,22 +186,6 @@ impl Channel1 {
 				self.sweep_calculation();
 			}
 		}
-
-		// self.sweep_time -= 1;
-		// if self.sweep_time <= 0 {
-		// 	self.sweep_time = self.sweep.time as i32;
-
-		// 	if self.sweep_enable && self.sweep_time > 0 {
-		// 		let new_frequency = self.sweep_calculation();
-		// 		if new_frequency <= 2047 && self.sweep.shift > 0 {
-		// 			// Sweep shadow is X(t-1)
-		// 			self.sweep_shadow = new_frequency;
-		// 			self.frequency_load = new_frequency;
-		// 			self.sweep_calculation();
-		// 		}
-		// 		self.sweep_calculation();
-		// 	}
-		// }
 	}
 
 	// Calculates new frequency based on sweep shift.
@@ -257,32 +217,31 @@ impl Channel1 {
 			self.length_counter = 64;
 		}
 
-		self.frequency_count = (2048 - self.frequency_load as i32) * 4;
+		self.frequency_count = (2048 - self.frequency_load) * 4;
 		self.envelope_running = true;
-		self.envelope.length = self.envelope.length_load as i32;
+		self.envelope_period_counter = self.envelope.period;
 		self.volume = self.envelope.initial_volume;
 		self.sweep_shadow = self.frequency_load;
-		self.sweep_time = self.sweep.time;
-
-		if self.sweep_time == 0 {
-			self.sweep_time = 8;
-		}
-		self.sweep_enable = self.sweep_time > 0 || self.sweep.shift > 0;
+		self.sweep_period_counter = if self.sweep.period == 0 {
+			8
+		} else {
+			self.sweep.period
+		};
+		self.sweep_enable = self.sweep_period_counter > 0 || self.sweep.shift > 0;
 		if self.sweep.shift > 0 {
 			self.sweep_calculation();
 		}
 	}
 
-	// pub fn dac_output(&self) -> f32 {
-	// 	if self.dac_enabled && self.enabled {
-	// 		let vol_output = (self.volume
-	// 			* WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize])
-	// 			as f32;
-	// 		vol_output / 7.5 - 1.0
-	// 	} else {
-	// 		0.0
-	// 	}
-	// }
+	 pub fn dac_output(&self) -> f32 {
+	 	if self.dac_enabled && self.enabled {
+			let duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+	 		let vol_output: f32 = self.volume as f32 * duty_output;
+	 		(vol_output / 7.5) - 1.0
+	 	} else {
+	 		0.0
+	 	}
+	 }
 }
 
 
@@ -299,7 +258,7 @@ mod test {
         let mut ch1 = create_test_channel1();
 				ch1.write(0xFF10, 0xFF);
 
-				assert_eq!(ch1.sweep.time, 7);
+				assert_eq!(ch1.sweep.period, 7);
 				assert_eq!(ch1.sweep.direction, 1);
 				assert_eq!(ch1.sweep.shift, 7);
 
@@ -325,7 +284,7 @@ mod test {
 
 				assert_eq!(ch1.envelope.initial_volume, 15);
 				assert_eq!(ch1.envelope.direction, 1);
-				assert_eq!(ch1.envelope.length_load, 7);
+				assert_eq!(ch1.envelope.period, 7);
 				assert_eq!(ch1.read(0xFF12), 0xFF);
     }
 

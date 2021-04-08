@@ -5,14 +5,15 @@ pub struct Channel3 {
 	counter_selection: bool,
 	dac_enabled: bool,
 	enabled: bool,
-	frequency_count: i32,
+	frequency_count: u16,
 	frequency_load: u16,
-	length_counter: u8,
+	length_counter: u16,
 	pub output_volume: u8,
 	position_counter: u8,
 	pub status: bool,
 	volume: u8,
 	wave_ram: [u8; 16],
+	sample_byte: u8,
 }
 
 impl Channel3 {
@@ -29,6 +30,7 @@ impl Channel3 {
 			status: false,            // NR 34 bit 7
 			volume: 0,                // Actual envelope volume that is updated
 			wave_ram: [0; 16],        // Wave RAM
+			sample_byte: 0,
 		}
 	}
 
@@ -41,7 +43,7 @@ impl Channel3 {
 					0
 				}
 			}
-			0xFF1B => self.length_counter,
+			0xFF1B => self.length_counter as u8,
 			0xFF1C => self.volume << 5,
 			0xFF1D => (self.frequency_load & 0x00FF) as u8,
 			0xFF1E => {
@@ -59,7 +61,7 @@ impl Channel3 {
 				self.dac_enabled = if (val & 0x80) == 0x80 { true } else { false };
 			}
 			0xFF1B => {
-				self.length_counter = val;
+				self.length_counter = 256 - (val as u16);
 			}
 			0xFF1C => {
 				self.volume = (val >> 5) & 0x03;
@@ -85,12 +87,12 @@ impl Channel3 {
 
 	// Channel NR33/NR34 frequency tick
 	pub fn tick(&mut self) {
-		self.frequency_count -= 1;
-		if self.frequency_count <= 0 {
-			self.frequency_count = (2048 - self.frequency_load as i32) * 2;
+		if self.frequency_count > 0 {
+			self.frequency_count -= 1;
+		} else if self.frequency_count == 0 {
+			self.frequency_count = (2048 - self.frequency_load) * 2;
 			self.position_counter = (self.position_counter + 1) & 0x1F;
-		}
-		if self.enabled && self.dac_enabled {
+
 			let position = (self.position_counter / 2) as usize;
 			let mut output_byte = self.wave_ram[position];
 
@@ -99,14 +101,8 @@ impl Channel3 {
 			}
 			output_byte &= 0xF;
 
-			output_byte = if self.volume > 0 {
-				output_byte >> self.volume - 1
-			} else {
-				0
-			};
-			self.output_volume = output_byte;
-		} else {
-			self.output_volume = 0;
+			self.sample_byte = output_byte
+
 		}
 	}
 
@@ -114,9 +110,9 @@ impl Channel3 {
 	fn initialize(&mut self) {
 		self.enabled = true;
 		if self.length_counter == 0 {
-			self.length_counter = 255;
+			self.length_counter = 256;
 		}
-		self.frequency_count = (2048 - self.frequency_load as i32) * 2;
+		self.frequency_count = (2048 - self.frequency_load) * 2;
 		self.position_counter = 0;
 	}
 
@@ -127,6 +123,25 @@ impl Channel3 {
 			if self.length_counter == 0 {
 				self.status = false;
 			}
+		}
+	}
+
+	// Return a value in [0,15]
+	fn volume_output(&self) -> u8 {
+		if self.enabled {
+			// Shift by volume code
+			self.sample_byte >> self.volume
+		} else {
+			0
+		}
+	}
+
+	pub fn dac_output(&self) -> f32 {
+		if self.dac_enabled {
+			let vol_output = self.volume_output() as f32;
+			(vol_output / 7.5) - 1.0
+		} else {
+			0.0
 		}
 	}
 }
