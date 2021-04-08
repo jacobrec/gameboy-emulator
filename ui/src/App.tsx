@@ -92,34 +92,34 @@ function GamePad(props: any) {
 
   return (
     <div className="gamepad">
-      <Draggable bounds={{top: -10}} grid={[25,25]} defaultPosition={{x: 125, y: 0}}>
-        <UpButton className="icon-button" onClick={() => props.onClick(Button.DUp)}/>
+      <Draggable bounds={{top: -10}} grid={[10,10]}>
+        <UpButton className="icon-button up" onClick={() => props.onClick(Button.DUp)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -10}} grid={[10,10]} defaultPosition={{x: -25, y: 100}}>
-        <LeftButton className="icon-button" onClick={() => props.onClick(Button.DLeft)}/>
+      <Draggable bounds={{top: -10}} grid={[10,10]}>
+        <LeftButton className="icon-button left" onClick={() => props.onClick(Button.DLeft)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -50}} grid={[10,10]} defaultPosition={{x: 115, y: 100}}>
-        <RightButton className="icon-button" onClick={() => props.onClick(Button.DRight)}/>
+      <Draggable bounds={{top: -50}} grid={[10,10]}>
+        <RightButton className="icon-button right" onClick={() => props.onClick(Button.DRight)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: -33, y: 73}}>
-        <DownButton className="icon-button" onClick={() => props.onClick(Button.DDown)}/>
+      <Draggable bounds={{top: -73}} grid={[10,10]}>
+        <DownButton className="icon-button down" onClick={() => props.onClick(Button.DDown)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 290, y: 10}}>
-        <SelectButtonAngled className="icon-button" onClick={() => props.onClick(Button.Select)}/>
+      <Draggable bounds={{top: -73}} grid={[10,10]}>
+        <SelectButtonAngled className="select" onClick={() => props.onClick(Button.Select)}/>
       </Draggable>
-      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 375, y: -40}}>
-        <StartButtonAngled className="icon-button" onClick={() => props.onClick(Button.Start)}/>
+      <Draggable bounds={{top: -73}} grid={[10,10]}>
+        <StartButtonAngled className="start" onClick={() => props.onClick(Button.Start)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 595, y: 75}}>
-        <AButton className="icon-button" onClick={() => props.onClick(Button.A)}/>
+      <Draggable bounds={{top: -73}} grid={[10,10]}>
+        <AButton className="icon-button a-button" onClick={() => props.onClick(Button.A)}/>
       </Draggable>
-      <Draggable bounds={{top: -73}} grid={[10,10]} defaultPosition={{x: 640, y: -35}}>
-        <BButton className="icon-button" onClick={() => props.onClick(Button.B)}/>
+      <Draggable bounds={{top: -73}} grid={[10,10]}>
+        <BButton className="icon-button b-button" onClick={() => props.onClick(Button.B)}/>
       </Draggable>
        
     </div>
@@ -313,7 +313,5 @@ function App() {
     </div>
   );
 }
-
-
 
 export default App;
