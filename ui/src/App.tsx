@@ -25,6 +25,8 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import SaveIcon from '@material-ui/icons/Save';
 import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import VideogameAssetIcon from '@material-ui/icons/VideogameAsset';
+import KeyboardIcon from '@material-ui/icons/Keyboard';
 
 //Icon imports
 import DownButton from './iconComponents/DownButton';
@@ -92,33 +94,33 @@ function GamePad(props: any) {
 
   return (
     <div className="gamepad">
-      <Draggable bounds={{top: -10}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <UpButton className="icon-button up" onClick={() => props.onClick(Button.DUp)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -10}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <LeftButton className="icon-button left" onClick={() => props.onClick(Button.DLeft)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -50}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <RightButton className="icon-button right" onClick={() => props.onClick(Button.DRight)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <DownButton className="icon-button down" onClick={() => props.onClick(Button.DDown)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <SelectButtonAngled className="select" onClick={() => props.onClick(Button.Select)}/>
       </Draggable>
-      <Draggable bounds={{top: -73}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <StartButtonAngled className="start" onClick={() => props.onClick(Button.Start)}/>
       </Draggable>
 
-      <Draggable bounds={{top: -73}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <AButton className="icon-button a-button" onClick={() => props.onClick(Button.A)}/>
       </Draggable>
-      <Draggable bounds={{top: -73}} grid={[10,10]}>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
         <BButton className="icon-button b-button" onClick={() => props.onClick(Button.B)}/>
       </Draggable>
        
@@ -156,6 +158,8 @@ function ResponsiveDrawer(props: any) {
         <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
         <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
         <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
+        <MenuItem onClick={() => props.onGamepadChange()} text={"Configure GamePad"}><VideogameAssetIcon/></MenuItem>
+        <MenuItem onClick={() => props.onKeyboardChange()} text={"Configure Keyboard"}><KeyboardIcon/></MenuItem>
       </List>
     </div>
   );
@@ -219,7 +223,7 @@ function App() {
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
-  // const [keyPress, setKeyPress] = useState('up');
+  const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
   const [controls, setControls] = useState({
     up:'w', 
     left:'a', 
@@ -253,13 +257,9 @@ function App() {
 
 
   const handleKeyDown = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
     w.button_down(decodeButton(event.key))
   }
   const handleKeyUp = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
     w.button_up(decodeButton(event.key))
   }
 
@@ -267,11 +267,19 @@ function App() {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-
   const handleClick = (button: Button) => {
     // console.log(button);
     w.button_down(button);
     sleep(85).then(() => {w.button_up(button);});
+  }
+
+  const handleGamepadChange = () => {
+    setIsDraggableDisabled(!isDraggableDisabled);
+    //needs to save gamepads current positions and save to JSOn file 
+  }
+  const handleKeyboardChange = () => {
+    //need to get keybindings and set controls JSON
+    //may need to open modal and save form input 
   }
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -290,7 +298,7 @@ function App() {
       <Modal open={modalIsOpen}>
         <FileSubmission onSubmit={onSubmit}/>
       </Modal>
-      <ResponsiveDrawer name={rom.name}/>
+      <ResponsiveDrawer name={rom.name} onGamepadChange={handleGamepadChange} onKeyboardChange={handleKeyboardChange}/>
       <Grid
         direction="column"
         justify="center"
@@ -307,7 +315,7 @@ function App() {
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad onClick={handleClick}/>
+          <GamePad onClick={handleClick} disabled={isDraggableDisabled}/>
         </Grid>
       </Grid>
     </div>
