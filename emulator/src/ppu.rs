@@ -118,7 +118,6 @@ pub struct PPU {
     registers: Vec<u8>,// size of 16
     tick: usize,
     oam_ram: Vec<Sprite>, // size of 40
-    active_sprites: [Option<usize>; 10],
     spriteline: Vec<PixelData>,
     pixel_fifo: VecDeque<PixelData>,
     pixels_pushed: usize,
@@ -138,7 +137,6 @@ impl Clone for PPU {
             registers: self.registers.clone(),// size of 16
             tick: self.tick,
             oam_ram: self.oam_ram.clone(),
-            active_sprites: self.active_sprites.clone(),
             spriteline: self.spriteline.clone(),
             pixel_fifo: self.pixel_fifo.clone(),
             pixels_pushed: self.pixels_pushed.clone(),
@@ -238,7 +236,6 @@ impl PPU {
                 registers: [0u8; 0x10].to_vec(),
                 oam_ram: [Sprite::new(); 40].to_vec(),
                 tick: 0,
-                active_sprites: [None; 10],
                 spriteline: Vec::new(),
                 pixel_fifo: VecDeque::new(),
                 pixels_pushed: 0,
@@ -311,7 +308,7 @@ impl PPU {
     }
     fn window_or_background_tilemap_loc(&self, tilemap_loc: u16) -> usize {
         let y = self.get_effective_y();
-        let x = self.lx + self.pixel_fifo.len() as u8;
+        let x = self.lx.wrapping_add(self.pixel_fifo.len() as u8);
         let offset = (y as usize) / 8 * 32 + (x as usize) / 8;
         let tile_idx = self.vram[tilemap_loc as usize + offset];
         if self.registers[LCD_CONTROL_REGISTER] & 0b10000 > 0 {
@@ -331,34 +328,6 @@ impl PPU {
     }
     fn sprite_tile_loc(&self, idx: u8) -> usize {
         idx as usize * 16
-    }
-
-
-    fn sprites_overlay(&mut self) -> Vec<PixelData> {
-        let y = self.registers[LY];
-        let x = self.lx as u8;
-
-        let mut data = [PixelData {
-            src: PixelSrc::S1,
-            value: 0b00,
-        }; 168];
-        for s in self.active_sprites.iter() {
-            if let Some(s) = s {
-                let s = self.oam_ram[*s];
-                let ey = 16 + y as isize - s.pos_y as isize;
-                let sp = self.decode_tile(self.sprite_tile_loc(s.tile), ey as usize);
-                for i in 0..8 {
-                    data[s.pos_x as usize + i] = sp[i]
-                }
-            }
-        }
-        // TODO: get rid of data1 and go straight from slice to vec
-        let mut data1 = [PixelData {
-            src: PixelSrc::S1,
-            value: 0b00,
-        }; 160];
-        data1.copy_from_slice(&data[8..]);
-        return data1.to_vec()
     }
 
     fn decode_tile(&self, loc: usize, line: usize) -> [PixelData; 8] {
@@ -433,23 +402,31 @@ impl PPU {
             },
             Mode::OAM => {
                 if self.tick == 1 {
-                    self.active_sprites = [None; 10];
                 } else if self.tick == OAM_WIDTH {
                     // OAM lookup, this is normally done over 20 dots, but we'll just do it at the end
                     let mut i = 0;
                     let s_size = 8;
                     let ly = self.registers[LY];
+
+                    let mut data = [PixelData {
+                        src: PixelSrc::S1,
+                        value: 0b00,
+                    }; 168];
                     for j in 0..40 {
                         let sj = self.oam_ram[j];
                         if sj.pos_x != 0 && ly + 16 >= sj.pos_y && ly + 16 < sj.pos_y + s_size {
-                            self.active_sprites[i] = Some(j);
+                            let ey = 16 + ly as isize - sj.pos_y as isize;
+                            let sp = self.decode_tile(self.sprite_tile_loc(sj.tile), ey as usize);
+                            for i in 0..8 {
+                                data[sj.pos_x as usize + i] = sp[i]
+                            }
                             i += 1;
                         }
                         if i >= 10 {
                             break;
                         }
                     }
-                    self.spriteline = self.sprites_overlay();
+                    self.spriteline = data[8..].to_vec();
                     self.set_mode(Mode::VRAM);
                 }
             },
