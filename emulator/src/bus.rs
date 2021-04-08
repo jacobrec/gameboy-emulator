@@ -170,6 +170,7 @@ impl Bus {
         // PPU runs at 2MHz
         self.ppu.tick();
         self.ppu.tick();
+        self.timer.tick();
         self.dma_transfer();
         // TODO: call apu tick
     }
@@ -247,8 +248,8 @@ impl Joypad {
     pub fn update_joypad(&mut self, buttonmap: u8) {
         self.last = buttonmap;
         use crate::gameboy;
-        let dir = self.pins & 0b010000 > 0;
-        let act = self.pins & 0b100000 > 0;
+        let dir = self.pins & 0b010000 == 0;
+        let act = self.pins & 0b100000 == 0;
         self.set_down_start(dir && (buttonmap & gameboy::BUT_DOWN > 0) || act && (buttonmap & gameboy::BUT_START > 0));
         self.set_up_select(dir && (buttonmap & gameboy::BUT_UP > 0) || act && (buttonmap & gameboy::BUT_SELECT > 0));
         self.set_left_b(dir && (buttonmap & gameboy::BUT_LEFT > 0) || act && (buttonmap & gameboy::BUT_B > 0));

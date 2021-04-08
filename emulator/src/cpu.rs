@@ -1173,22 +1173,20 @@ impl CPU {
                 self.ime = false
             },
             Instruction::Daa => {
-                let value = self.a();
+                let mut a = self.a();
                 let sub = self.get_flag(Flag::AddSub);
                 let carry = self.get_flag(Flag::Carry);
                 let half = self.get_flag(Flag::HalfCarry);
-                let correction = if half || (!sub && ((value & 0xF) > 9)) {
-                    0x6
+                if (sub) {
+                    if (carry) { a = a.wrapping_sub(0x60) }
+                    if (half)  { a = a.wrapping_sub(0x6) }
                 } else {
-                    0
-                } | if carry || (!sub && (value > 99)) {
-                    self.set_flag(Flag::Carry, true);
-                    0x60
-                } else {
-                    0
-                };
-                let a = if sub { value.wrapping_sub(correction) } else { value.wrapping_add(correction) };
+                    if (carry || a > 0x99) { a = a.wrapping_add(0x60); self.set_flag(Flag::Carry, true) }
+                    if (half || (a & 0xF) > 0x9) { a = a.wrapping_add(0x6) }
+                }
+
                 self.set_flag(Flag::Zero, a == 0);
+                self.set_flag(Flag::HalfCarry, false);
                 self.set_a(a);
             }
         }
