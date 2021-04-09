@@ -20,7 +20,7 @@ impl Channel3 {
 	pub fn new() -> Self {
 		Channel3 {
 			counter_selection: false, // NR 34 bit 6
-			dac_enabled: true,        // Condition to check if all of envelope properties are set
+			dac_enabled: false,        // Condition to check if all of envelope properties are set
 			enabled: false,           // Condition to check if channel is enabled
 			frequency_count: 0,       // Actual frequency value that is updated
 			frequency_load: 0,        // NR 33 and NR 34 bit 2-0
@@ -127,18 +127,23 @@ impl Channel3 {
 	}
 
 	// Return a value in [0,15]
-	fn volume_output(&self) -> u8 {
-		if self.enabled {
-			// Shift by volume code
-			self.sample_byte >> self.volume
-		} else {
-			0
-		}
-	}
+//	fn volume_output(&self) -> u8 {
+//		if self.enabled {
+//			// Shift by volume code
+//			self.sample_byte >> self.volume
+//		} else {
+//			0
+//		}
+//	}
 
 	pub fn dac_output(&self) -> f32 {
 		if self.dac_enabled {
-			let vol_output = self.volume_output() as f32;
+			let mut vol_output = 0.0;
+			if self.enabled {
+				// Shift by volume code
+				vol_output = (self.sample_byte >> self.volume) as f32
+			}
+//			let vol_output = self.volume_output() as f32;
 			(vol_output / 7.5) - 1.0
 		} else {
 			0.0

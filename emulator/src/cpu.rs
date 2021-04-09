@@ -80,7 +80,7 @@ impl CPU {
         return self.bus.get_screen();
     }
 
-    pub fn get_audio_buffer(&self) -> [f32; 4096] {
+    pub fn get_audio_buffer(&self) -> [f32; crate::apu::SAMPLE_SIZE] {
         return self.bus.get_audio_buffer();
     }
 
@@ -380,6 +380,7 @@ impl CPU {
         self.process_recievables();
         self.interrupt();
         let instruction = self.next_op();
+//        println!("Instruction: {}", instruction);
         if cfg!(debug_assertions) {
             if self.debug_options.pause_on_branch {
                 match instruction {

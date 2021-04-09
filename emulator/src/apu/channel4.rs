@@ -28,7 +28,7 @@ impl Channel4 {
     Channel4 {
       counter_selection: false,  // NR 44 bit 6
       counter_step: 0,           // Counter step
-      dac_enabled: true,         // Condition to check if all of envelope properties are set
+      dac_enabled: false,         // Condition to check if all of envelope properties are set
       dividing_ratio: 0,         // Dividing ratio
       enabled: false,            // Condition to check if channel is enabled
       envelope: Envelope::new(), // NR 42 Enevlope
@@ -175,7 +175,11 @@ impl Channel4 {
   // Return a value between [-1.0,+1.0]
   pub fn dac_output(&self) -> f32 {
     if self.dac_enabled {
-      let vol_output = self.volume_output() as f32;
+      let mut vol_output = 0.0;
+      if self.enabled {
+        vol_output = (self.waveform_output()* self.volume) as f32
+      }
+//      let vol_output = self.volume_output() as f32;
       (vol_output / 7.5) - 1.0
     } else {
       0.0

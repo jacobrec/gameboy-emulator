@@ -15,7 +15,7 @@ use serde_big_array::big_array;
 
 big_array! { BigArray; }
 
-const SAMPLE_SIZE: usize = 4096;
+pub const SAMPLE_SIZE: usize = 4096;
 
 pub enum ChannelBit {
     Channel4Left = 1 << 7,
@@ -220,7 +220,7 @@ impl APU {
             self.audio_buffer[self.audio_buffer_position + 1] = right_buffer;
             self.audio_buffer_position += 2;
 
-            // println!("{:?}", self.audio_buffer);
+             println!("{:?}", self.audio_buffer);
         }
 
         // Reset buffer position if we reach max

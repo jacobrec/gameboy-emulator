@@ -42,7 +42,7 @@ impl Channel1 {
 	pub fn new() -> Channel1 {
 		Channel1 {
 			counter_selection: false,           // NR 14 bit 6
-			dac_enabled: true,                  // Condition to check if all of envelope properties are set
+			dac_enabled: false,                  // Condition to check if all of envelope properties are set
 			enabled: false,                     // Condition to check if channel is enabled
 			envelope: Envelope::new(),          // NR 12 Enevlope
 			envelope_period_counter: 0,
@@ -234,8 +234,11 @@ impl Channel1 {
 	}
 
 	 pub fn dac_output(&self) -> f32 {
-	 	if self.dac_enabled && self.enabled {
-			let duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+	 	if self.dac_enabled {
+			let mut duty_output = 0.0;
+			if self.enabled {
+				duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+			}
 	 		let vol_output: f32 = self.volume as f32 * duty_output;
 	 		(vol_output / 7.5) - 1.0
 	 	} else {
