@@ -29,7 +29,7 @@ export const EmulatorScreen = (props: EmulatorProps) => {
         const checker = (time: number) => {
             let diff = time - lt;
             lt = time;
-            console.log(diff / 1000)
+            // console.log(diff / 1000)
             let data = emulator.update();
             imd.data.set(new Uint8ClampedArray(data.buffer));
             ctx.putImageData(imd, 0, 0);

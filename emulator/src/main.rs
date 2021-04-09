@@ -1,21 +1,23 @@
+// use rodio::queue;
+// use rodio::{buffer::SamplesBuffer, OutputStream, OutputStreamHandle};
+use std::env;
 use std::fs::File;
 use std::io::Read;
-use std::env;
-use std::time::{Duration, Instant};
 use std::thread;
+use std::time::{Duration, Instant};
 
+mod apu;
+mod bus;
 
-mod utils;
-mod debugger;
 mod cartridge;
 mod cpu;
-mod timer;
-mod bus;
-mod ppu;
-mod apu;
-mod instruction;
-mod gameboy;
 mod cpu_recievable;
+mod debugger;
+mod gameboy;
+mod instruction;
+mod ppu;
+mod timer;
+mod utils;
 
 static ESC: &str = "\u{001b}";
 
@@ -71,7 +73,7 @@ fn number_prefixed(pre: &str, s: &str) -> Option<u16> {
     }
 }
 
-fn get_args () -> Args {
+fn get_args() -> Args {
     let args: Vec<String> = env::args().collect();
     let mut display = Display::None;
     let mut stepmode = false;
@@ -99,7 +101,12 @@ fn get_args () -> Args {
         number_prefixed("-w", x).map(|n| watches.push(n));
         number_prefixed("--watch", x).map(|n| watches.push(n));
     }
-    Args {display, stepmode, watches, breaks}
+    Args {
+        display,
+        stepmode,
+        watches,
+        breaks,
+    }
 }
 
 fn ascii_half_print(screen: &ppu::Screen) {
@@ -110,7 +117,6 @@ fn ascii_half_print(screen: &ppu::Screen) {
             2 => 90,
             _ => 30,
         }
-
     }
     fn print_pixel_pair(topcolor: u8, bottomcolor: u8) {
         let top_half = "▀";
@@ -119,7 +125,7 @@ fn ascii_half_print(screen: &ppu::Screen) {
         print!("{}[{};{}m{}", ESC, fg, bg + 10, top_half)
     }
     print!("{}[1;1f", ESC);
-    for row in 0..(ppu::SCREEN_HEIGHT/2) {
+    for row in 0..(ppu::SCREEN_HEIGHT / 2) {
         for col in 0..(ppu::SCREEN_WIDTH) {
             let ctop = (row * 2) * ppu::SCREEN_WIDTH + col;
             let cbot = (row * 2 + 1) * ppu::SCREEN_WIDTH + col;
@@ -134,17 +140,23 @@ fn ascii_half_print(screen: &ppu::Screen) {
 fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
     let mut start = Instant::now();
     let mut frametime = Instant::now();
+    // let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+    // let (tx, mut rx) = queue::queue(false);
+
+    // let audio_buffer = gameboy.get_audio_buffer();
+    // let data: Vec<f32> = (0..4096).map(|n| -0.5 + (n % 2) as f32).collect();
+    // let sample_buffer = SamplesBuffer::new(2, 44100, audio_buffer);
+    // let result = stream_handle.play_raw(sample_buffer);
+
     loop {
         match args.display {
             Display::None => (),
-            Display::CPUAlt => {
-                gameboy.print_alt()
-            },
+            Display::CPUAlt => gameboy.print_alt(),
             Display::CPU => {
                 if gameboy.cpu.debug_options.debug_print {
                     gameboy.print_cpu_state()
                 }
-            },
+            }
             Display::AsciiHalf => {
                 let duration = frametime.elapsed();
                 if duration.as_secs_f64() > (1.0 / 17.0) {
@@ -154,12 +166,20 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
             }
         }
         gameboy.tick();
+
+        // let audio_buffer = gameboy.get_audio_buffer();
+        // let sample_buffer = SamplesBuffer::new(2, 44100, audio_buffer);
+        // stream_handle.play_raw(sample_buffer);
+
         let mut duration = start.elapsed();
         let desiredtime = Duration::from_nanos(1000);
         let elapsed = desiredtime.checked_sub(duration);
         match elapsed {
             None => start = start.checked_add(desiredtime).unwrap(),
-            Some(x) => { start = Instant::now(); thread::sleep(x)},
+            Some(x) => {
+                start = Instant::now();
+                thread::sleep(x)
+            }
         }
 
         let savestatefile = "savestate";
@@ -167,33 +187,31 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
             Some(SignalOp::Break) => {
                 gameboy.debug_break();
                 println!("Debug!")
-
-            },
+            }
             Some(SignalOp::SaveState) => {
                 let mut f = BufWriter::new(File::create(savestatefile).unwrap());
                 let state = gameboy.save();
                 bincode::serialize_into(&mut f, &state);
-            },
+            }
             Some(SignalOp::LoadState) => {
                 let state = open_file(savestatefile);
                 match bincode::deserialize(&state) {
-                    Ok(deser) =>  {
+                    Ok(deser) => {
                         let save: cpu::SaveState = deser;
                         gameboy.load(&save);
                     }
-                    _ => println!("Failed to load savestate")
+                    _ => println!("Failed to load savestate"),
                 }
-            },
+            }
             None => (),
         }
     }
 }
 
 use bincode::serialize_into;
-use std::io::BufWriter;
 use std::collections::VecDeque;
-use std::sync::{Mutex,Arc};
-
+use std::io::BufWriter;
+use std::sync::{Arc, Mutex};
 
 enum SignalOp {
     SaveState,
@@ -203,9 +221,11 @@ enum SignalOp {
 type Saver = Arc<Mutex<VecDeque<SignalOp>>>;
 
 fn main() {
-    // let romdata = open_file("cpu_instrs_ld.gb");
     // let romdata = open_file("cpu_instrs.gb");
     // let romdata = open_file("testrom/jtest.gb");
+    // let romdata = open_file("tetris.gb");
+    // let romdata = open_file("testrom/dtest2.gb");
+    // let romdata = open_file("cpu_instrs_ld.gb");
     let args: Vec<String> = env::args().collect();
     let romdata = open_file(&args[1]);
     let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
@@ -238,9 +258,10 @@ fn main() {
         cleanup_screen(d);
         println!("Bye!");
         std::process::exit(0x01);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
-    use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2, SIGALRM};
+    use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
     let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
     let saver2 = saver.clone();
     thread::spawn(move || {
@@ -251,7 +272,6 @@ fn main() {
                 SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
                 _ => println!("Received signal {:?}", sig),
             }
-
         }
     });
 

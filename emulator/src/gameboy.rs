@@ -1,14 +1,14 @@
-use crate::cpu::CPU;
 use crate::cartridge::Cartridge;
+use crate::cpu::CPU;
 
-pub const BUT_START: u8   = 0b1;
-pub const BUT_SELECT: u8  = 0b10;
-pub const BUT_UP: u8      = 0b100;
-pub const BUT_DOWN: u8    = 0b1000;
-pub const BUT_LEFT: u8    = 0b10000;
-pub const BUT_RIGHT: u8   = 0b100000;
-pub const BUT_A: u8       = 0b1000000;
-pub const BUT_B: u8       = 0b10000000;
+pub const BUT_START: u8 = 0b1;
+pub const BUT_SELECT: u8 = 0b10;
+pub const BUT_UP: u8 = 0b100;
+pub const BUT_DOWN: u8 = 0b1000;
+pub const BUT_LEFT: u8 = 0b10000;
+pub const BUT_RIGHT: u8 = 0b100000;
+pub const BUT_A: u8 = 0b1000000;
+pub const BUT_B: u8 = 0b10000000;
 
 pub struct GameboyBuilder {
     rom: Option<Cartridge>,
@@ -22,7 +22,10 @@ pub struct Gameboy {
 
 impl GameboyBuilder {
     pub fn new() -> Self {
-        return Self{rom: None, bios: None}
+        return Self {
+            rom: None,
+            bios: None,
+        };
     }
 
     pub fn load_rom(mut self, rom: Cartridge) -> Self {
@@ -41,12 +44,12 @@ impl GameboyBuilder {
                 return Gameboy {
                     cpu: CPU::with_bios(crate::bus::Bus::with_bios(rom, bios.clone())),
                     buttons_pressed: 0,
-                }
+                };
             } else {
                 return Gameboy {
                     cpu: CPU::post_bootrom(crate::bus::Bus::new(rom)),
                     buttons_pressed: 0,
-                }
+                };
             }
         }
         panic!("Builder not fully initialized")
@@ -62,12 +65,21 @@ impl Gameboy {
         self.cpu.tick()
     }
     pub fn get_screen(&self) -> &crate::ppu::Screen {
-        return self.cpu.get_screen()
+        return self.cpu.get_screen();
     }
     pub fn get_canvas(&self) -> crate::ppu::Canvas {
-        return self.cpu.get_canvas()
+        return self.cpu.get_canvas();
     }
 
+    pub fn get_audio_buffer(&self) -> [f32; 4096] {
+        self.cpu.get_audio_buffer()
+    }
+    pub fn get_audio_buffer_status(&self) -> bool {
+        self.cpu.get_audio_buffer_status()
+    }
+    pub fn set_audio_buffer_status(&mut self, status: bool) {
+        self.cpu.set_audio_buffer_status(status);
+    }
     pub fn print_cpu_state(&self) {
         self.cpu.print_state();
     }

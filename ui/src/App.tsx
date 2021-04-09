@@ -77,7 +77,7 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 function FileSubmission(props: any) {
-  const { register, handleSubmit, errors } = useForm(); 
+  const { register, handleSubmit, errors } = useForm();
 
   return (
     <div className="modal-box">
@@ -125,7 +125,7 @@ function GamePad(props: any) {
       <Draggable disabled={props.disabled} grid={[10,10]}>
         <BButton className="icon-button b-button" onClick={() => props.onClick(Button.B)}/>
       </Draggable>
-       
+
     </div>
   );
 }
@@ -233,13 +233,13 @@ function App() {
   const [modalIsOpen, setModalIsOpen] = useState(true);
   const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
   const [controls, setControls] = useState({
-    up:'w', 
-    left:'a', 
+    up:'w',
+    left:'a',
     down:'s',
     right:'d',
-    a:'j', 
+    a:'j',
     b:'k',
-    start:' ', 
+    start:' ',
     select:'b',
   });
 
@@ -258,14 +258,25 @@ function App() {
       case controls.b: return Button.B;
       case controls.start: return Button.Start;
       case controls.select: return Button.Select;
+      default: return undefined;
     }
   };
 
   const handleKeyDown = (event: any) => {
-    w.button_down(decodeButton(event.key))
+    // console.log(event);
+    // setKeyPress(event.key);
+    let butt = decodeButton(event.key);
+    if (butt !== undefined) {
+        w.button_down(butt)
+    }
   }
   const handleKeyUp = (event: any) => {
-    w.button_up(decodeButton(event.key))
+    // console.log(event);
+    // setKeyPress(event.key);
+    let butt = decodeButton(event.key);
+    if (butt !== undefined) {
+        w.button_up(butt)
+    }
   }
 
   function sleep(ms: any) {
