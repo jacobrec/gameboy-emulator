@@ -1,7 +1,16 @@
 var CACHE_NAME = 'pwa-gameboy-emulator-cache';
 var urlsToCache = [
   '/',
-  '/index.html'
+  '/index.html',
+  '/static/js/bundle.js',
+  '/static/js/0.chunk.js',
+  '/static/js/1.chunk.js',
+  '/static/js/2.chunk.js',
+  '/static/js/main.chunk.js',
+  '/favicon.ico',
+  '/logo192.png',
+  '/logo512.png',
+  '/e6c918b637992db06180.module.wasm',
 ];
 
 // Install a service worker
