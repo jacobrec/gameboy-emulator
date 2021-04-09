@@ -569,7 +569,8 @@ impl PPU {
     pub fn read_reg(&self, loc: u16) -> u8 {
         let l = loc as usize - 0xFF40;
         if l > 0xB {
-            panic!("CGB functionallity is not supported")
+            //panic!("CGB functionallity is not supported")
+                return 0xff
         }
         self.registers[l]
     }
