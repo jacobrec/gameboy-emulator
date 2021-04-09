@@ -27,6 +27,8 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import VideogameAssetIcon from '@material-ui/icons/VideogameAsset';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 
 //Icon imports
 import DownButton from './iconComponents/DownButton';
@@ -158,7 +160,13 @@ function ResponsiveDrawer(props: any) {
         <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
         <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
         <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
-        <MenuItem onClick={() => props.onGamepadChange()} text={"Configure GamePad"}><VideogameAssetIcon/></MenuItem>
+        <MenuItem text={"Configure GamePad"}>
+          <VideogameAssetIcon/>
+          <Switch 
+            checked={props.toggle}
+            onChange={props.onGamepadChange}
+          />
+        </MenuItem>
         <MenuItem onClick={() => props.onKeyboardChange()} text={"Configure Keyboard"}><KeyboardIcon/></MenuItem>
       </List>
     </div>
@@ -240,8 +248,6 @@ function App() {
     setRom(data.rom[0]);
   };
 
-
-
   const decodeButton = (keyString: string) => {
     switch(keyString) {
       case controls.up: return Button.DUp;
@@ -254,7 +260,6 @@ function App() {
       case controls.select: return Button.Select;
     }
   };
-
 
   const handleKeyDown = (event: any) => {
     w.button_down(decodeButton(event.key))
@@ -298,7 +303,12 @@ function App() {
       <Modal open={modalIsOpen}>
         <FileSubmission onSubmit={onSubmit}/>
       </Modal>
-      <ResponsiveDrawer name={rom.name} onGamepadChange={handleGamepadChange} onKeyboardChange={handleKeyboardChange}/>
+      <ResponsiveDrawer 
+        name={rom.name} 
+        onGamepadChange={handleGamepadChange} 
+        onKeyboardChange={handleKeyboardChange} 
+        toggle={isDraggableDisabled}
+      />
       <Grid
         direction="column"
         justify="center"
