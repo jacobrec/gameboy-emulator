@@ -36,11 +36,6 @@ pub fn update(x: usize) -> Vec<u32> {
 }
 
 #[wasm_bindgen]
-pub fn get_audio_buffer() -> Vec<f32> {
-    unsafe { GAMEBOY.as_mut().unwrap().get_audio_buffer().to_vec() }
-}
-
-#[wasm_bindgen]
 pub fn button_down(b: isize) {
     let bt = 1 << b; // ensure Emulator.ts and gameboy.rs have buttons in the same order
     unsafe { GAMEBOY.as_mut().unwrap().button_down(bt) }

@@ -111,18 +111,10 @@ impl APU {
             0xFF30..=0xFF3F => self.channel3.write(loc, val),
             0xFF20..=0xFF23 => self.channel4.write(loc, val),
             0xFF24 => {
-                self.left_terminal_vin = if val & 0x80 == 0x80 {
-                    true
-                } else {
-                    false
-                };
+                self.left_terminal_vin = if val & 0x80 == 0x80 { true } else { false };
                 self.left_terminal_volume = (val >> 4) & 0x7;
 
-                self.right_terminal_vin = if val & 0x08 == 0x08 {
-                    true
-                } else {
-                    false
-                };
+                self.right_terminal_vin = if val & 0x08 == 0x08 { true } else { false };
                 self.right_terminal_volume = val & 0x7;
             }
             0xFF25 => {
@@ -228,7 +220,7 @@ impl APU {
             self.audio_buffer[self.audio_buffer_position + 1] = right_buffer;
             self.audio_buffer_position += 2;
 
-            println!("{:?}", self.audio_buffer);
+            // println!("{:?}", self.audio_buffer);
         }
 
         // Reset buffer position if we reach max

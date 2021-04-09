@@ -351,9 +351,12 @@ impl CPU {
         // https://gbdev.io/pandocs/#interrupt-service-routine
         let loc: u8 = 0x40 + 0x8 * id;
         self.bus.reg_if.data &= !(1 << id);
+        if cfg!(debug_assertions) {
+            println!("Interrupt Occurred: loc: {}. Pushing sp({})", loc, self.sp);
+        }
         self.clock();
         self.clock();
-        self.stack_push(self.sp);
+        self.stack_push(self.pc);
         self.set_pc(loc as u16);
     }
 
@@ -377,8 +380,14 @@ impl CPU {
         self.process_recievables();
         self.interrupt();
         let instruction = self.next_op();
-        // println!("Instruction: {}", instruction);
-        // self.print_state();
+        if cfg!(debug_assertions) {
+            if self.debug_options.pause_on_branch {
+                match instruction {
+                    Instruction::Call(_, _) | Instruction::Jmp(_, _) => self.wait_for_enter(),
+                    _ => (),
+                }
+            }
+        }
         self.execute(instruction);
         if cfg!(debug_assertions) {
             if self.debug_options.break_points.contains(&self.pc) {
@@ -486,7 +495,7 @@ impl CPU {
 
     fn next(&mut self) -> u8 {
         let data = self.read(self.pc);
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         return data;
     }
     fn next_signed(&mut self) -> i8 {
@@ -601,7 +610,7 @@ impl CPU {
 
             0x07 => Instruction::Rlca, // RLCA
             0x17 => Instruction::Rla,  // RLA
-            // 0x27 => TODO: DAA
+            0x27 => Instruction::Daa,
             0x37 => Instruction::Scf, // SCF
 
             0x08 => Instruction::Load(Location::IndirectLiteral(self.next16()), Location::SP), // LD (a16), SP
@@ -857,7 +866,7 @@ impl CPU {
 
     fn execute(&mut self, op: Instruction) {
         if cfg!(debug_assertions) && self.debug_options.debug_print {
-            print!("{:<15} => ", format!("{}", op));
+            print!("{:<16} => ", format!("{}", op));
         }
         fn isLoc16Bit(l: Location) -> bool {
             match l {
@@ -1233,19 +1242,15 @@ impl CPU {
                         Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
                         Jump::Absolute(v16) => v16,
                     };
-                    self.clock();
-                    self.pc = dest;
+                    self.set_pc(dest);
                 }
             }
             Instruction::Jmp(j, None) => {
                 let dest = match j {
-                    Jump::Relative(v8) => {
-                        self.clock();
-                        ((self.pc as i32) + (v8 as i32)) as u16
-                    }
+                    Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
                     Jump::Absolute(v16) => v16,
                 };
-                self.pc = dest;
+                self.set_pc(dest);
             }
             Instruction::Rl(r) => {
                 self.rotate_register(r, Rotate::Left, true);
@@ -1343,7 +1348,32 @@ impl CPU {
             }
             Instruction::EI => self.recievables.send(Delay(1, Box::new(EnableInterrupts))),
             Instruction::DI => self.ime = false,
-            _ => unimplemented!("TODO"),
+            Instruction::Daa => {
+                let mut a = self.a();
+                let sub = self.get_flag(Flag::AddSub);
+                let carry = self.get_flag(Flag::Carry);
+                let half = self.get_flag(Flag::HalfCarry);
+                if (sub) {
+                    if (carry) {
+                        a = a.wrapping_sub(0x60)
+                    }
+                    if (half) {
+                        a = a.wrapping_sub(0x6)
+                    }
+                } else {
+                    if (carry || a > 0x99) {
+                        a = a.wrapping_add(0x60);
+                        self.set_flag(Flag::Carry, true)
+                    }
+                    if (half || (a & 0xF) > 0x9) {
+                        a = a.wrapping_add(0x6)
+                    }
+                }
+
+                self.set_flag(Flag::Zero, a == 0);
+                self.set_flag(Flag::HalfCarry, false);
+                self.set_a(a);
+            }
         }
     }
 

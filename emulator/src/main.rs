@@ -152,7 +152,11 @@ fn main_loop(mut gameboy: gameboy::Gameboy, args: Args, saver: Saver) {
         match args.display {
             Display::None => (),
             Display::CPUAlt => gameboy.print_alt(),
-            Display::CPU => gameboy.print_cpu_state(),
+            Display::CPU => {
+                if gameboy.cpu.debug_options.debug_print {
+                    gameboy.print_cpu_state()
+                }
+            }
             Display::AsciiHalf => {
                 let duration = frametime.elapsed();
                 if duration.as_secs_f64() > (1.0 / 17.0) {
@@ -220,7 +224,10 @@ fn main() {
     // let romdata = open_file("cpu_instrs.gb");
     // let romdata = open_file("testrom/jtest.gb");
     // let romdata = open_file("tetris.gb");
-    let romdata = open_file("testrom/dtest2.gb");
+    // let romdata = open_file("testrom/dtest2.gb");
+    // let romdata = open_file("cpu_instrs_ld.gb");
+    let args: Vec<String> = env::args().collect();
+    let romdata = open_file(&args[1]);
     let bios = open_file("bootrom.bin"); // gameboy state now starts after bootrom has complete
     let mut gameboy = gameboy::GameboyBuilder::new()
         .load_rom(cartridge::Cartridge::from_data(romdata))
@@ -254,19 +261,19 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-//    use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
-//    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
-//    let saver2 = saver.clone();
-//    thread::spawn(move || {
-//        for sig in signals.forever() {
-//            match sig {
-//                SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
-//                SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
-//                SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
-//                _ => println!("Received signal {:?}", sig),
-//            }
-//        }
-//    });
+    //    use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
+    //    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
+    //    let saver2 = saver.clone();
+    //    thread::spawn(move || {
+    //        for sig in signals.forever() {
+    //            match sig {
+    //                SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
+    //                SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
+    //                SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
+    //                _ => println!("Received signal {:?}", sig),
+    //            }
+    //        }
+    //    });
 
     main_loop(gameboy, args, saver);
 }

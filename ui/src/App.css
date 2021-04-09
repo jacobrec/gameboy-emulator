@@ -25,21 +25,72 @@
 }
 
 .gamepad {
+  position: relative;
+  padding: 0px;
   padding-left: 240px;
-  text-align: center;
+  height: 500px;
+  width: 500px;
+  overflow: 'auto';
+  
 }
 
-.direction-pad {
+
+.icon-button {
   height: 50px;
   width: 50px;
 }
 
-LeftButton {
+.up {
   position: absolute;
-  left: 5%;
-  top: 25%;
+  top: 2.5%;
+  left: 36vw;
 }
 
+.left {
+  position: absolute;
+  top: 15%;
+  left: 30vw;
+}
+
+.right {
+  position: absolute;
+  left: 42vw;
+  top: 15%;
+}
+
+.down {
+  position: absolute;
+  top: 30%;
+  left: 36vw;
+
+}
+
+.select {
+  position: absolute;
+  left: 55vw;
+  height: 80px;
+  width: 60px;
+}
+
+.start {
+  position: absolute;
+  left: 65vw;
+  height: 80px;
+  width: 60px;
+}
+
+.a-button {
+  position: absolute;
+  left: 80vw;
+  top: 20%;
+}
+
+.b-button {
+  position: absolute;
+  left: 90vw;
+  top: 5%;
+
+}
 
 
 canvas {

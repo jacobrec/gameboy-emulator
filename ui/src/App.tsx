@@ -25,6 +25,8 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import SaveIcon from '@material-ui/icons/Save';
 import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import VideogameAssetIcon from '@material-ui/icons/VideogameAsset';
+import KeyboardIcon from '@material-ui/icons/Keyboard';
 
 //Icon imports
 import DownButton from './iconComponents/DownButton';
@@ -73,7 +75,7 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 function FileSubmission(props: any) {
-  const { register, handleSubmit, errors } = useForm(); 
+  const { register, handleSubmit, errors } = useForm();
 
   return (
     <div className="modal-box">
@@ -89,60 +91,39 @@ function FileSubmission(props: any) {
 }
 
 function GamePad(props: any) {
+
   return (
     <div className="gamepad">
-      <Grid 
-        container
-        direction="row"
-        justify="space-evenly"
-        alignItems="stretch"
-      >
-        <Grid item>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <UpButton className="icon-button up" onClick={() => props.onClick(Button.DUp)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="up-button">
-              <UpButton className="direction-pad" onClick={() => props.onClick(Button.DUp)}/>
-            </Grid>
-          </Draggable>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <LeftButton className="icon-button left" onClick={() => props.onClick(Button.DLeft)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="left-button">
-              <LeftButton className="direction-pad" onClick={() => props.onClick(Button.DLeft)}/>
-            </Grid>
-          </Draggable>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <RightButton className="icon-button right" onClick={() => props.onClick(Button.DRight)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="right-button">
-              <RightButton className="direction-pad" onClick={() => props.onClick(Button.DRight)}/>
-            </Grid>
-          </Draggable>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <DownButton className="icon-button down" onClick={() => props.onClick(Button.DDown)}/>
+      </Draggable>
 
-          <Draggable>
-            <Grid item className="down-button">
-              <DownButton className="direction-pad" onClick={() => props.onClick(Button.DDown)}/>
-            </Grid>
-          </Draggable>
-        </Grid>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <SelectButtonAngled className="select" onClick={() => props.onClick(Button.Select)}/>
+      </Draggable>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <StartButtonAngled className="start" onClick={() => props.onClick(Button.Start)}/>
+      </Draggable>
 
-        <Grid item>
-          <Draggable>
-            <SelectButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Select)}/>
-          </Draggable>
-          <Draggable>
-            <StartButtonAngled className="direction-pad" onClick={() => props.onClick(Button.Start)}/>
-          </Draggable>
-        </Grid>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <AButton className="icon-button a-button" onClick={() => props.onClick(Button.A)}/>
+      </Draggable>
+      <Draggable disabled={props.disabled} grid={[10,10]}>
+        <BButton className="icon-button b-button" onClick={() => props.onClick(Button.B)}/>
+      </Draggable>
 
-        <Grid item>
-          <Draggable>
-            <AButton className="direction-pad" onClick={() => props.onClick(Button.A)}/>
-          </Draggable>
-          <Draggable>
-            <BButton className="direction-pad" onClick={() => props.onClick(Button.B)}/>
-          </Draggable>
-        </Grid>
-       
-      </Grid>
     </div>
   );
 }
@@ -177,6 +158,8 @@ function ResponsiveDrawer(props: any) {
         <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
         <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
         <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
+        <MenuItem onClick={() => props.onGamepadChange()} text={"Configure GamePad"}><VideogameAssetIcon/></MenuItem>
+        <MenuItem onClick={() => props.onKeyboardChange()} text={"Configure Keyboard"}><KeyboardIcon/></MenuItem>
       </List>
     </div>
   );
@@ -240,15 +223,15 @@ function App() {
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
-  // const [keyPress, setKeyPress] = useState('up');
+  const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
   const [controls, setControls] = useState({
-    up:'w', 
-    left:'a', 
+    up:'w',
+    left:'a',
     down:'s',
     right:'d',
-    a:'j', 
+    a:'j',
     b:'k',
-    start:' ', 
+    start:' ',
     select:'b',
   });
 
@@ -269,6 +252,7 @@ function App() {
       case controls.b: return Button.B;
       case controls.start: return Button.Start;
       case controls.select: return Button.Select;
+      default: return undefined;
     }
   };
 
@@ -276,23 +260,37 @@ function App() {
   const handleKeyDown = (event: any) => {
     // console.log(event);
     // setKeyPress(event.key);
-    w.button_down(decodeButton(event.key))
+    let butt = decodeButton(event.key);
+    if (butt !== undefined) {
+        w.button_down(butt)
+    }
   }
   const handleKeyUp = (event: any) => {
     // console.log(event);
     // setKeyPress(event.key);
-    w.button_up(decodeButton(event.key))
+    let butt = decodeButton(event.key);
+    if (butt !== undefined) {
+        w.button_up(butt)
+    }
   }
 
   function sleep(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-
   const handleClick = (button: Button) => {
     // console.log(button);
     w.button_down(button);
     sleep(85).then(() => {w.button_up(button);});
+  }
+
+  const handleGamepadChange = () => {
+    setIsDraggableDisabled(!isDraggableDisabled);
+    //needs to save gamepads current positions and save to JSOn file 
+  }
+  const handleKeyboardChange = () => {
+    //need to get keybindings and set controls JSON
+    //may need to open modal and save form input 
   }
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -311,7 +309,7 @@ function App() {
       <Modal open={modalIsOpen}>
         <FileSubmission onSubmit={onSubmit}/>
       </Modal>
-      <ResponsiveDrawer name={rom.name}/>
+      <ResponsiveDrawer name={rom.name} onGamepadChange={handleGamepadChange} onKeyboardChange={handleKeyboardChange}/>
       <Grid
         direction="column"
         justify="center"
@@ -328,13 +326,11 @@ function App() {
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad onClick={handleClick}/>
+          <GamePad onClick={handleClick} disabled={isDraggableDisabled}/>
         </Grid>
       </Grid>
     </div>
   );
 }
-
-
 
 export default App;

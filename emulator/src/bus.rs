@@ -177,7 +177,10 @@ impl Bus {
             0xFF30..=0xFF3F => self.apu.write(loc, val),
             0xFF40..=0xFF4F => self.ppu.write_reg(loc, val),
             0xFF00..=0xFF7F => {
-                print!("[UNIMPLEMENTED: Writing IO Register]\n{:19}", "")
+                print!(
+                    "[UNIMPLEMENTED: Writing IO Register: {:04X}]\n{:19}",
+                    loc, ""
+                )
             }
             0xFF80..=0xFFFE => self.ram[loc as usize] = val, // HRAM
             0xFFFF => self.reg_ie.data = val,
@@ -200,6 +203,7 @@ impl Bus {
         // PPU runs at 2MHz
         self.ppu.tick();
         self.ppu.tick();
+        self.timer.tick();
         self.dma_transfer();
         // TODO: call apu tick
         self.apu.tick();
@@ -284,8 +288,8 @@ impl Joypad {
     pub fn update_joypad(&mut self, buttonmap: u8) {
         self.last = buttonmap;
         use crate::gameboy;
-        let dir = self.pins & 0b010000 > 0;
-        let act = self.pins & 0b100000 > 0;
+        let dir = self.pins & 0b010000 == 0;
+        let act = self.pins & 0b100000 == 0;
         self.set_down_start(
             dir && (buttonmap & gameboy::BUT_DOWN > 0)
                 || act && (buttonmap & gameboy::BUT_START > 0),

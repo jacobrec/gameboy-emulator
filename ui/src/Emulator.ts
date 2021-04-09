@@ -46,6 +46,7 @@ export default class Emulator {
     }
 
     button_down(b: Button): number {
+        console.log("Sending Button press: ", b);
         return this.wasm?.button_down(b);
     }
     button_up(b: Button): number {
