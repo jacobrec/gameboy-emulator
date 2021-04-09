@@ -42,6 +42,21 @@ import BButton from './iconComponents/BButton';
 
 const drawerWidth = 240;
 
+interface ControlObj {
+  up: string,
+  left: string,
+  down:string,
+  right:string,
+  a:string,
+  b:string,
+  start:string,
+  select:string
+}
+
+function parse_json(json: any): json is ControlObj {
+  return json;
+}
+
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
@@ -111,11 +126,6 @@ function GamePad(props: any) {
         <div 
         className="up" 
         ref={upButton} 
-        style={{
-          position:'relative', 
-          top: props.locations["upButton"].offsetTop, 
-          left: props.locations["upButton"].offsetLeft,
-          }}
         >
           <UpButton className="icon-button" onClick={() => props.onClick(Button.DUp)} />
         </div>
@@ -183,7 +193,7 @@ function MenuItem (props: any) {
 function ResponsiveDrawer(props: any) {
   const classes = useStyles();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-
+  
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -208,7 +218,7 @@ function ResponsiveDrawer(props: any) {
             onChange={props.onGamepadChange}
           />
         </ListItem>
-        <MenuItem onClick={() => props.onKeyboardChange()} text={"Configure Keyboard"}><KeyboardIcon/></MenuItem>
+        <MenuItem onClick={props.onKeyboardChange} text={"Configure Keyboard"}><KeyboardIcon/> {props.modal} </MenuItem>
         <MenuItem text={"Delete User Data"} onClick={props.onDelete}><DeleteIcon/></MenuItem>
       </List>
     </div>
@@ -270,11 +280,13 @@ function ResponsiveDrawer(props: any) {
 
 function App() {
   let w: any = window;
+  const { register, handleSubmit} = useForm();
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
   const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
-  const [controls, setControls] = useState({
+  const [controls, setControls] = useState(
+    JSON.parse(localStorage.getItem('controls')) || {
     up:'w',
     left:'a',
     down:'s',
@@ -317,19 +329,16 @@ function App() {
   };
 
   const handleKeyDown = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
     let butt = decodeButton(event.key);
     if (butt !== undefined) {
-        w.button_down(butt)
+      w.button_down(butt)
     }
   }
   const handleKeyUp = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
+
     let butt = decodeButton(event.key);
     if (butt !== undefined) {
-        w.button_up(butt)
+      w.button_up(butt)
     }
   }
 
@@ -347,10 +356,63 @@ function App() {
     setIsDraggableDisabled(!isDraggableDisabled);
   }
 
+  const [openKeyBindingModal, setOpenKeyBindingModal] = useState(false);
+
+
+  const handleClose = () => {
+    setOpenKeyBindingModal(false);
+  };
+
   const handleKeyboardChange = () => {
     //need to get keybindings and set controls JSON
     //may need to open modal and save form input 
+    setOpenKeyBindingModal(true);
   }
+
+  const submittedChanges = (data: any) => {
+    let changeControls = (id: string, value: string) => {
+      switch(id) {
+        case "up": { setControls({...controls, "up": value}); break;}
+        case "down": { setControls({...controls, "down": value}); break;}
+        case "left": { setControls({...controls, "left": value}); break;}
+        case "right": { setControls({...controls, "right": value}); break;}
+        case "a": { setControls({...controls, "a": value}); break;}
+        case "b": { setControls({...controls, "b": value}); break;}
+        case "start": { setControls({...controls, "start": value}); break;}
+        case "select": { setControls({...controls, "select": value}); break;}
+        default: console.log("No such control exists");
+      }
+    }
+    for(const prop in data) {
+      if (data[prop].length !== 0) {
+        changeControls(prop, data[prop]);
+      }
+    }
+    setOpenKeyBindingModal(false);
+  }
+
+  const keyBindingChangeModal = (
+    <Modal 
+    open={openKeyBindingModal}
+    onClose={handleClose}
+    disableEnforceFocus
+    >
+      <div className="modal-box">
+        <h2>Set Key Bindings</h2>
+        <form onSubmit={handleSubmit(submittedChanges)}>
+          <input name="up" placeholder="up" ref={register}></input> <br/>
+          <input name="down" placeholder="down" ref={register}></input> <br/>
+          <input name="left" placeholder="left" ref={register}></input> <br/>
+          <input name="right" placeholder="right" ref={register}></input> <br/>
+          <input name="a" placeholder="a" ref={register}></input> <br/>
+          <input name="b" placeholder="b" ref={register}></input> <br/>
+          <input name="start" placeholder="start" ref={register}></input> <br/>
+          <input name="select" placeholder="select" ref={register}></input> <br/>
+          <button>Save</button>
+        </form>
+      </div>
+    </Modal>
+  );
 
   const handleGamePadChange = (id: string, el: HTMLDivElement) => {
 
@@ -415,7 +477,13 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('gamePadLocations', JSON.stringify(gamePadLocations));
-  });
+  }, [gamePadLocations]);
+
+  useEffect(() => {
+    localStorage.setItem('controls', JSON.stringify(controls));
+  }, [controls]);
+
+  
 
 
   return (
@@ -429,6 +497,7 @@ function App() {
         onKeyboardChange={handleKeyboardChange} 
         onDelete={removeLocalStorage}
         toggle={isDraggableDisabled}
+        modal={keyBindingChangeModal}
       />
       <Grid
         direction="column"
