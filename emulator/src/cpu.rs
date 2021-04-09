@@ -352,7 +352,7 @@ impl CPU {
         let loc: u8 = 0x40 + 0x8 * id;
         self.bus.reg_if.data &= !(1 << id);
         if cfg!(debug_assertions) {
-            println!("Interrupt Occurred: loc: {}. Pushing sp({})", loc, self.sp);
+            println!("Interrupt Occurred: loc: {:02X}. Pushing sp({:04X})", loc, self.sp);
         }
         self.clock();
         self.clock();
@@ -614,9 +614,9 @@ impl CPU {
             0x37 => Instruction::Scf, // SCF
 
             0x08 => Instruction::Load(Location::IndirectLiteral(self.next16()), Location::SP), // LD (a16), SP
-            0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None), // JR r8
-            0x28 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Zero)), // JR Z, r8
-            0x38 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Carry)), // JR C, r8
+            0x18 => Instruction::Jmp(Jump::Relative(self.next_signed()), None),                     // JR r8
+            0x28 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Zero)),      // JR Z, r8
+            0x38 => Instruction::Jmp(Jump::Relative(self.next_signed()), Some(JmpFlag::Carry)),     // JR C, r8
 
             // ADD HL, r16
             0x09 => Instruction::AddHL16(Register16Loc::BC), // ADD HL, BC

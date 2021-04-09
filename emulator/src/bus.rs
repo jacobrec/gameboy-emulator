@@ -95,7 +95,7 @@ impl Bus {
     }
 
     pub fn new(rom: Cartridge) -> Self {
-        let ram = [0u8; 0xFFFF].to_vec();
+        let ram = [0u8; 0x10000].to_vec();
         let ppu = crate::ppu::PPU::new();
         let apu = crate::apu::APU::new();
         let timer = crate::timer::Timer::new();
@@ -143,11 +143,8 @@ impl Bus {
             0xFF0F => self.reg_if.data,
             0xFF10..=0xFF26 => self.apu.read(loc),
             0xFF30..=0xFF3F => self.apu.read(loc),
-            0xFF40..=0xFF4F => self.ppu.read_reg(loc),
-            0xFF00..=0xFF7F => {
-                print!("[UNIMPLEMENTED: Reading IO Register]\n{:19}", "");
-                0
-            }
+            0xFF40..=0xFF4F => { self.ppu.read_reg(loc) },
+            0xFF00..=0xFF7F => { print!("[UNIMPLEMENTED: Reading IO Register: {:04X}]\n{:19}", loc, ""); 0},
             0xFF80..=0xFFFE => self.ram[loc as usize], // HRAM
             0xFFFF => self.reg_ie.data,
             _ => panic!("Unimplemented read range: {:04X}", loc),
