@@ -3,7 +3,7 @@ import './App.css';
 import Emulator, { Button } from './Emulator';
 import { EmulatorScreen } from './EmulatorComponent';
 import { useForm } from 'react-hook-form';
-import Draggable from 'react-draggable';
+import Draggable, { DraggableData } from 'react-draggable';
 
 //Material UI imports
 import AppBar from '@material-ui/core/AppBar';
@@ -109,66 +109,92 @@ function FileSubmission(props: any) {
 
 function GamePad(props: any) {
 
-  const upButton = useRef(null);
-  const leftButton = useRef(null);
-  const rightButton = useRef(null);
-  const downButton = useRef(null);
-  const startButton = useRef(null);
-  const selectButton = useRef(null);
-  const aButton = useRef(null);
-  const bButton = useRef(null);
-
-  
-
   return (
     <div className="gamepad">
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("upButton",upButton.current)}>
-        <div 
-        className="up" 
-        ref={upButton} 
-        >
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("upButton", data)} 
+      defaultPosition={{x: props.locations["upButton"].x, y: props.locations["upButton"].y}}
+      >
+        <div className="up">
           <UpButton className="icon-button" onClick={() => props.onClick(Button.DUp)} />
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("leftButton",leftButton.current)}>
-        <div className="left" ref={leftButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("leftButton",data)}
+      defaultPosition={{x: props.locations["leftButton"].x, y: props.locations["leftButton"].y}}
+      >
+        <div className="left">
           <LeftButton className="icon-button" onClick={() => props.onClick(Button.DLeft)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("rightButton",rightButton.current)}>
-        <div className="right" ref={rightButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("rightButton",data)}
+      defaultPosition={{x: props.locations["rightButton"].x, y: props.locations["rightButton"].y}}
+      >
+        <div className="right">
           <RightButton className="icon-button" onClick={() => props.onClick(Button.DRight)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("downButton",downButton.current)}>
-        <div className="down" ref={downButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("downButton",data)}
+      defaultPosition={{x: props.locations["downButton"].x, y: props.locations["downButton"].y}}
+      >
+        <div className="down">
           <DownButton className="icon-button" onClick={() => props.onClick(Button.DDown)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("select",selectButton.current)}>
-        <div className="select" ref={selectButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("select",data)}
+      defaultPosition={{x: props.locations["select"].x, y: props.locations["select"].y}}
+      >
+        <div className="select">
           <SelectButtonAngled className="start-select-button" onClick={() => props.onClick(Button.Select)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("start",startButton.current)}>
-        <div className="start" ref={startButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("start",data)}
+      defaultPosition={{x: props.locations["start"].x, y: props.locations["start"].y}}
+      >
+        <div className="start">
           <StartButtonAngled  className="start-select-button" onClick={() => props.onClick(Button.Start)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("a",aButton.current)}>
-        <div className="a-button" ref={aButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("a",data)}
+      defaultPosition={{x: props.locations["a"].x, y: props.locations["a"].y}}
+      >
+        <div className="a-button">
           <AButton className="icon-button" onClick={() => props.onClick(Button.A)}/>
         </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]} onStop={() => props.onStop("b",bButton.current)}>
-        <div className="b-button" ref={bButton}>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("b",data)}
+      defaultPosition={{x: props.locations["b"].x, y: props.locations["b"].y}}
+      >
+        <div className="b-button">
           <BButton className="icon-button" onClick={() => props.onClick(Button.B)}/>
         </div>
       </Draggable>
@@ -299,14 +325,14 @@ function App() {
 
   const [gamePadLocations, setGamePadLocations] = useState(
     JSON.parse(localStorage.getItem('gamePadLocations')) || {
-    "upButton": {},
-    "downButton": {},
-    "leftButton": {},
-    "rightButton": {},
-    "start": {},
-    "select": {},
-    "a": {},
-    "b": {},
+    "upButton": {x: null, y: null},
+    "downButton": {x: null, y: null},
+    "leftButton":{x: null, y: null},
+    "rightButton": {x: null, y: null},
+    "start": {x: null, y: null},
+    "select": {x: null, y: null},
+    "a": {x: null, y: null},
+    "b": {x: null, y: null},
   })
 
   const onSubmit = (data: any) => {
@@ -347,7 +373,6 @@ function App() {
   }
 
   const handleClick = (button: Button) => {
-    // console.log(button);
     w.button_down(button);
     sleep(85).then(() => {w.button_up(button);});
   }
@@ -364,8 +389,6 @@ function App() {
   };
 
   const handleKeyboardChange = () => {
-    //need to get keybindings and set controls JSON
-    //may need to open modal and save form input 
     setOpenKeyBindingModal(true);
   }
 
@@ -414,50 +437,36 @@ function App() {
     </Modal>
   );
 
-  const handleGamePadChange = (id: string, el: HTMLDivElement) => {
+  const handleGamePadChange = (id: string, data: DraggableData) => {
 
-    if (el) {
-      switch(id) {
-        case "upButton": {
-          gamePadLocations["upButton"] = {
-            offsetTop: el.offsetTop,
-            offsetLeft: el.offsetLeft,
-          };
-          break;
-        }
-        case "downButton": {
-          gamePadLocations["downButton"] = el.getBoundingClientRect();
-          break;
-        }
-        case "leftButton": {
-          gamePadLocations["leftButton"] = el.getBoundingClientRect();
-          break;
-        }
-        case "rightButton": {
-          gamePadLocations["rightButton"] = el.getBoundingClientRect();
-          break;
-        }
-        case "start": {
-          gamePadLocations["start"] = el.getBoundingClientRect();
-          break;
-        }
-        case "select": {
-          gamePadLocations["select"] = el.getBoundingClientRect();
-          break;
-        }
-        case "a": {
-          gamePadLocations["a"] = el.getBoundingClientRect();
-          break;
-        }
-        case "b": {
-          gamePadLocations["b"] = el.getBoundingClientRect();
-          break;
-        }
-        default: console.log("No such button exists");
+    switch(id) {
+      case "upButton": {setGamePadLocations({...gamePadLocations, "upButton": {x: data.x, y: data.y}});
+        break;
       }
-
-      console.log(el.offsetParent);
+      case "downButton": {setGamePadLocations({...gamePadLocations, "downButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "leftButton": {setGamePadLocations({...gamePadLocations, "leftButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "rightButton": {setGamePadLocations({...gamePadLocations, "rightButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "start": {setGamePadLocations({...gamePadLocations, "start": {x: data.x, y: data.y}});
+        break;
+      }
+      case "select": {setGamePadLocations({...gamePadLocations, "select": {x: data.x, y: data.y}});
+        break;
+      }
+      case "a": {setGamePadLocations({...gamePadLocations, "a": {x: data.x, y: data.y}});
+        break;
+      }
+      case "b": {setGamePadLocations({...gamePadLocations, "b": {x: data.x, y: data.y}});
+        break;
+      }
+      default: console.log("No such button exists");
     }
+    
 
   }
 
@@ -477,6 +486,9 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('gamePadLocations', JSON.stringify(gamePadLocations));
+    return () => {
+      localStorage.setItem('gamePadLocations', JSON.stringify(gamePadLocations));
+    }
   }, [gamePadLocations]);
 
   useEffect(() => {
