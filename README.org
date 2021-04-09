@@ -1,5 +1,0 @@
-* Gameboy Emulator
-** Emulator
-   Cycle accurate gameboy emulator written in rust
-** UI
-   React project 

@@ -1,8 +1,0 @@
-* Gameboy UI
-** Running
-*** 🛠️ Build with ~npm run build~
-    ~npm run build~
-
-*** 🔬 Test in with ~npm start~
-    ~npm start~
-

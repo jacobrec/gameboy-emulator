@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../emulator/pkg/gameboy_emulator.js"],"names":[],"mappings":"gHAAA","file":"static/js/4.9a47574f.chunk.js","sourcesContent":["import * as wasm from \"./gameboy_emulator_bg.wasm\";\nexport * from \"./gameboy_emulator_bg.js\";"],"sourceRoot":""}

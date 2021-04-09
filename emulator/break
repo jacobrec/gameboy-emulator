@@ -1,2 +1,0 @@
-#!/bin/bash
-kill -s SIGALRM $(ps -aux | grep "target/debug/cli-runner" | grep -v grep | grep -Po "^\w+\s+\d+" | grep -Po "\d+")
