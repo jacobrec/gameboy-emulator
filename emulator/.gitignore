@@ -7,4 +7,6 @@ wasm-pack.log
 bootrom.bin
 *.gb
 serial
+.vscode/
+.idea/
 savestate

@@ -12,11 +12,6 @@ Start:
     ld A, $10                   ; Set joypad to direction only
     ld [$FF00], a
 
-    ld A, $4                   ; Scroll X
-    ld [$FF43], a
-
-
-
     ld	a,$93
 	ld	[$FF40],a ; enable lcd
 
@@ -85,7 +80,7 @@ LoadSprite1Data:
     ld HL, $FE00
     ld a, $10                    ; sprite y
     ld [HL+], a
-    ld a, $03                    ; sprite x
+    ld a, $10                    ; sprite x
     ld [HL+], a
     ld a, 11
     ld [HL+], a

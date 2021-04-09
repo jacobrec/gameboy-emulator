@@ -20,6 +20,7 @@ unix-deps = ["ctrlc", "signal-hook"]
 [dependencies]
 wasm-bindgen = "0.2.63"
 serde = { version = "1.0.125", features = ["derive"] }
+serde-big-array = "0.3.2"
 bincode = "1.3.2"
 serde_bytes = "0.11"
 ctrlc = {  version = "3.1.8", optional = true }
