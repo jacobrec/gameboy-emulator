@@ -40,6 +40,11 @@
   width: 50px;
 }
 
+.start-select-button {
+  height: 80px;
+  width: 60px;
+}
+
 .up {
   position: absolute;
   top: 2.5%;
@@ -68,15 +73,11 @@
 .select {
   position: absolute;
   left: 55vw;
-  height: 80px;
-  width: 60px;
 }
 
 .start {
   position: absolute;
   left: 65vw;
-  height: 80px;
-  width: 60px;
 }
 
 .a-button {

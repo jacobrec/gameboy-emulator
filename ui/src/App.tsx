@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Emulator, { Button } from './Emulator';
 import { EmulatorScreen } from './EmulatorComponent';
 import { useForm } from 'react-hook-form';
-import Draggable from 'react-draggable';
+import Draggable, { DraggableData } from 'react-draggable';
 
 //Material UI imports
 import AppBar from '@material-ui/core/AppBar';
@@ -27,6 +27,8 @@ import SettingsIcon from '@material-ui/icons/Settings';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import VideogameAssetIcon from '@material-ui/icons/VideogameAsset';
 import KeyboardIcon from '@material-ui/icons/Keyboard';
+import Switch from '@material-ui/core/Switch';
+import DeleteIcon from '@material-ui/icons/Delete';
 
 //Icon imports
 import DownButton from './iconComponents/DownButton';
@@ -39,6 +41,21 @@ import AButton from './iconComponents/AButton';
 import BButton from './iconComponents/BButton';
 
 const drawerWidth = 240;
+
+interface ControlObj {
+  up: string,
+  left: string,
+  down:string,
+  right:string,
+  a:string,
+  b:string,
+  start:string,
+  select:string
+}
+
+function parse_json(json: any): json is ControlObj {
+  return json;
+}
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -94,34 +111,92 @@ function GamePad(props: any) {
 
   return (
     <div className="gamepad">
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <UpButton className="icon-button up" onClick={() => props.onClick(Button.DUp)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("upButton", data)} 
+      defaultPosition={{x: props.locations["upButton"].x, y: props.locations["upButton"].y}}
+      >
+        <div className="up">
+          <UpButton className="icon-button" onClick={() => props.onClick(Button.DUp)} />
+        </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <LeftButton className="icon-button left" onClick={() => props.onClick(Button.DLeft)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("leftButton",data)}
+      defaultPosition={{x: props.locations["leftButton"].x, y: props.locations["leftButton"].y}}
+      >
+        <div className="left">
+          <LeftButton className="icon-button" onClick={() => props.onClick(Button.DLeft)}/>
+        </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <RightButton className="icon-button right" onClick={() => props.onClick(Button.DRight)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("rightButton",data)}
+      defaultPosition={{x: props.locations["rightButton"].x, y: props.locations["rightButton"].y}}
+      >
+        <div className="right">
+          <RightButton className="icon-button" onClick={() => props.onClick(Button.DRight)}/>
+        </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <DownButton className="icon-button down" onClick={() => props.onClick(Button.DDown)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("downButton",data)}
+      defaultPosition={{x: props.locations["downButton"].x, y: props.locations["downButton"].y}}
+      >
+        <div className="down">
+          <DownButton className="icon-button" onClick={() => props.onClick(Button.DDown)}/>
+        </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <SelectButtonAngled className="select" onClick={() => props.onClick(Button.Select)}/>
-      </Draggable>
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <StartButtonAngled className="start" onClick={() => props.onClick(Button.Start)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("select",data)}
+      defaultPosition={{x: props.locations["select"].x, y: props.locations["select"].y}}
+      >
+        <div className="select">
+          <SelectButtonAngled className="start-select-button" onClick={() => props.onClick(Button.Select)}/>
+        </div>
       </Draggable>
 
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <AButton className="icon-button a-button" onClick={() => props.onClick(Button.A)}/>
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("start",data)}
+      defaultPosition={{x: props.locations["start"].x, y: props.locations["start"].y}}
+      >
+        <div className="start">
+          <StartButtonAngled  className="start-select-button" onClick={() => props.onClick(Button.Start)}/>
+        </div>
       </Draggable>
-      <Draggable disabled={props.disabled} grid={[10,10]}>
-        <BButton className="icon-button b-button" onClick={() => props.onClick(Button.B)}/>
+
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("a",data)}
+      defaultPosition={{x: props.locations["a"].x, y: props.locations["a"].y}}
+      >
+        <div className="a-button">
+          <AButton className="icon-button" onClick={() => props.onClick(Button.A)}/>
+        </div>
+      </Draggable>
+
+      <Draggable 
+      disabled={props.disabled} 
+      grid={[10,10]} 
+      onStop={(e, data) => props.onStop("b",data)}
+      defaultPosition={{x: props.locations["b"].x, y: props.locations["b"].y}}
+      >
+        <div className="b-button">
+          <BButton className="icon-button" onClick={() => props.onClick(Button.B)}/>
+        </div>
       </Draggable>
 
     </div>
@@ -132,11 +207,11 @@ function MenuItem (props: any) {
   let {text, onClick} = props;
   return (
       <ListItem onClick={onClick} button key={text}>
-          <ListItemIcon>
-            {props.children}
-          </ListItemIcon>
-          <ListItemText primary={text} />
-        </ListItem>
+        <ListItemIcon>
+          {props.children}
+        </ListItemIcon>
+        <ListItemText primary={text} />
+      </ListItem>
 
   )
 }
@@ -144,7 +219,7 @@ function MenuItem (props: any) {
 function ResponsiveDrawer(props: any) {
   const classes = useStyles();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-
+  
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -158,8 +233,19 @@ function ResponsiveDrawer(props: any) {
         <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
         <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
         <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
-        <MenuItem onClick={() => props.onGamepadChange()} text={"Configure GamePad"}><VideogameAssetIcon/></MenuItem>
-        <MenuItem onClick={() => props.onKeyboardChange()} text={"Configure Keyboard"}><KeyboardIcon/></MenuItem>
+        <ListItem button key={"Configure GamePad"}>
+          <ListItemIcon>
+            <VideogameAssetIcon/>
+          </ListItemIcon>
+          <ListItemText primary={"Configure GamePad"} />
+          <Switch 
+            checked={!props.toggle}
+            color="default"
+            onChange={props.onGamepadChange}
+          />
+        </ListItem>
+        <MenuItem onClick={props.onKeyboardChange} text={"Configure Keyboard"}><KeyboardIcon/> {props.modal} </MenuItem>
+        <MenuItem text={"Delete User Data"} onClick={props.onDelete}><DeleteIcon/></MenuItem>
       </List>
     </div>
   );
@@ -220,11 +306,13 @@ function ResponsiveDrawer(props: any) {
 
 function App() {
   let w: any = window;
+  const { register, handleSubmit} = useForm();
   const [emulator, setEmulator] = useState(new Emulator());
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
   const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
-  const [controls, setControls] = useState({
+  const [controls, setControls] = useState(
+    JSON.parse(localStorage.getItem('controls')) || {
     up:'w',
     left:'a',
     down:'s',
@@ -235,12 +323,22 @@ function App() {
     select:'b',
   });
 
+  const [gamePadLocations, setGamePadLocations] = useState(
+    JSON.parse(localStorage.getItem('gamePadLocations')) || {
+    "upButton": {x: null, y: null},
+    "downButton": {x: null, y: null},
+    "leftButton":{x: null, y: null},
+    "rightButton": {x: null, y: null},
+    "start": {x: null, y: null},
+    "select": {x: null, y: null},
+    "a": {x: null, y: null},
+    "b": {x: null, y: null},
+  })
+
   const onSubmit = (data: any) => {
     setModalIsOpen(false);
     setRom(data.rom[0]);
   };
-
-
 
   const decodeButton = (keyString: string) => {
     switch(keyString) {
@@ -256,21 +354,17 @@ function App() {
     }
   };
 
-
   const handleKeyDown = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
     let butt = decodeButton(event.key);
     if (butt !== undefined) {
-        w.button_down(butt)
+      w.button_down(butt)
     }
   }
   const handleKeyUp = (event: any) => {
-    // console.log(event);
-    // setKeyPress(event.key);
+
     let butt = decodeButton(event.key);
     if (butt !== undefined) {
-        w.button_up(butt)
+      w.button_up(butt)
     }
   }
 
@@ -279,19 +373,107 @@ function App() {
   }
 
   const handleClick = (button: Button) => {
-    // console.log(button);
     w.button_down(button);
     sleep(85).then(() => {w.button_up(button);});
   }
 
-  const handleGamepadChange = () => {
+  const toggleGamePadMove = () => {
     setIsDraggableDisabled(!isDraggableDisabled);
-    //needs to save gamepads current positions and save to JSOn file 
   }
+
+  const [openKeyBindingModal, setOpenKeyBindingModal] = useState(false);
+
+
+  const handleClose = () => {
+    setOpenKeyBindingModal(false);
+  };
+
   const handleKeyboardChange = () => {
-    //need to get keybindings and set controls JSON
-    //may need to open modal and save form input 
+    setOpenKeyBindingModal(true);
   }
+
+  const submittedChanges = (data: any) => {
+    let changeControls = (id: string, value: string) => {
+      switch(id) {
+        case "up": { setControls({...controls, "up": value}); break;}
+        case "down": { setControls({...controls, "down": value}); break;}
+        case "left": { setControls({...controls, "left": value}); break;}
+        case "right": { setControls({...controls, "right": value}); break;}
+        case "a": { setControls({...controls, "a": value}); break;}
+        case "b": { setControls({...controls, "b": value}); break;}
+        case "start": { setControls({...controls, "start": value}); break;}
+        case "select": { setControls({...controls, "select": value}); break;}
+        default: console.log("No such control exists");
+      }
+    }
+    for(const prop in data) {
+      if (data[prop].length !== 0) {
+        changeControls(prop, data[prop]);
+      }
+    }
+    setOpenKeyBindingModal(false);
+  }
+
+  const keyBindingChangeModal = (
+    <Modal 
+    open={openKeyBindingModal}
+    onClose={handleClose}
+    disableEnforceFocus
+    >
+      <div className="modal-box">
+        <h2>Set Key Bindings</h2>
+        <form onSubmit={handleSubmit(submittedChanges)}>
+          <input name="up" placeholder="up" ref={register}></input> <br/>
+          <input name="down" placeholder="down" ref={register}></input> <br/>
+          <input name="left" placeholder="left" ref={register}></input> <br/>
+          <input name="right" placeholder="right" ref={register}></input> <br/>
+          <input name="a" placeholder="a" ref={register}></input> <br/>
+          <input name="b" placeholder="b" ref={register}></input> <br/>
+          <input name="start" placeholder="start" ref={register}></input> <br/>
+          <input name="select" placeholder="select" ref={register}></input> <br/>
+          <button>Save</button>
+        </form>
+      </div>
+    </Modal>
+  );
+
+  const handleGamePadChange = (id: string, data: DraggableData) => {
+
+    switch(id) {
+      case "upButton": {setGamePadLocations({...gamePadLocations, "upButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "downButton": {setGamePadLocations({...gamePadLocations, "downButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "leftButton": {setGamePadLocations({...gamePadLocations, "leftButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "rightButton": {setGamePadLocations({...gamePadLocations, "rightButton": {x: data.x, y: data.y}});
+        break;
+      }
+      case "start": {setGamePadLocations({...gamePadLocations, "start": {x: data.x, y: data.y}});
+        break;
+      }
+      case "select": {setGamePadLocations({...gamePadLocations, "select": {x: data.x, y: data.y}});
+        break;
+      }
+      case "a": {setGamePadLocations({...gamePadLocations, "a": {x: data.x, y: data.y}});
+        break;
+      }
+      case "b": {setGamePadLocations({...gamePadLocations, "b": {x: data.x, y: data.y}});
+        break;
+      }
+      default: console.log("No such button exists");
+    }
+    
+
+  }
+
+  const removeLocalStorage = () => {
+    localStorage.clear();
+  }
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -302,6 +484,18 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    localStorage.setItem('gamePadLocations', JSON.stringify(gamePadLocations));
+    return () => {
+      localStorage.setItem('gamePadLocations', JSON.stringify(gamePadLocations));
+    }
+  }, [gamePadLocations]);
+
+  useEffect(() => {
+    localStorage.setItem('controls', JSON.stringify(controls));
+  }, [controls]);
+
+  
 
 
   return (
@@ -309,7 +503,14 @@ function App() {
       <Modal open={modalIsOpen}>
         <FileSubmission onSubmit={onSubmit}/>
       </Modal>
-      <ResponsiveDrawer name={rom.name} onGamepadChange={handleGamepadChange} onKeyboardChange={handleKeyboardChange}/>
+      <ResponsiveDrawer 
+        name={rom.name} 
+        onGamepadChange={toggleGamePadMove} 
+        onKeyboardChange={handleKeyboardChange} 
+        onDelete={removeLocalStorage}
+        toggle={isDraggableDisabled}
+        modal={keyBindingChangeModal}
+      />
       <Grid
         direction="column"
         justify="center"
@@ -326,7 +527,12 @@ function App() {
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad onClick={handleClick} disabled={isDraggableDisabled}/>
+          <GamePad 
+          onClick={handleClick} 
+          disabled={isDraggableDisabled} 
+          onStop={handleGamePadChange}
+          locations={gamePadLocations}
+        />
         </Grid>
       </Grid>
     </div>
