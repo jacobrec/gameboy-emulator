@@ -36,6 +36,7 @@ pub struct Channel1 {
 	sweep_period_counter: u8,
 	volume: u8,
 	pub wave_pattern: Pattern,
+	capacitor: f32,
 }
 
 impl Channel1 {
@@ -59,22 +60,23 @@ impl Channel1 {
 			sweep_period_counter: 0,            // Actual sweep time that is updated
 			volume: 0,                          // Actual envelope volume that is updated
 			wave_pattern: Pattern::HalfQuarter, // NR 11 bit 7-6
+			capacitor: 0.0
 		}
 	}
 
 	pub fn read(&self, loc: u16) -> u8 {
 		match loc {
-			0xFF10 => self.sweep.read(),
+			0xFF10 => 0x80 | self.sweep.read(),
 			0xFF11 => {
 				let pattern_bits = pattern_to_u8(self.wave_pattern);
-				pattern_bits << 6
+				0x3F | (pattern_bits << 6)
 			}
 			0xFF12 => self.envelope.read(),
-			0xFF13 => (self.frequency_load & 0x00FF) as u8,
+			0xFF13 => 0xFF | (self.frequency_load & 0x00FF) as u8,
 			0xFF14 => {
 				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
 
-				counter_selection_bit 
+				0xBF | counter_selection_bit
 			}
 			_ => panic!("Channel 1 read register out of range: {:04X}", loc),
 		}
@@ -154,7 +156,7 @@ impl Channel1 {
 			};
 
 			// println!("Envelope length: {}", self.envelope.length);
-			if self.envelope_running {
+			if self.envelope_running && self.envelope.period > 0 {
 				// println!("Envelope running & Envelope length > 0");
 				// println!("Volume is: {}", self.volume);
 				if self.envelope.direction == 1 && self.volume < 15 {
@@ -211,7 +213,7 @@ impl Channel1 {
 
 	// Initializes channel by resetting all values
 	fn initialize(&mut self) {
-		println!("initialize");
+		// println!("initialize");
 		self.enabled = true;
 		if self.length_counter == 0 {
 			self.length_counter = 64;
@@ -233,17 +235,29 @@ impl Channel1 {
 		}
 	}
 
-	 pub fn dac_output(&self) -> f32 {
-	 	if self.dac_enabled {
-			let mut duty_output = 0.0;
-			if self.enabled {
-				duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
-			}
-	 		let vol_output: f32 = self.volume as f32 * duty_output;
-	 		(vol_output / 7.5) - 1.0
-	 	} else {
-	 		0.0
-	 	}
+
+	// pub fn dac_output(&self) -> f32 {
+		// if self.dac_enabled {
+		// 	let mut duty_output = 0.0;
+		// 	if self.enabled {
+		// 		duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+		// 	}
+		// 	let vol_output: f32 = self.volume as f32 * duty_output;
+		// 	(vol_output / 7.5) - 1.0
+		// } else {
+		// 	0.0
+		// }
+	// }
+	 pub fn dac_output(&mut self) -> f32 {
+		let mut dac_output = 0.0;
+
+		 if self.dac_enabled {
+			 let dac_input = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+			 dac_output = dac_input - self.capacitor;
+			 self.capacitor = dac_input - dac_output * 0.996;
+		 }
+
+		 dac_output
 	 }
 }
 

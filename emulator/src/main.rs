@@ -248,19 +248,19 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
-    let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
-    let saver2 = saver.clone();
-    thread::spawn(move || {
-        for sig in signals.forever() {
-            match sig {
-                SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
-                SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
-                SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
-                _ => println!("Received signal {:?}", sig),
-            }
-        }
-    });
+    // use signal_hook::{iterator::Signals, SIGALRM, SIGUSR1, SIGUSR2};
+    // let signals = Signals::new(&vec![SIGUSR1, SIGUSR2, SIGALRM]).unwrap();
+    // let saver2 = saver.clone();
+    // thread::spawn(move || {
+    //     for sig in signals.forever() {
+    //         match sig {
+    //             SIGUSR1 => saver2.lock().unwrap().push_back(SignalOp::SaveState),
+    //             SIGUSR2 => saver2.lock().unwrap().push_back(SignalOp::LoadState),
+    //             SIGALRM => saver2.lock().unwrap().push_back(SignalOp::Break),
+    //             _ => println!("Received signal {:?}", sig),
+    //         }
+    //     }
+    // });
 
     main_loop(gameboy, args, saver);
 }

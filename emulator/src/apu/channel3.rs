@@ -8,12 +8,12 @@ pub struct Channel3 {
 	frequency_count: u16,
 	frequency_load: u16,
 	length_counter: u16,
-	pub output_volume: u8,
 	position_counter: u8,
 	pub status: bool,
 	volume: u8,
 	wave_ram: [u8; 16],
 	sample_byte: u8,
+	capacitor: f32
 }
 
 impl Channel3 {
@@ -25,30 +25,31 @@ impl Channel3 {
 			frequency_count: 0,       // Actual frequency value that is updated
 			frequency_load: 0,        // NR 33 and NR 34 bit 2-0
 			length_counter: 0,        // NR 31 5-0
-			output_volume: 0,         // Volume uesd for mixing
 			position_counter: 0,      // Wave RAM pointer
 			status: false,            // NR 34 bit 7
 			volume: 0,                // Actual envelope volume that is updated
 			wave_ram: [0; 16],        // Wave RAM
 			sample_byte: 0,
+			capacitor: 0.0
 		}
 	}
 
 	pub fn read(&self, loc: u16) -> u8 {
 		match loc {
 			0xFF1A => {
-				if self.dac_enabled {
+				let output = if self.dac_enabled {
 					0x80
 				} else {
 					0
-				}
+				};
+				0x7F | output
 			}
 			0xFF1B => self.length_counter as u8,
-			0xFF1C => self.volume << 5,
-			0xFF1D => (self.frequency_load & 0x00FF) as u8,
+			0xFF1C => 0x9F | (self.volume << 5),
+			0xFF1D => 0xFF | (self.frequency_load & 0x00FF) as u8,
 			0xFF1E => {
 				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
-				counter_selection_bit
+				0xBF | counter_selection_bit
 			}
 			0xFF30..=0xFF3F => self.wave_ram[loc as usize - 0xFF30],
 			_ => panic!("Channel 3 read register out of range: {:04X}", loc),
@@ -136,18 +137,30 @@ impl Channel3 {
 //		}
 //	}
 
-	pub fn dac_output(&self) -> f32 {
+// 	pub fn dac_output(&self) -> f32 {
+// 		if self.dac_enabled {
+// 			let mut vol_output = 0.0;
+// 			if self.enabled {
+// 				// Shift by volume code
+// 				vol_output = (self.sample_byte >> self.volume) as f32
+// 			}
+// //			let vol_output = self.volume_output() as f32;
+// 			(vol_output / 7.5) - 1.0
+// 		} else {
+// 			0.0
+// 		}
+// 	}
+
+	pub fn dac_output(&mut self) -> f32 {
+		let mut dac_output = 0.0;
+
 		if self.dac_enabled {
-			let mut vol_output = 0.0;
-			if self.enabled {
-				// Shift by volume code
-				vol_output = (self.sample_byte >> self.volume) as f32
-			}
-//			let vol_output = self.volume_output() as f32;
-			(vol_output / 7.5) - 1.0
-		} else {
-			0.0
+			let dac_input = (self.sample_byte >> self.volume) as f32;
+			dac_output = dac_input - self.capacitor;
+			self.capacitor = dac_input - dac_output * 0.996;
 		}
+
+		dac_output
 	}
 }
 

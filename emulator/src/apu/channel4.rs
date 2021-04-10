@@ -21,6 +21,7 @@ pub struct Channel4 {
   shift_clock_frequency: u8,
   pub status: bool,
   volume: u8,
+  capacitor: f32,
 }
 
 impl Channel4 {
@@ -42,17 +43,19 @@ impl Channel4 {
       shift_clock_frequency: 0,  // Shift clock frequency
       status: false,             // NR 44 bit 7
       volume: 0,                 // Actual envelope volume that is updated
+      capacitor: 0.0
     }
   }
 
   pub fn read(&self, loc: u16) -> u8 {
     match loc {
-      0xFF20 => self.length_counter,
+      0xFFaF => 0xFF,
+      0xFF20 => 0xFF | self.length_counter,
       0xFF21 => self.envelope.read(),
       0xFF22 => self.shift_clock_frequency << 4 | self.counter_step << 3 | self.dividing_ratio,
       0xFF23 => {
         let counter_selection_bit = if self.counter_selection { 0x40 } else { 0 };
-        counter_selection_bit
+        0xBF | counter_selection_bit
       }
       _ => panic!("Channel 4 read register out of range: {:04X}", loc),
     }
@@ -60,6 +63,7 @@ impl Channel4 {
 
   pub fn write(&mut self, loc: u16, val: u8) {
     match loc {
+      0x1F => {}
       0xFF20 => {
         self.length_counter = val & 0x3F;
       }
@@ -132,7 +136,7 @@ impl Channel4 {
   pub fn envelope_step(&mut self) {
     if self.envelope_period_counter > 0 {
       self.envelope_period_counter -= 1;
-    } else if self.envelope_period_counter == 0 {
+    } else {
       self.envelope_period_counter = if self.envelope_period_counter == 0 {
         8
       } else {
@@ -140,7 +144,7 @@ impl Channel4 {
       };
 
       // println!("Envelope length: {}", self.envelope.length);
-      if self.envelope_running {
+      if self.envelope_running && self.envelope.period > 0 {
         // println!("Envelope running & Envelope length > 0");
         // println!("Volume is: {}", self.volume);
         if self.envelope.direction == 1 && self.volume < 15 {
@@ -173,18 +177,30 @@ impl Channel4 {
   }
 
   // Return a value between [-1.0,+1.0]
-  pub fn dac_output(&self) -> f32 {
-    if self.dac_enabled {
-      let mut vol_output = 0.0;
-      if self.enabled {
-        vol_output = (self.waveform_output()* self.volume) as f32
+//   pub fn dac_output(&self) -> f32 {
+//     if self.dac_enabled {
+//       let mut vol_output = 0.0;
+//       if self.enabled {
+//         vol_output = (self.waveform_output()* self.volume) as f32
+//       }
+// //      let vol_output = self.volume_output() as f32;
+//       (vol_output / 7.5) - 1.0
+//     } else {
+//       0.0
+//     }
+//   }
+
+    pub fn dac_output(&mut self) -> f32 {
+      let mut dac_output: f32 = 0.0;
+
+      if self.dac_enabled {
+        let dac_input = (self.waveform_output() * self.volume) as f32;
+        dac_output = dac_input - self.capacitor;
+        self.capacitor = dac_input - dac_output * 0.996;
       }
-//      let vol_output = self.volume_output() as f32;
-      (vol_output / 7.5) - 1.0
-    } else {
-      0.0
+
+      dac_output
     }
-  }
 
 }
 
