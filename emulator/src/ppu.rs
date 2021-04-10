@@ -593,40 +593,41 @@ mod test {
         let mut ppu = create_test_ppu();
 
         ppu.registers[BGP] = 0b11100100;
+        ppu.registers[OBP0] = 0b11100100;
         assert_eq!(color00, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b00,
-        }));
+        }, 0b00));
         assert_eq!(color01, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b01,
-        }));
+        }, 0b00));
         assert_eq!(color10, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b10,
-        }));
+        }, 0b00));
         assert_eq!(color11, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b11,
-        }));
+        }, 0b00));
 
         ppu.registers[BGP] = 0b10110001;
         assert_eq!(color01, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b00,
-        }));
+        }, 0b00));
         assert_eq!(color00, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b01,
-        }));
+        }, 0b00));
         assert_eq!(color11, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b10,
-        }));
+        }, 0b00));
         assert_eq!(color10, ppu.lookup_color(PixelData{
             src: PixelSrc::BG,
             value: 0b11,
-        }));
+        }, 0b00));
 
     }
 
