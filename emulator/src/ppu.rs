@@ -638,6 +638,8 @@ mod test {
         let mut ppu = create_test_ppu();
         ppu.registers[BGP] = 0b11100100;
         ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        ppu.lx = 0;
+        ppu.registers[LY] = 0;
         for i in 0..testtile.len(){
             ppu.vram[i+16] = testtile[i];
         }
