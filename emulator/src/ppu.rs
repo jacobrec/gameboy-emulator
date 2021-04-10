@@ -691,7 +691,7 @@ mod test {
         }
         ppu.registers[LY] = 0;
         ppu.registers[SCY] = 16;
-        assert_eq!(ppu.get_mode(), Mode::OAM);
+        assert_eq!(ppu.get_mode(), Mode::VBlank);
         for i in 0..testtile.len(){
             ppu.vram[i+offset*16] = testtile[i];
         }
@@ -701,7 +701,10 @@ mod test {
         for _ in 0..(80 + 250) {
             ppu.tick();
         }
-        assert_eq!(ppu.get_mode(), Mode::HBlank);
+        assert_eq!(ppu.get_mode(), Mode::VBlank);
+        while ppu.get_mode() == Mode::VBlank {
+            ppu.tick();
+        }
         while ppu.get_mode() != Mode::VBlank {
             ppu.tick();
         }
