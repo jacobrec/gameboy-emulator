@@ -13,14 +13,14 @@ pub struct Channel3 {
 	volume: u8,
 	wave_ram: [u8; 16],
 	sample_byte: u8,
-	capacitor: f32
+	capacitor: f32,
 }
 
 impl Channel3 {
 	pub fn new() -> Self {
 		Channel3 {
 			counter_selection: false, // NR 34 bit 6
-			dac_enabled: false,        // Condition to check if all of envelope properties are set
+			dac_enabled: false,       // Condition to check if all of envelope properties are set
 			enabled: false,           // Condition to check if channel is enabled
 			frequency_count: 0,       // Actual frequency value that is updated
 			frequency_load: 0,        // NR 33 and NR 34 bit 2-0
@@ -30,21 +30,17 @@ impl Channel3 {
 			volume: 0,                // Actual envelope volume that is updated
 			wave_ram: [0; 16],        // Wave RAM
 			sample_byte: 0,
-			capacitor: 0.0
+			capacitor: 0.0,
 		}
 	}
 
 	pub fn read(&self, loc: u16) -> u8 {
 		match loc {
 			0xFF1A => {
-				let output = if self.dac_enabled {
-					0x80
-				} else {
-					0
-				};
+				let output = if self.dac_enabled { 0x80 } else { 0 };
 				0x7F | output
 			}
-			0xFF1B => self.length_counter as u8,
+			0xFF1B => 0xFF,
 			0xFF1C => 0x9F | (self.volume << 5),
 			0xFF1D => 0xFF | (self.frequency_load & 0x00FF) as u8,
 			0xFF1E => {
@@ -103,7 +99,6 @@ impl Channel3 {
 			output_byte &= 0xF;
 
 			self.sample_byte = output_byte
-
 		}
 	}
 
@@ -128,28 +123,28 @@ impl Channel3 {
 	}
 
 	// Return a value in [0,15]
-//	fn volume_output(&self) -> u8 {
-//		if self.enabled {
-//			// Shift by volume code
-//			self.sample_byte >> self.volume
-//		} else {
-//			0
-//		}
-//	}
+	//	fn volume_output(&self) -> u8 {
+	//		if self.enabled {
+	//			// Shift by volume code
+	//			self.sample_byte >> self.volume
+	//		} else {
+	//			0
+	//		}
+	//	}
 
-// 	pub fn dac_output(&self) -> f32 {
-// 		if self.dac_enabled {
-// 			let mut vol_output = 0.0;
-// 			if self.enabled {
-// 				// Shift by volume code
-// 				vol_output = (self.sample_byte >> self.volume) as f32
-// 			}
-// //			let vol_output = self.volume_output() as f32;
-// 			(vol_output / 7.5) - 1.0
-// 		} else {
-// 			0.0
-// 		}
-// 	}
+	// 	pub fn dac_output(&self) -> f32 {
+	// 		if self.dac_enabled {
+	// 			let mut vol_output = 0.0;
+	// 			if self.enabled {
+	// 				// Shift by volume code
+	// 				vol_output = (self.sample_byte >> self.volume) as f32
+	// 			}
+	// //			let vol_output = self.volume_output() as f32;
+	// 			(vol_output / 7.5) - 1.0
+	// 		} else {
+	// 			0.0
+	// 		}
+	// 	}
 
 	pub fn dac_output(&mut self) -> f32 {
 		let mut dac_output = 0.0;
@@ -164,62 +159,60 @@ impl Channel3 {
 	}
 }
 
-
 #[cfg(test)]
 mod test {
-    use super::*;
+	use super::*;
 
-    fn create_test_channel3() -> Channel3 {
-        Channel3::new()
-    }
-
-    #[test]
-    fn test_NR30_read_write () {
-        let mut ch3 = create_test_channel3();
-				ch3.write(0xFF1A, 0xFF);
-
-				assert_eq!(ch3.dac_enabled, true);
-
-				assert_eq!(ch3.read(0xFF1A), 0x80);
-    }
-
-		#[test]
-    fn test_NR31_read_write () {
-        let mut ch3 = create_test_channel3();
-				ch3.write(0xFF1B, 0xFF);
-
-				assert_eq!(ch3.length_counter, 0xFF);
-
-				assert_eq!(ch3.read(0xFF1B), 0xFF);
-    }
-
-		#[test]
-    fn test_NR32_read_write () {
-        let mut ch3 = create_test_channel3();
-				ch3.write(0xFF1C, 0xFF);
-
-				assert_eq!(ch3.volume, 3);
-				assert_eq!(ch3.read(0xFF1C), 0x60);
-    }
-
-		#[test]
-    fn test_NR33_read_write () {
-        let mut ch3 = create_test_channel3();
-				ch3.write(0xFF1D, 0xFF);
-
-				assert_eq!(ch3.frequency_load, 255);
-				assert_eq!(ch3.read(0xFF1D), 0xFF);
-    }
-
-		
-		#[test]
-    fn test_NR34_read_write () {
-        let mut ch3 = create_test_channel3();
-				ch3.write(0xFF1E, 0xFF);
-
-				assert_eq!(ch3.status, true);
-				assert_eq!(ch3.counter_selection, true);
-				assert_eq!(ch3.frequency_load, 1792);
-				assert_eq!(ch3.read(0xFF1E), 0x40);
-    }
+	fn create_test_channel3() -> Channel3 {
+		Channel3::new()
 	}
+
+	#[test]
+	fn test_NR30_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF1A, 0xFF);
+
+		assert_eq!(ch3.dac_enabled, true);
+
+		assert_eq!(ch3.read(0xFF1A), 0xFF);
+	}
+
+	#[test]
+	fn test_NR31_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF1B, 0xFF);
+
+		assert_eq!(ch3.length_counter, 1);
+
+		assert_eq!(ch3.read(0xFF1B), 0xFF);
+	}
+
+	#[test]
+	fn test_NR32_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF1C, 0xFF);
+
+		assert_eq!(ch3.volume, 3);
+		assert_eq!(ch3.read(0xFF1C), 0xFF);
+	}
+
+	#[test]
+	fn test_NR33_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF1D, 0xFF);
+
+		assert_eq!(ch3.frequency_load, 255);
+		assert_eq!(ch3.read(0xFF1D), 0xFF);
+	}
+
+	#[test]
+	fn test_NR34_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF1E, 0xFF);
+
+		assert_eq!(ch3.status, true);
+		assert_eq!(ch3.counter_selection, true);
+		assert_eq!(ch3.frequency_load, 1792);
+		assert_eq!(ch3.read(0xFF1E), 0xFF);
+	}
+}
