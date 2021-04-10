@@ -232,7 +232,17 @@ function ResponsiveDrawer(props: any) {
       <List>
         <MenuItem onClick={() => w.emu.load_save_state()} text={"Load"}><GetAppIcon/></MenuItem>
         <MenuItem onClick={() => w.emu.make_save_state()} text={"Save"}><SaveIcon/></MenuItem>
-        <MenuItem text={"Settings"}><SettingsIcon/></MenuItem>
+        <ListItem button key={"Mute"}>
+          <ListItemIcon>
+            <SettingsIcon/>
+          </ListItemIcon>
+          <ListItemText primary={"Mute"} />
+          <Switch
+            checked={!props.togglemute}
+            color="default"
+            onChange={props.onMute}
+          />
+        </ListItem>
         <ListItem button key={"Configure GamePad"}>
           <ListItemIcon>
             <VideogameAssetIcon/>
@@ -311,6 +321,7 @@ function App() {
   const [rom, setRom] = useState({name: "No File Selected"});
   const [modalIsOpen, setModalIsOpen] = useState(true);
   const [isDraggableDisabled, setIsDraggableDisabled] = useState(true);
+  const [mute, setMute] = useState(true);
   const [controls, setControls] = useState(
     JSON.parse(localStorage.getItem('controls')) || {
     up:'w',
@@ -379,6 +390,10 @@ function App() {
 
   const toggleGamePadMove = () => {
     setIsDraggableDisabled(!isDraggableDisabled);
+  }
+
+  const toggleMute = () => {
+    setMute(!mute);
   }
 
   const [openKeyBindingModal, setOpenKeyBindingModal] = useState(false);
@@ -505,10 +520,12 @@ function App() {
       </Modal>
       <ResponsiveDrawer 
         name={rom.name} 
+        onMute={toggleMute}
         onGamepadChange={toggleGamePadMove} 
         onKeyboardChange={handleKeyboardChange} 
         onDelete={removeLocalStorage}
         toggle={isDraggableDisabled}
+        togglemute={mute}
         modal={keyBindingChangeModal}
       />
       <Grid

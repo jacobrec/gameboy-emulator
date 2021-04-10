@@ -1248,11 +1248,14 @@ impl CPU {
             }
             Instruction::Jmp(j, None) => {
                 let dest = match j {
-                    Jump::Relative(v8) => ((self.pc as i32) + (v8 as i32)) as u16,
+                    Jump::Relative(v8) => {
+                        self.clock();
+                        ((self.pc as i32) + (v8 as i32)) as u16
+                    }
                     Jump::Absolute(v16) => v16,
                 };
-                self.set_pc(dest);
-            }
+                self.pc = dest;
+            },
             Instruction::Rl(r) => {
                 self.rotate_register(r, Rotate::Left, true);
             }
