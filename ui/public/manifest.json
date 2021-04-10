@@ -1,6 +1,8 @@
 {
   "short_name": "PGE",
   "name": "PWA Gameboy Emulator",
+  "scope": "/",
+  "start_url": "/",
   "icons": [
     {
       "src": "favicon.ico",

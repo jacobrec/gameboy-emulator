@@ -12,6 +12,20 @@ var urlsToCache = [
   '/logo512.png',
   '/e6c918b637992db06180.module.wasm',
 ];
+  'static/js/0.chunk.js': '/static/js/0.chunk.js',
+  'module.wasm': '/afaff60a829a10d9d6b6.module.wasm',
+  'static/js/0.chunk.js.map': '/static/js/0.chunk.js.map',
+  'static/js/1.chunk.js': '/static/js/1.chunk.js',
+  'static/js/1.chunk.js.map': '/static/js/1.chunk.js.map',
+  'static/js/2.chunk.js': '/static/js/2.chunk.js',
+  'static/js/2.chunk.js.map': '/static/js/2.chunk.js.map',
+  'static/js/3.chunk.js': '/static/js/3.chunk.js',
+  'static/js/3.chunk.js.map': '/static/js/3.chunk.js.map',
+  'main.js': '/static/js/main.chunk.js',
+  'main.js.map': '/static/js/main.chunk.js.map',
+  'runtime-main.js': '/static/js/bundle.js',
+  'runtime-main.js.map': '/static/js/bundle.js.map',
+  'index.html': '/index.html'
 
 // Install a service worker
 self.addEventListener('install', event => {

@@ -1,4 +1,7 @@
+const {GenerateSW} = require('workbox-webpack-plugin');
+const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const path = require('path');
+
 
 module.exports = function override(config, env) {
   const wasmExtensionRegExp = /\.wasm$/;
@@ -21,5 +24,10 @@ module.exports = function override(config, env) {
     use: [{ loader: require.resolve('wasm-loader'), options: {} }]
   });
 
+  config.plugins.push(new WebpackManifestPlugin({
+    "fileName": "assets-manifest.json",
+    "writeToFileEmit": true,
+  }));
+  config.plugins.push(new GenerateSW({}));
   return config;
 };
