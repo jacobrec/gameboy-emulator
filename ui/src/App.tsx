@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect} from 'react';
 import './App.css';
 import Emulator, { Button } from './Emulator';
 import { EmulatorScreen } from './EmulatorComponent';
@@ -42,20 +42,6 @@ import BButton from './iconComponents/BButton';
 
 const drawerWidth = 240;
 
-interface ControlObj {
-  up: string,
-  left: string,
-  down:string,
-  right:string,
-  a:string,
-  b:string,
-  start:string,
-  select:string
-}
-
-function parse_json(json: any): json is ControlObj {
-  return json;
-}
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -92,7 +78,7 @@ const useStyles = makeStyles((theme: Theme) =>
 );
 
 function FileSubmission(props: any) {
-  const { register, handleSubmit, errors } = useForm();
+  const { register, handleSubmit} = useForm();
 
   return (
     <div className="modal-box">
@@ -410,14 +396,14 @@ function App() {
   const submittedChanges = (data: any) => {
     let changeControls = (id: string, value: string) => {
       switch(id) {
-        case "up": { setControls({...controls, "up": value}); break;}
-        case "down": { setControls({...controls, "down": value}); break;}
-        case "left": { setControls({...controls, "left": value}); break;}
-        case "right": { setControls({...controls, "right": value}); break;}
-        case "a": { setControls({...controls, "a": value}); break;}
-        case "b": { setControls({...controls, "b": value}); break;}
-        case "start": { setControls({...controls, "start": value}); break;}
-        case "select": { setControls({...controls, "select": value}); break;}
+        case "up": {controls["up"] = value; break;} 
+        case "down": { controls["down"] = value; break;}
+        case "left": { controls["left"] = value; break;}
+        case "right": { controls["right"] = value; break;}
+        case "a": { controls["a"] = value; break;}
+        case "b": { controls["b"] = value; break;}
+        case "start": { controls["start"] = value; break;}
+        case "select": { controls["select"] = value; break;}
         default: console.log("No such control exists");
       }
     }
@@ -508,7 +494,7 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('controls', JSON.stringify(controls));
-  }, [controls]);
+  });
 
   
 
