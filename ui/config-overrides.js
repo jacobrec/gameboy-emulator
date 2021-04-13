@@ -28,6 +28,8 @@ module.exports = function override(config, env) {
     "fileName": "assets-manifest.json",
     "writeToFileEmit": true,
   }));
-  config.plugins.push(new GenerateSW({}));
+  if (process.env.NODE_ENV != "development") {
+    config.plugins.push(new GenerateSW({}));
+  }
   return config;
 };
