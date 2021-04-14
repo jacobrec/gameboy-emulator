@@ -741,4 +741,68 @@ mod test {
             }
         }
     }
+
+    #[test]
+    fn test_ppu_tick_scroll () {
+        let testtile = [0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00, 0x0F, 0x00,
+                        0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF, 0x0F, 0xFF];
+        let mut ppu = create_test_ppu();
+        ppu.registers[BGP] = 0b11100100;
+        ppu.registers[LCD_CONTROL_REGISTER] = 0b10010000;
+        ppu.registers[SCX] = 1;
+        assert_eq!(ppu.get_mode(), Mode::HBlank);
+        let offset = 9;
+        for i in 0..(TICK_WIDTH+1) {
+            ppu.tick();
+        }
+        ppu.registers[LY] = 0;
+        ppu.registers[SCY] = 16;
+        assert_eq!(ppu.get_mode(), Mode::VBlank);
+        for i in 0..testtile.len(){
+            ppu.vram[i+offset*16] = testtile[i];
+        }
+        for i in 0..(32*32) {
+            ppu.vram[0x1800 + i] = offset as u8;
+        }
+        for _ in 0..(80 + 250) {
+            ppu.tick();
+        }
+        assert_eq!(ppu.get_mode(), Mode::VBlank);
+        while ppu.get_mode() == Mode::VBlank {
+            ppu.tick();
+        }
+        while ppu.get_mode() != Mode::VBlank {
+            ppu.tick();
+        }
+
+        let line = 144 - 8;
+        for j in line..(line+8) {
+            for i in 0..8{
+                print!("{:X} ", ppu.screen[SCREEN_WIDTH*j + i]);
+            }
+            println!();
+        }
+
+        for j in 0..SCREEN_HEIGHT {
+            for i in 0..SCREEN_WIDTH {
+                let should_color =
+                    if ((i+1) / 4) % 2 == 0 {
+                        if (j / 4) % 2 == 0 {
+                            color00
+                        } else {
+                            color10
+                        }
+                    } else {
+                        if (j / 4) % 2 == 0 {
+                            color01
+                        } else {
+                            color11
+                        }
+                    };
+                //println!("Checking ({}, {}) to be {}", i, j, format!("{:X}", should_color));
+                assert_eq!(format!("{:X}", ppu.screen[SCREEN_WIDTH * j + i]), format!("{:X}", should_color));
+                // assert_eq!(ppu.screen[i], should_color);
+            }
+        }
+    }
 }

@@ -1,5 +1,87 @@
 * Gameboy Emulator
-** Emulator
-   Cycle accurate gameboy emulator written in rust
-** UI
-   React project 
+** Functional Requirements
+*** FR1 - App.PWA. :: PGE shall be a progressive web app, and thus work offline after the initial installation
+This can be verified to be complete by running the gameboy emulator and playing
+a game. Then turning off your internet and refreshing the page.
+*** FR2 - App.Delete. :: PGE shall allow users a way to delete all saved user data
+This can be verified to be complete by moving the gamepad around then clicking
+delete user data and refreshing the page.
+*** FR3 - App.Upload. :: PGE shall have an interface to allow users to upload ROM files to emulate
+This can be verified by opening the page, as you are greeted with the upload rom display.
+*** FR4 - Extra.Mute. :: PGE shall have a method by which to disable sound
+This can be verified by viewing the sidebar (mute toggle).
+*** FR5 - Extra.Save. :: PGE shall have a way to save progress to resume later
+This can be verified by viewing the sidebar (save button).
+*** FR6 - Extra.Load. :: PGE shall have a way to load saved progress
+This can be verified by viewing the sidebar (load button).
+*** FR7 - Controls.Touchpad. :: PGE shall have an onscreen button pad to allow mobile users to use it
+This can be verified by loading a rom and seeing the onscreen button pad.
+*** FR8 - Controls.CustomKeymap. :: PGE shall allow users to set a custom keyboard mapping for accessibility reasons
+This can be verified by hitting the configure keyboard button, then setting your own custom keys.
+*** FR9 - Controls.CustomTouchpad. :: PGE shall have a customizable on screen button pad to ensure it works on a variety of screen sizes
+This can be verified by hitting the configure gamepad toggle, then dragging the buttons around.
+*** FR10 - CPU.Registers. :: The CPU shall contain 8 8-bit registers named A, F, B, C, D, E, H, L and should also have the capability to combine them into 16-bit registers named AF, BC, DE, HL. The CPU should also contain 2 16-bit registers for the stack pointer and program counter.
+This can be verified by running test ~cpu::test::test_getter_setter_register~ or running a rom file in the emulator
+*** FR11 - CPU.LoadAndStoreOpCodes. :: The CPU shall emulate all load operations including direct, indirect and immediate load operations.
+This can be verified by running all of the cpu tests or running a rom file in the emulator
+*** FR12 - CPU.ArithmeticOpCodes. :: The CPU shall emulate all arithmetic operations including add, subtract, and, or, xor, postincrement, pre decrement, complement and decimal adjust operations.
+This can be verified by running test ~cpu::test::test_sbc~,
+~cpu::test::test_sbcimm~, ~cpu::test::test_sub~, ~cpu::test::test_orimm~,
+~cpu::test::test_or~, ~cpu::test::test_dec~, ~cpu::test::test_inc~,
+~cpu::test::test_cpimm~, ~cpu::test::test_cp~, ~cpu::test::test_and~,
+~cpu::test::test_andimm~, ~cpu::test::test_addimm~, ~cpu::test::test_add~,
+~cpu::test::test_addhl16~, ~cpu::test::test_adc~, ~cpu::test::test_adcimm~, or
+running a rom file in the emulator
+*** FR13 - CPU.StackOperations. :: The CPU shall emulate all stack operations including load, push, pop and store stack pointer operations onto 16-bit registers.
+This can be verified by running test ~cpu::test::test_pop~,
+~cpu::test::test_ret~, ~cpu::test::test_call~, ~cpu::test::test_addsp~,
+~cpu::test::test_addhl16~, ~cpu::test::test_push~, or running a rom file in the
+emulator
+*** FR14 - CPU.BitShiftAndRotate. :: The CPU shall emulate all bit shift, bit set, bit reset and register rotate operations including rotate right and rotate left.
+This can be verified by running test ~cpu::test::test_set~,
+~cpu::test::test_bit~, ~cpu::test::test_srl~, ~cpu::test::test_sla~,
+~cpu::test::test_sra~, ~cpu::test::test_rl~, ~cpu::test::test_rrc~, or running a
+rom file in the emulator
+*** FR15 - CPU.ControlFlowOperations. :: The CPU shall emulate all jump, call and return control flow operations.
+This can be verified by running tests ~cpu::test::test_ret~,
+~cpu::test::test_ret_c~, ~cpu::test::test_reti~, ~cpu::test::test_reti~,
+~cpu::test::test_ret_nc~, ~cpu::test::test_ret_nz~, ~cpu::test::test_ret_z~,
+~cpu::test::test_rst~, ~cpu::test::test_jmp_absolute~,
+~cpu::test::test_jmp_absolute_cc~, ~cpu::test::test_call~,
+~cpu::test::test_call_cc~, or running a rom file in the emulator
+*** FR16 - CPU.MiscellaneousOperations. :: The CPU shall emulate all miscellaneous operations including clearing the carry flag, setting the carry flag, NOP, halt, stop, reset, swapping nibbles and enabling/disabling interrupts.
+This can be verified by running test ~cpu::test::test_getter_setter_register~,
+~cpu::test::test_swap~, ~cpu::test::test_reti~, ~cpu::test::test_ccf~ or running
+a rom file in the emulator
+*** FR17 - CPU.Speed. :: The CPU shall run at a speed of 4MHz.
+This can be verified running a rom file in the emulator and seeing if it runs in real time
+*** FR18 - PPU.Background. :: The PPU should be able to draw the tiles that form the background layer.
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_ppu_tick~
+*** FR19 - PPU.Scrolling. :: The PPU shall support scrolling on both the x and y axis for the background layer
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_ppu_tick_scroll~
+*** FR20 - PPU.Window. :: The PPU shall support rendering the window layer on top of the background layer
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_ppu_tick~
+*** FR21 - PPU.Sprites. :: The PPU shall support rendering up to 10 sprites per line, and up to 40 sprites total. Sprites may be either 8 or 16 pixels tall which will be global to the game.
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_tile_decode~
+*** FR22 - PPU.Timing. :: The PPU shall emulate the timing accurately to allow for video effects that rely on precise timing. Ex) Wobble
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_ppu_tick~
+*** FR23 - PPU.Palettes. :: The PPU shall support configurable palettes, as how the Gameboy did
+This can be verified running a rom file in the emulator and seeing if it draws
+the screen, or by running test ~test ppu::test::test_pixel_color_lookup~
+*** FR24 - APU.Channels. :: The APU shall produce 4 channels of audio data. 2 wave generators, 1 that plays data from ram, and one noise generator.
+This can be verified by running the apu tests
+*** FR25 - APU.Terminals. :: The APU shall produce sound to emulate the sound terminals in the gameboy
+This cannot be verified
+*** FR26 - APU.Registers. :: The APU shall emulate the 21 audio registers of the gameboy to provide an identical interface for sound that a gameboy would to games.
+This can be verified by running the apu tests
+*** FR27 - APU.WaveRAM. ::  The APU shall emulate the waveform RAM to allow producing arbitrary audio data.
+This can be verified by running the apu tests for channel 3
+*** FR28 - Interrupt.Flag. :: Stops program flow when an interrupt is generated
+This can be verified by running a rom file which uses interrupts for drawing [Eg) Dr Mario]
+*** FR29 - Interrupt.Handle. :: Handles the interrupt
+This can be verified by running a rom file which uses interrupts for drawing [Eg) Dr Mario]
