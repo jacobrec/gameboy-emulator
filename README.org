@@ -1,4 +1,15 @@
 * Gameboy Emulator
+** Dependencies
+- rustc and cargo v1.49.0 (for building the emulator)
+- nodejs v12.16.2 (for building the frontend)
+- rgbds v0.4.2 (for building the testrom)
+** Running emulator
+~cd gameboy-emulator/emulator/testrom && make # this makes the test rom~
+~cd gameboy-emulator/ui && npm i && npm run build # this builds the rust code, as well as the typescript~
+~cd build && python3 -m http.server # this serves the files~
+Proceed to =localhost:8000= in your browser and upload a rom file
+** Running tests
+~cd gameboy-emulator/emulator && cargo run~
 ** Functional Requirements
 *** FR1 - App.PWA. :: PGE shall be a progressive web app, and thus work offline after the initial installation
 This can be verified to be complete by running the gameboy emulator and playing
