@@ -1,3 +1,4 @@
+import localForage from 'localforage';
 import React, { useState, useEffect} from 'react';
 import './App.css';
 import Emulator, { Button } from './Emulator';
@@ -97,10 +98,10 @@ function GamePad(props: any) {
 
   return (
     <div className="gamepad">
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
-      onStop={(e, data) => props.onStop("upButton", data)} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
+      onStop={(e, data) => props.onStop("upButton", data)}
       defaultPosition={{x: props.locations["upButton"].x, y: props.locations["upButton"].y}}
       >
         <div className="up">
@@ -108,9 +109,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("leftButton",data)}
       defaultPosition={{x: props.locations["leftButton"].x, y: props.locations["leftButton"].y}}
       >
@@ -119,9 +120,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("rightButton",data)}
       defaultPosition={{x: props.locations["rightButton"].x, y: props.locations["rightButton"].y}}
       >
@@ -130,9 +131,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("downButton",data)}
       defaultPosition={{x: props.locations["downButton"].x, y: props.locations["downButton"].y}}
       >
@@ -141,9 +142,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("select",data)}
       defaultPosition={{x: props.locations["select"].x, y: props.locations["select"].y}}
       >
@@ -152,9 +153,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("start",data)}
       defaultPosition={{x: props.locations["start"].x, y: props.locations["start"].y}}
       >
@@ -163,9 +164,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("a",data)}
       defaultPosition={{x: props.locations["a"].x, y: props.locations["a"].y}}
       >
@@ -174,9 +175,9 @@ function GamePad(props: any) {
         </div>
       </Draggable>
 
-      <Draggable 
-      disabled={props.disabled} 
-      grid={[10,10]} 
+      <Draggable
+      disabled={props.disabled}
+      grid={[10,10]}
       onStop={(e, data) => props.onStop("b",data)}
       defaultPosition={{x: props.locations["b"].x, y: props.locations["b"].y}}
       >
@@ -205,7 +206,7 @@ function MenuItem (props: any) {
 function ResponsiveDrawer(props: any) {
   const classes = useStyles();
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -234,7 +235,7 @@ function ResponsiveDrawer(props: any) {
             <VideogameAssetIcon/>
           </ListItemIcon>
           <ListItemText primary={"Configure GamePad"} />
-          <Switch 
+          <Switch
             checked={!props.toggle}
             color="default"
             onChange={props.onGamepadChange}
@@ -396,7 +397,7 @@ function App() {
   const submittedChanges = (data: any) => {
     let changeControls = (id: string, value: string) => {
       switch(id) {
-        case "up": {controls["up"] = value; break;} 
+        case "up": {controls["up"] = value; break;}
         case "down": { controls["down"] = value; break;}
         case "left": { controls["left"] = value; break;}
         case "right": { controls["right"] = value; break;}
@@ -416,7 +417,7 @@ function App() {
   }
 
   const keyBindingChangeModal = (
-    <Modal 
+    <Modal
     open={openKeyBindingModal}
     onClose={handleClose}
     disableEnforceFocus
@@ -467,12 +468,13 @@ function App() {
       }
       default: console.log("No such button exists");
     }
-    
+
 
   }
 
   const removeLocalStorage = () => {
     localStorage.clear();
+    localForage.clear();
   }
 
   useEffect(() => {
@@ -496,7 +498,7 @@ function App() {
     localStorage.setItem('controls', JSON.stringify(controls));
   });
 
-  
+
 
 
   return (
@@ -504,11 +506,11 @@ function App() {
       <Modal open={modalIsOpen}>
         <FileSubmission onSubmit={onSubmit}/>
       </Modal>
-      <ResponsiveDrawer 
-        name={rom.name} 
+      <ResponsiveDrawer
+        name={rom.name}
         onMute={toggleMute}
-        onGamepadChange={toggleGamePadMove} 
-        onKeyboardChange={handleKeyboardChange} 
+        onGamepadChange={toggleGamePadMove}
+        onKeyboardChange={handleKeyboardChange}
         onDelete={removeLocalStorage}
         toggle={isDraggableDisabled}
         togglemute={mute}
@@ -530,9 +532,9 @@ function App() {
         </Grid>
         <Divider/>
         <Grid item>
-          <GamePad 
-          onClick={handleClick} 
-          disabled={isDraggableDisabled} 
+          <GamePad
+          onClick={handleClick}
+          disabled={isDraggableDisabled}
           onStop={handleGamePadChange}
           locations={gamePadLocations}
         />
