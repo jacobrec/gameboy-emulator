@@ -10,6 +10,8 @@
 Proceed to =localhost:8000= in your browser and upload a rom file
 ** Running tests
 ~cd gameboy-emulator/emulator && cargo run~
+** Included testrom
+The test rom included is a very simple demo of all the features of the gameboy. Press a and b to move left and right
 ** Functional Requirements
 *** FR1 - App.PWA. :: PGE shall be a progressive web app, and thus work offline after the initial installation
 This can be verified to be complete by running the gameboy emulator and playing
