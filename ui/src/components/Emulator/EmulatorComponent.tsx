@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Context } from 'vm';
-import Emulator, { Button } from './Emulator';
+import Emulator from './Emulator';
+import './Emulator.css';
 
 
 type EmulatorProps = {
@@ -59,3 +60,4 @@ export const EmulatorScreen = (props: EmulatorProps) => {
         <canvas id={id} width={160} height={144}></canvas>
     )
 }
+

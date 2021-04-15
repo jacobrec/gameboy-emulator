@@ -9,11 +9,6 @@
   width: 50%;
 }
 
-.modal-text {
-  text-align: center;
-  margin: auto;
-}
-
 .screen {
   background-color: black;
   color: white;
@@ -23,76 +18,6 @@
   padding-top: 25px;
   text-align: center;
 }
-
-.gamepad {
-  position: relative;
-  padding: 0px;
-  padding-left: 240px;
-  height: 500px;
-  width: 500px;
-  overflow: 'auto';
-  
-}
-
-
-.icon-button {
-  height: 50px;
-  width: 50px;
-}
-
-.start-select-button {
-  height: 80px;
-  width: 60px;
-}
-
-.up {
-  position: absolute;
-  top: 2.5%;
-  left: 36vw;
-}
-
-.left {
-  position: absolute;
-  top: 15%;
-  left: 30vw;
-}
-
-.right {
-  position: absolute;
-  left: 42vw;
-  top: 15%;
-}
-
-.down {
-  position: absolute;
-  top: 30%;
-  left: 36vw;
-
-}
-
-.select {
-  position: absolute;
-  left: 55vw;
-}
-
-.start {
-  position: absolute;
-  left: 65vw;
-}
-
-.a-button {
-  position: absolute;
-  left: 80vw;
-  top: 20%;
-}
-
-.b-button {
-  position: absolute;
-  left: 90vw;
-  top: 5%;
-
-}
-
 
 canvas {
   background-color: black;
