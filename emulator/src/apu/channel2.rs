@@ -9,7 +9,6 @@ const WAVE_PATTERN: [[u8; 8]; 4] = [
 	[0, 1, 1, 1, 1, 1, 1, 0],
 ];
 
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Channel2 {
 	counter_selection: bool,
@@ -26,16 +25,17 @@ pub struct Channel2 {
 	pub status: bool,
 	volume: u8,
 	pub wave_pattern: Pattern,
+	capacitor: f32,
 }
 
 impl Channel2 {
 	pub fn new() -> Self {
 		Channel2 {
-			counter_selection: false,           // NR 24 bit 6
-			dac_enabled: true,                  // Condition to check if all of envelope properties are set
-			enabled: false,                     // Condition to check if channel is enabled
-			envelope: Envelope::new(),          // NR 22 Enevlope
-			envelope_running: false,            // Condition to check whether envelope is on or off
+			counter_selection: false,  // NR 24 bit 6
+			dac_enabled: false,        // Condition to check if all of envelope properties are set
+			enabled: false,            // Condition to check if channel is enabled
+			envelope: Envelope::new(), // NR 22 Enevlope
+			envelope_running: false,   // Condition to check whether envelope is on or off
 			envelope_period_counter: 0,
 			frequency_count: 0,                 // Actual frequency value that is updated
 			frequency_load: 0,                  // NR 23 and NR 24 bit 2-0
@@ -45,20 +45,22 @@ impl Channel2 {
 			status: false,                      // NR 24 bit 7
 			volume: 0,                          // Actual envelope volume that is updated
 			wave_pattern: Pattern::HalfQuarter, // NR 21 bit 7-6
+			capacitor: 0.0,
 		}
 	}
 
 	pub fn read(&self, loc: u16) -> u8 {
 		match loc {
+			0xFF15 => 0xFF,
 			0xFF16 => {
 				let pattern_bits = pattern_to_u8(self.wave_pattern);
-				pattern_bits << 6
+				0x3F | pattern_bits << 6
 			}
 			0xFF17 => self.envelope.read(),
-			0xFF18 => (self.frequency_load & 0x00FF) as u8,
+			0xFF18 => 0xFF | (self.frequency_load & 0x00FF) as u8,
 			0xFF19 => {
-				let counter_selection_bit = if self.counter_selection {1 << 6 } else { 0 };
-				counter_selection_bit
+				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
+				0xBF | counter_selection_bit
 			}
 			_ => panic!("Channel 2 read register out of range: {:04X}", loc),
 		}
@@ -66,6 +68,7 @@ impl Channel2 {
 
 	pub fn write(&mut self, loc: u16, val: u8) {
 		match loc {
+			0xFF15 => (),
 			0xFF16 => {
 				let pattern_bits = val >> 6;
 				self.wave_pattern = u8_to_pattern(pattern_bits).unwrap();
@@ -99,17 +102,6 @@ impl Channel2 {
 		} else if self.frequency_count == 0 {
 			self.frequency_count = (2048 - self.frequency_load) * 4;
 			self.sequence_pointer = (self.sequence_pointer + 1) % 8;
-
-			if self.enabled && self.dac_enabled {
-				self.output_volume = self.volume;
-			} else {
-				self.output_volume = 0;
-			}
-		}
-
-		if WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] == 0
-		{
-			self.output_volume = 0;
 		}
 	}
 
@@ -128,7 +120,7 @@ impl Channel2 {
 	pub fn envelope_step(&mut self) {
 		if self.envelope_period_counter > 0 {
 			self.envelope_period_counter -= 1;
-		} else if self.envelope_period_counter == 0 {
+		} else {
 			self.envelope_period_counter = if self.envelope_period_counter == 0 {
 				8
 			} else {
@@ -136,7 +128,7 @@ impl Channel2 {
 			};
 
 			// println!("Envelope length: {}", self.envelope.length);
-			if self.envelope_running {
+			if self.envelope_running && self.envelope.period > 0 {
 				// println!("Envelope running & Envelope length > 0");
 				// println!("Volume is: {}", self.volume);
 				if self.envelope.direction == 1 && self.volume < 15 {
@@ -166,67 +158,81 @@ impl Channel2 {
 		self.volume = self.envelope.initial_volume;
 	}
 
-	pub fn dac_output(&self) -> f32 {
-		if self.dac_enabled && self.enabled {
-			let duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
-			let vol_output: f32 = self.volume as f32 * duty_output;
-			(vol_output / 7.5) - 1.0
-		} else {
-			0.0
+	// pub fn dac_output(&self) -> f32 {
+	// 	if self.dac_enabled {
+	// 		let mut duty_output = 0.0;
+	// 		if self.enabled {
+	// 			duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+	// 		}
+	// 		let vol_output: f32 = self.volume as f32 * duty_output;
+	// 		(vol_output / 7.5) - 1.0
+	// 	} else {
+	// 		0.0
+	// 	}
+	// }
+
+	pub fn dac_output(&mut self) -> f32 {
+		let mut dac_output = 0.0;
+
+		if self.dac_enabled {
+			let dac_input = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize]
+				[self.sequence_pointer as usize] as f32;
+			dac_output = dac_input - self.capacitor;
+			self.capacitor = dac_input - dac_output * 0.996;
 		}
+
+		dac_output
 	}
 }
 
-
 #[cfg(test)]
 mod test {
-    use super::*;
+	use super::*;
 
-    fn create_test_channel2() -> Channel2 {
-        Channel2::new()
-    }
-
-		#[test]
-    fn test_NR21_read_write () {
-        let mut ch2 = create_test_channel2();
-				ch2.write(0xFF16, 0xFF);
-
-				let pattern_bits = pattern_to_u8(ch2.wave_pattern);
-				assert_eq!(pattern_bits, 3);
-				assert_eq!(ch2.length_counter, 1);
-
-				assert_eq!(ch2.read(0xFF16), 0xC0);
-    }
-
-		#[test]
-    fn test_NR22_read_write () {
-        let mut ch2 = create_test_channel2();
-				ch2.write(0xFF17, 0xFF);
-
-				assert_eq!(ch2.envelope.initial_volume, 15);
-				assert_eq!(ch2.envelope.direction, 1);
-				assert_eq!(ch2.envelope.period, 7);
-				assert_eq!(ch2.read(0xFF17), 0xFF);
-    }
-
-		#[test]
-    fn test_NR23_read_write () {
-        let mut ch2 = create_test_channel2();
-				ch2.write(0xFF18, 0xFF);
-
-				assert_eq!(ch2.frequency_load, 255);
-				assert_eq!(ch2.read(0xFF18), 0xFF);
-    }
-
-		
-		#[test]
-    fn test_NR24_read_write () {
-        let mut ch2 = create_test_channel2();
-				ch2.write(0xFF19, 0xFF);
-
-				assert_eq!(ch2.status, true);
-				assert_eq!(ch2.counter_selection, true);
-				assert_eq!(ch2.frequency_load, 1792);
-				assert_eq!(ch2.read(0xFF19), 0x40);
-    }
+	fn create_test_channel2() -> Channel2 {
+		Channel2::new()
 	}
+
+	#[test]
+	fn test_NR21_read_write() {
+		let mut ch2 = create_test_channel2();
+		ch2.write(0xFF16, 0xFF);
+
+		let pattern_bits = pattern_to_u8(ch2.wave_pattern);
+		assert_eq!(pattern_bits, 3);
+		assert_eq!(ch2.length_counter, 1);
+
+		assert_eq!(ch2.read(0xFF16), 0xFF);
+	}
+
+	#[test]
+	fn test_NR22_read_write() {
+		let mut ch2 = create_test_channel2();
+		ch2.write(0xFF17, 0xFF);
+
+		assert_eq!(ch2.envelope.initial_volume, 15);
+		assert_eq!(ch2.envelope.direction, 1);
+		assert_eq!(ch2.envelope.period, 7);
+		assert_eq!(ch2.read(0xFF17), 0xFF);
+	}
+
+	#[test]
+	fn test_NR23_read_write() {
+		let mut ch2 = create_test_channel2();
+		ch2.write(0xFF18, 0xFF);
+
+		assert_eq!(ch2.frequency_load, 255);
+		assert_eq!(ch2.read(0xFF18), 0xFF);
+	}
+
+	#[test]
+	fn test_NR24_read_write() {
+		let mut ch2 = create_test_channel2();
+		ch2.write(0xFF19, 0xFF);
+
+		assert_eq!(ch2.status, true);
+		assert_eq!(ch2.counter_selection, true);
+		assert_eq!(ch2.frequency_load, 1792);
+		assert_eq!(ch2.read(0xFF19), 0xff);
+	}
+}

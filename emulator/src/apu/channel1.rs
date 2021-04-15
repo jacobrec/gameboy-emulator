@@ -10,7 +10,6 @@ const WAVE_PATTERN: [[u8; 8]; 4] = [
 	[0, 1, 1, 1, 1, 1, 1, 0],
 ];
 
-
 /*
 The variable names with _load are the variables we use to store the initial values.
 All updates to the values to perform any computation is done in the variables without
@@ -36,45 +35,47 @@ pub struct Channel1 {
 	sweep_period_counter: u8,
 	volume: u8,
 	pub wave_pattern: Pattern,
+	capacitor: f32,
 }
 
 impl Channel1 {
 	pub fn new() -> Channel1 {
 		Channel1 {
-			counter_selection: false,           // NR 14 bit 6
-			dac_enabled: true,                  // Condition to check if all of envelope properties are set
-			enabled: false,                     // Condition to check if channel is enabled
-			envelope: Envelope::new(),          // NR 12 Enevlope
+			counter_selection: false,  // NR 14 bit 6
+			dac_enabled: false,        // Condition to check if all of envelope properties are set
+			enabled: false,            // Condition to check if channel is enabled
+			envelope: Envelope::new(), // NR 12 Enevlope
 			envelope_period_counter: 0,
-			envelope_running: false,            // Condition to check whether envelope is on or off
-			frequency_count: 0,                 // Actual frequency value that is updated
-			frequency_load: 0,                  // NR 13 and NR 14 bit 2-0
-			length_counter: 0,                  // NR 11 5-0
-			output_volume: 0,                   // Volume uesd for mixing
-			sequence_pointer: 0,                // pointer to keep track of wave_pattern location
-			status: false,                      // NR 14 bit 7
-			sweep: Sweep::new(),                // NR 10 register
-			sweep_enable: false,                // Condition to check whether sweep is on or off
-			sweep_shadow: 0,                    // Sweep shadow register
-			sweep_period_counter: 0,            // Actual sweep time that is updated
-			volume: 0,                          // Actual envelope volume that is updated
+			envelope_running: false, // Condition to check whether envelope is on or off
+			frequency_count: 0,      // Actual frequency value that is updated
+			frequency_load: 0,       // NR 13 and NR 14 bit 2-0
+			length_counter: 0,       // NR 11 5-0
+			output_volume: 0,        // Volume uesd for mixing
+			sequence_pointer: 0,     // pointer to keep track of wave_pattern location
+			status: false,           // NR 14 bit 7
+			sweep: Sweep::new(),     // NR 10 register
+			sweep_enable: false,     // Condition to check whether sweep is on or off
+			sweep_shadow: 0,         // Sweep shadow register
+			sweep_period_counter: 0, // Actual sweep time that is updated
+			volume: 0,               // Actual envelope volume that is updated
 			wave_pattern: Pattern::HalfQuarter, // NR 11 bit 7-6
+			capacitor: 0.0,
 		}
 	}
 
 	pub fn read(&self, loc: u16) -> u8 {
 		match loc {
-			0xFF10 => self.sweep.read(),
+			0xFF10 => 0x80 | self.sweep.read(),
 			0xFF11 => {
 				let pattern_bits = pattern_to_u8(self.wave_pattern);
-				pattern_bits << 6
+				0x3F | (pattern_bits << 6)
 			}
 			0xFF12 => self.envelope.read(),
-			0xFF13 => (self.frequency_load & 0x00FF) as u8,
+			0xFF13 => 0xFF | (self.frequency_load & 0x00FF) as u8,
 			0xFF14 => {
 				let counter_selection_bit = if self.counter_selection { 1 << 6 } else { 0 };
 
-				counter_selection_bit 
+				0xBF | counter_selection_bit
 			}
 			_ => panic!("Channel 1 read register out of range: {:04X}", loc),
 		}
@@ -154,7 +155,7 @@ impl Channel1 {
 			};
 
 			// println!("Envelope length: {}", self.envelope.length);
-			if self.envelope_running {
+			if self.envelope_running && self.envelope.period > 0 {
 				// println!("Envelope running & Envelope length > 0");
 				// println!("Volume is: {}", self.volume);
 				if self.envelope.direction == 1 && self.volume < 15 {
@@ -211,7 +212,7 @@ impl Channel1 {
 
 	// Initializes channel by resetting all values
 	fn initialize(&mut self) {
-		println!("initialize");
+		// println!("initialize");
 		self.enabled = true;
 		if self.length_counter == 0 {
 			self.length_counter = 64;
@@ -233,79 +234,92 @@ impl Channel1 {
 		}
 	}
 
-	 pub fn dac_output(&self) -> f32 {
-	 	if self.dac_enabled && self.enabled {
-			let duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
-	 		let vol_output: f32 = self.volume as f32 * duty_output;
-	 		(vol_output / 7.5) - 1.0
-	 	} else {
-	 		0.0
-	 	}
-	 }
-}
+	// pub fn dac_output(&self) -> f32 {
+	// if self.dac_enabled {
+	// 	let mut duty_output = 0.0;
+	// 	if self.enabled {
+	// 		duty_output = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize][self.sequence_pointer as usize] as f32;
+	// 	}
+	// 	let vol_output: f32 = self.volume as f32 * duty_output;
+	// 	(vol_output / 7.5) - 1.0
+	// } else {
+	// 	0.0
+	// }
+	// }
+	pub fn dac_output(&mut self) -> f32 {
+		let mut dac_output = 0.0;
 
+		if self.dac_enabled {
+			let dac_input = WAVE_PATTERN[pattern_to_u8(self.wave_pattern) as usize]
+				[self.sequence_pointer as usize] as f32;
+			dac_output = dac_input - self.capacitor;
+			self.capacitor = dac_input - dac_output * 0.996;
+		}
+
+		dac_output
+	}
+}
 
 #[cfg(test)]
 mod test {
-    use super::*;
+	use super::*;
 
-    fn create_test_channel1() -> Channel1 {
-        Channel1::new()
-    }
-
-    #[test]
-    fn test_NR10_read_write () {
-        let mut ch1 = create_test_channel1();
-				ch1.write(0xFF10, 0xFF);
-
-				assert_eq!(ch1.sweep.period, 7);
-				assert_eq!(ch1.sweep.direction, 1);
-				assert_eq!(ch1.sweep.shift, 7);
-
-				assert_eq!(ch1.read(0xFF10), 0x7F);
-    }
-
-		#[test]
-    fn test_NR11_read_write () {
-        let mut ch1 = create_test_channel1();
-				ch1.write(0xFF11, 0xFF);
-
-				let pattern_bits = pattern_to_u8(ch1.wave_pattern);
-				assert_eq!(pattern_bits, 3);
-				assert_eq!(ch1.length_counter, 1);
-
-				assert_eq!(ch1.read(0xFF11), 0xC0);
-    }
-
-		#[test]
-    fn test_NR12_read_write () {
-        let mut ch1 = create_test_channel1();
-				ch1.write(0xFF12, 0xFF);
-
-				assert_eq!(ch1.envelope.initial_volume, 15);
-				assert_eq!(ch1.envelope.direction, 1);
-				assert_eq!(ch1.envelope.period, 7);
-				assert_eq!(ch1.read(0xFF12), 0xFF);
-    }
-
-		#[test]
-    fn test_NR13_read_write () {
-        let mut ch1 = create_test_channel1();
-				ch1.write(0xFF13, 0xFF);
-
-				assert_eq!(ch1.frequency_load, 255);
-				assert_eq!(ch1.read(0xFF13), 0xFF);
-    }
-
-		
-		#[test]
-    fn test_NR14_read_write () {
-        let mut ch1 = create_test_channel1();
-				ch1.write(0xFF14, 0xFF);
-
-				assert_eq!(ch1.status, true);
-				assert_eq!(ch1.counter_selection, true);
-				assert_eq!(ch1.frequency_load, 1792);
-				assert_eq!(ch1.read(0xFF14), 0x40);
-    }
+	fn create_test_channel1() -> Channel1 {
+		Channel1::new()
 	}
+
+	#[test]
+	fn test_NR10_read_write() {
+		let mut ch1 = create_test_channel1();
+		ch1.write(0xFF10, 0xFF);
+
+		assert_eq!(ch1.sweep.period, 7);
+		assert_eq!(ch1.sweep.direction, 1);
+		assert_eq!(ch1.sweep.shift, 7);
+
+		assert_eq!(ch1.read(0xFF10), 0xFF);
+	}
+
+	#[test]
+	fn test_NR11_read_write() {
+		let mut ch1 = create_test_channel1();
+		ch1.write(0xFF11, 0xFF);
+
+		let pattern_bits = pattern_to_u8(ch1.wave_pattern);
+		assert_eq!(pattern_bits, 3);
+		assert_eq!(ch1.length_counter, 1);
+
+		assert_eq!(ch1.read(0xFF11), 0xFF);
+	}
+
+	#[test]
+	fn test_NR12_read_write() {
+		let mut ch1 = create_test_channel1();
+		ch1.write(0xFF12, 0xFF);
+
+		assert_eq!(ch1.envelope.initial_volume, 15);
+		assert_eq!(ch1.envelope.direction, 1);
+		assert_eq!(ch1.envelope.period, 7);
+		assert_eq!(ch1.read(0xFF12), 0xFF);
+	}
+
+	#[test]
+	fn test_NR13_read_write() {
+		let mut ch1 = create_test_channel1();
+		ch1.write(0xFF13, 0xFF);
+
+		assert_eq!(ch1.frequency_load, 255);
+		assert_eq!(ch1.read(0xFF13), 0xFF);
+	}
+
+	#[test]
+	fn test_NR14_read_write() {
+		let mut ch1 = create_test_channel1();
+		ch1.write(0xFF14, 0xFF);
+
+		assert_eq!(ch1.status, true);
+		assert_eq!(ch1.counter_selection, true);
+		assert_eq!(ch1.frequency_load, 1792);
+		assert_eq!(ch1.read(0xFF14), 0xFF);
+	}
+}

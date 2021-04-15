@@ -75,7 +75,7 @@ impl Bus {
         self.ppu.get_screen()
     }
 
-    pub fn get_audio_buffer(&self) -> [f32; 4096] {
+    pub fn get_audio_buffer(&self) -> [f32; crate::apu::SAMPLE_SIZE] {
         return self.apu.get_audio_buffer();
     }
     pub fn get_audio_buffer_status(&self) -> bool {
@@ -204,13 +204,6 @@ impl Bus {
         self.dma_transfer();
         // TODO: call apu tick
         self.apu.tick();
-
-        // let buffer = SamplesBuffer::new(1, 44100, [0.123, 0.234, 0.532, 0.523, 0.25, 0.76, 0.85]);
-        // let result = stream_handle.play_raw(buffer);
-        // let data: Vec<f32> = (0..4096).map(|n| -0.5 + (n % 2) as f32).collect();
-        // let source2 = rodio::buffer::SamplesBuffer::new(1, 500, data);
-        // self.stream_handle.play_raw(source2);
-        // std::thread::sleep(std::time::Duration::from_secs(5));
     }
 
     pub fn stack_push(&mut self, sp: usize, data: u8) {

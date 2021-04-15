@@ -71,7 +71,7 @@ impl Gameboy {
         return self.cpu.get_canvas();
     }
 
-    pub fn get_audio_buffer(&self) -> [f32; 4096] {
+    pub fn get_audio_buffer(&self) -> [f32; crate::apu::SAMPLE_SIZE] {
         self.cpu.get_audio_buffer()
     }
     pub fn get_audio_buffer_status(&self) -> bool {
