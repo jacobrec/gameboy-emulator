@@ -1,3 +1,6 @@
+/**
+ * This is the main web server, it just serves static content over https
+ */
 const fs = require('fs');
 const https = require('https');
 const express = require('express');

@@ -1,3 +1,6 @@
+/**
+ * This just redirects http requests on port 80 to https requests on port 443
+ */
 var express = require('express')
 var app = express();
 
