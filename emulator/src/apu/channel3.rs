@@ -215,4 +215,15 @@ mod test {
 		assert_eq!(ch3.frequency_load, 1792);
 		assert_eq!(ch3.read(0xFF1E), 0xFF);
 	}
+
+	#[test]
+	fn test_waveram_read_write() {
+		let mut ch3 = create_test_channel3();
+		ch3.write(0xFF30, 0xFF);
+
+		let high_nibble = ch3.wave_ram[0] & 0xF0;
+		let low_nibble = ch3.wave_ram[0] & 0x0F;
+		assert_eq!(high_nibble, 0xF0);
+		assert_eq!(low_nibble, 0x0F);
+	}
 }

@@ -93,9 +93,8 @@ impl APU {
                 let channel3_on = if self.channel3.status { 0x4 } else { 0 };
                 let channel4_on = if self.channel4.status { 0x8 } else { 0 };
 
-                0x70 | sound_on | channel4_on | channel3_on | channel2_on | channel1_on
+                sound_on | channel4_on | channel3_on | channel2_on | channel1_on
             }
-            0xFF27..=0xFF2F => 0xFF,
             _ => panic!("APU read register out of range: {:04X}", loc),
         }
     }
@@ -107,10 +106,8 @@ impl APU {
 
         match loc {
             0xFF10..=0xFF14 => self.channel1.write(loc, val),
-            0xFF15 => (),
             0xFF16..=0xFF19 => self.channel2.write(loc, val),
             0xFF1A..=0xFF1E => self.channel3.write(loc, val),
-            0xFF1F => (),
             0xFF30..=0xFF3F => self.channel3.write(loc, val),
             0xFF20..=0xFF23 => self.channel4.write(loc, val),
             0xFF24 => {
@@ -126,7 +123,6 @@ impl APU {
             0xFF26 => {
                 self.apu_enabled = val & 0x80 == 0x80;
             }
-            0xFF27..=0xFF2F => {}
             _ => panic!("APU write register out of range: {:04X}", loc),
         }
     }
@@ -185,45 +181,46 @@ impl APU {
             // Mix audio if bit is set in sound selection register NR51
             if self.channel_output_selection & 0x10 == ChannelBit::Channel1Left as u8 {
                 // Mix left audio terminal with channel 1
-                left_buffer += self.channel1.dac_output() / 8.0;
+                left_buffer += self.channel1.dac_output();
             }
             if self.channel_output_selection & 0x20 == ChannelBit::Channel2Left as u8 {
                 // Mix left audio terminal with channel 2
-                left_buffer += self.channel2.dac_output() / 8.0;
+                left_buffer += self.channel2.dac_output();
             }
             if self.channel_output_selection & 0x40 == ChannelBit::Channel3Left as u8 {
                 // Mix left audio terminal with channel 3
-                left_buffer += self.channel3.dac_output() / 8.0;
+                left_buffer += self.channel3.dac_output();
             }
             if self.channel_output_selection & 0x80 == ChannelBit::Channel4Left as u8 {
                 // Mix left audio terminal with channel 4
-                left_buffer += self.channel4.dac_output() / 8.0;
+                left_buffer += self.channel4.dac_output();
             }
             // Fill buffer with mixed sample
-            self.audio_buffer[self.audio_buffer_position] = left_buffer  * (self.left_terminal_volume as f32 + 1.0);
+            self.audio_buffer[self.audio_buffer_position] = left_buffer;
             let mut right_buffer: f32 = 0.0;
 
             if self.channel_output_selection & 0x01 == ChannelBit::Channel1Right as u8 {
                 // Mix left audio terminal with channel 1
-                right_buffer += self.channel1.dac_output() / 8.0;
+                right_buffer += self.channel1.dac_output();
             }
             if self.channel_output_selection & 0x02 == ChannelBit::Channel2Right as u8 {
                 // Mix left audio terminal with channel 2
-                right_buffer += self.channel2.dac_output() / 8.0;
+                right_buffer += self.channel2.dac_output();
             }
             if self.channel_output_selection & 0x04 == ChannelBit::Channel3Right as u8 {
                 // Mix left audio terminal with channel 3
-                right_buffer += self.channel3.dac_output() / 8.0;
+                right_buffer += self.channel3.dac_output();
             }
             if self.channel_output_selection & 0x08 == ChannelBit::Channel4Right as u8 {
                 // Mix left audio terminal with channel 4
-                right_buffer += self.channel4.dac_output() / 8.0;
+                right_buffer += self.channel4.dac_output();
             }
+
             // Fill buffer with mixed sample
-            self.audio_buffer[self.audio_buffer_position + 1] =  right_buffer * (self.right_terminal_volume as f32 + 1.0);
+            self.audio_buffer[self.audio_buffer_position + 1] = right_buffer;
             self.audio_buffer_position += 2;
 
-             println!("{:?}", self.audio_buffer);
+            // println!("{:?}", self.audio_buffer);
         }
 
         // Reset buffer position if we reach max
@@ -287,5 +284,37 @@ impl APU {
 
     pub fn set_audio_buffer_status(&mut self, status: bool) {
         self.audio_buffer_full = status;
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    fn create_test_apu() -> APU {
+        APU::new()
+    }
+
+    fn test_NR50_read_write() {
+        let mut test_apu = create_test_apu();
+        test_apu.write(0xFF24, 0xFF);
+
+        assert_eq!(test_apu.left_terminal_vin, true);
+        assert_eq!(test_apu.left_terminal_volume, 7);
+        assert_eq!(test_apu.right_terminal_vin, true);
+        assert_eq!(test_apu.right_terminal_volume, 7);
+    }
+
+    fn test_NR51_read_write() {
+        let mut test_apu = create_test_apu();
+        test_apu.write(0xFF25, 0xFF);
+
+        assert_eq!(test_apu.channel_output_selection, 0xFF);
+    }
+
+    fn test_NR52_read_write() {
+        let mut test_apu = create_test_apu();
+        test_apu.write(0xFF26, 0xFF);
+
+        assert!(test_apu.apu_enabled);
     }
 }

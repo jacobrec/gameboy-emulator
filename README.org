@@ -39,11 +39,12 @@ This can be verified by running test ~cpu::test::test_getter_setter_register~ or
 This can be verified by running all of the cpu tests or running a rom file in the emulator
 *** FR12 - CPU.ArithmeticOpCodes. :: The CPU shall emulate all arithmetic operations including add, subtract, and, or, xor, postincrement, pre decrement, complement and decimal adjust operations.
 This can be verified by running test ~cpu::test::test_sbc~,
-~cpu::test::test_sbcimm~, ~cpu::test::test_sub~, ~cpu::test::test_orimm~,
+~cpu::test::test_sbcimm~, ~cpu::test::test_sub~, ~cpu::test::test_orimm~, cpu::test::test_subimm,
 ~cpu::test::test_or~, ~cpu::test::test_dec~, ~cpu::test::test_inc~,
 ~cpu::test::test_cpimm~, ~cpu::test::test_cp~, ~cpu::test::test_and~,
-~cpu::test::test_andimm~, ~cpu::test::test_addimm~, ~cpu::test::test_add~,
-~cpu::test::test_addhl16~, ~cpu::test::test_adc~, ~cpu::test::test_adcimm~, or
+~cpu::test::test_andimm~, ~cpu::test::test_addimm~, ~cpu::test::test_add~, cpu::test::test_adcimm,
+~cpu::test::test_addhl16~, ~cpu::test::test_adc~, ~cpu::test::test_adcimm~, 
+~cpu::test::test_xor~,~cpu::test::test_xorimm~,or
 running a rom file in the emulator
 *** FR13 - CPU.StackOperations. :: The CPU shall emulate all stack operations including load, push, pop and store stack pointer operations onto 16-bit registers.
 This can be verified by running test ~cpu::test::test_pop~,
@@ -52,12 +53,12 @@ This can be verified by running test ~cpu::test::test_pop~,
 emulator
 *** FR14 - CPU.BitShiftAndRotate. :: The CPU shall emulate all bit shift, bit set, bit reset and register rotate operations including rotate right and rotate left.
 This can be verified by running test ~cpu::test::test_set~,
-~cpu::test::test_bit~, ~cpu::test::test_srl~, ~cpu::test::test_sla~,
+~cpu::test::test_bit~, ~cpu::test::test_srl~, ~cpu::test::test_sla~,~cpu::test::test_res~
 ~cpu::test::test_sra~, ~cpu::test::test_rl~, ~cpu::test::test_rrc~, or running a
 rom file in the emulator
 *** FR15 - CPU.ControlFlowOperations. :: The CPU shall emulate all jump, call and return control flow operations.
 This can be verified by running tests ~cpu::test::test_ret~,
-~cpu::test::test_ret_c~, ~cpu::test::test_reti~, ~cpu::test::test_reti~,
+~cpu::test::test_ret_c~, ~cpu::test::test_reti~, 
 ~cpu::test::test_ret_nc~, ~cpu::test::test_ret_nz~, ~cpu::test::test_ret_z~,
 ~cpu::test::test_rst~, ~cpu::test::test_jmp_absolute~,
 ~cpu::test::test_jmp_absolute_cc~, ~cpu::test::test_call~,
@@ -87,13 +88,51 @@ the screen, or by running test ~test ppu::test::test_ppu_tick~
 This can be verified running a rom file in the emulator and seeing if it draws
 the screen, or by running test ~test ppu::test::test_pixel_color_lookup~
 *** FR24 - APU.Channels. :: The APU shall produce 4 channels of audio data. 2 wave generators, 1 that plays data from ram, and one noise generator.
-This can be verified by running the apu tests
+This can be verified by running the apu tests ~channel1::test::test_NR10_read_write~,
+~channel1::test::test_NR11_read_write~,
+~channel1::test::test_NR12_read_write~,
+~channel1::test::test_NR13_read_write~,
+~channel1::test::test_NR14_read_write~,
+~channel2::test::test_NR21_read_write~,
+~channel2::test::test_NR22_read_write~,
+~channel2::test::test_NR23_read_write~,
+~channel2::test::test_NR24_read_write~,
+~channel3::test::test_NR30_read_write~,
+~channel3::test::test_NR31_read_write~,
+~channel3::test::test_NR32_read_write~,
+~channel3::test::test_NR33_read_write~,
+~channel3::test::test_NR34_read_write~,
+~channel4::test::test_NR41_read_write~,
+~channel4::test::test_NR42_read_write~,
+~channel4::test::test_NR43_read_write~,
+~channel4::test::test_NR44_read_write~
 *** FR25 - APU.Terminals. :: The APU shall produce sound to emulate the sound terminals in the gameboy
 This cannot be verified
 *** FR26 - APU.Registers. :: The APU shall emulate the 21 audio registers of the gameboy to provide an identical interface for sound that a gameboy would to games.
 This can be verified by running the apu tests
+~channel1::test::test_NR10_read_write~,
+~channel1::test::test_NR11_read_write~,
+~channel1::test::test_NR12_read_write~,
+~channel1::test::test_NR13_read_write~,
+~channel1::test::test_NR14_read_write~,
+~channel2::test::test_NR21_read_write~,
+~channel2::test::test_NR22_read_write~,
+~channel2::test::test_NR23_read_write~,
+~channel2::test::test_NR24_read_write~,
+~channel3::test::test_NR30_read_write~,
+~channel3::test::test_NR31_read_write~,
+~channel3::test::test_NR32_read_write~,
+~channel3::test::test_NR33_read_write~,
+~channel3::test::test_NR34_read_write~,
+~channel4::test::test_NR41_read_write~,
+~channel4::test::test_NR42_read_write~,
+~channel4::test::test_NR43_read_write~,
+~channel4::test::test_NR44_read_write~,
+~apu::test::test_NR50_read_write~,
+~apu::test::test_NR51_read_write~,
+~apu::test::test_NR52_read_write~
 *** FR27 - APU.WaveRAM. ::  The APU shall emulate the waveform RAM to allow producing arbitrary audio data.
-This can be verified by running the apu tests for channel 3
+This can be verified by running test ~channel3::test::test_waveram_read_write~
 *** FR28 - Interrupt.Flag. :: Stops program flow when an interrupt is generated
 This can be verified by running a rom file which uses interrupts for drawing [Eg) Dr Mario]
 *** FR29 - Interrupt.Handle. :: Handles the interrupt
