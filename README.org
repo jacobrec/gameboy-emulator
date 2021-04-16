@@ -10,6 +10,7 @@
 Proceed to =localhost:8000= in your browser and upload a rom file
 ** Running tests
 ~cd gameboy-emulator/emulator && cargo run~
+~cd gameboy-emulator/ui && npm test~
 ** Included testrom
 The test rom included is a very simple demo of all the features of the gameboy. Press a and b to move left and right
 ** Functional Requirements
