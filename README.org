@@ -39,12 +39,12 @@ This can be verified by running test ~cpu::test::test_getter_setter_register~ or
 This can be verified by running all of the cpu tests or running a rom file in the emulator
 *** FR12 - CPU.ArithmeticOpCodes. :: The CPU shall emulate all arithmetic operations including add, subtract, and, or, xor, postincrement, pre decrement, complement and decimal adjust operations.
 This can be verified by running test ~cpu::test::test_sbc~,
-~cpu::test::test_sbcimm~, ~cpu::test::test_sub~, ~cpu::test::test_orimm~, cpu::test::test_subimm,
+~cpu::test::test_sbcimm~, ~cpu::test::test_sub~, ~cpu::test::test_orimm~, ~cpu::test::test_subimm~,
 ~cpu::test::test_or~, ~cpu::test::test_dec~, ~cpu::test::test_inc~,
 ~cpu::test::test_cpimm~, ~cpu::test::test_cp~, ~cpu::test::test_and~,
-~cpu::test::test_andimm~, ~cpu::test::test_addimm~, ~cpu::test::test_add~, cpu::test::test_adcimm,
+~cpu::test::test_andimm~, ~cpu::test::test_addimm~, ~cpu::test::test_add~, ~cpu::test::test_adcimm~,
 ~cpu::test::test_addhl16~, ~cpu::test::test_adc~, ~cpu::test::test_adcimm~, 
-~cpu::test::test_xor~,~cpu::test::test_xorimm~,or
+~cpu::test::test_xor~, ~cpu::test::test_xorimm~, or
 running a rom file in the emulator
 *** FR13 - CPU.StackOperations. :: The CPU shall emulate all stack operations including load, push, pop and store stack pointer operations onto 16-bit registers.
 This can be verified by running test ~cpu::test::test_pop~,
@@ -53,7 +53,7 @@ This can be verified by running test ~cpu::test::test_pop~,
 emulator
 *** FR14 - CPU.BitShiftAndRotate. :: The CPU shall emulate all bit shift, bit set, bit reset and register rotate operations including rotate right and rotate left.
 This can be verified by running test ~cpu::test::test_set~,
-~cpu::test::test_bit~, ~cpu::test::test_srl~, ~cpu::test::test_sla~,~cpu::test::test_res~
+~cpu::test::test_bit~, ~cpu::test::test_srl~, ~cpu::test::test_sla~, ~cpu::test::test_res~,
 ~cpu::test::test_sra~, ~cpu::test::test_rl~, ~cpu::test::test_rrc~, or running a
 rom file in the emulator
 *** FR15 - CPU.ControlFlowOperations. :: The CPU shall emulate all jump, call and return control flow operations.
