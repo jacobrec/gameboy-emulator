@@ -234,6 +234,7 @@ function App() {
         direction="column"
         justify="center"
         alignItems="center"
+        container
       >
         <Grid item>
           <div className="screen">

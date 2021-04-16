@@ -9,7 +9,7 @@ function FileSubmission(props: any) {
         <div className="modal-text">
           <h2>Load a Game</h2>
           <form onSubmit={handleSubmit(props.onSubmit)} className="form">
-            <input required type="file" name="rom" ref={register}/>
+            <input required data-testid="input" type="file" name="rom" ref={register}/>
             <button>Submit</button>
           </form>
         </div>
